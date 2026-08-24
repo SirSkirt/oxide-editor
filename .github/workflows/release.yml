@@ -1,0 +1,72 @@
+name: Build and publish Oxide
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  windows-release:
+    name: Windows x64 release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Verify updater signing configuration
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          $config = Get-Content 'src-tauri/tauri.conf.json' -Raw | ConvertFrom-Json
+          if ($config.plugins.updater.pubkey -eq 'OXIDE_UPDATER_PUBLIC_KEY_NOT_CONFIGURED') {
+            throw 'Updater public key is not configured. Run scripts/setup-updater.ps1 locally, commit the public-key config, and add the private key to GitHub Actions secrets.'
+          }
+          if (-not $env:TAURI_SIGNING_PRIVATE_KEY) {
+            throw 'Missing TAURI_SIGNING_PRIVATE_KEY repository secret.'
+          }
+
+      - name: Build, sign, and publish release
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'Oxide Editor v__VERSION__'
+          releaseBody: |
+            Automated Oxide Editor release.
+
+            The NSIS installer can be used for a new installation, while existing updater-enabled Oxide installations will receive this release through the built-in update checker.
+          releaseDraft: false
+          prerelease: false
+          updaterJsonPreferNsis: true
+          uploadUpdaterJson: true
+          uploadUpdaterSignatures: true
+          uploadWorkflowArtifacts: true
+          workflowArtifactNamePattern: 'oxide-[platform]-[arch]-[bundle]'
+          args: --config src-tauri/tauri.release.conf.json
