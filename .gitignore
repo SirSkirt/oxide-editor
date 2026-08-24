@@ -12,3 +12,5 @@ Thumbs.db
 *.key
 *.key.pub
 .oxide-secrets/
+linux-updater/target/
+src-tauri/binaries/oxide-updater-*
