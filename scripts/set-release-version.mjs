@@ -22,7 +22,7 @@ for (const configPath of ['src-tauri/tauri.conf.json', 'updater/src-tauri/tauri.
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 }
 
-for (const cargoPath of ['src-tauri/Cargo.toml', 'updater/src-tauri/Cargo.toml']) {
+for (const cargoPath of ['src-tauri/Cargo.toml', 'updater/src-tauri/Cargo.toml', 'linux-updater/Cargo.toml']) {
   let cargo = fs.readFileSync(cargoPath, 'utf8');
   cargo = cargo.replace(/(^\[package\][\s\S]*?^version\s*=\s*")[^"]+("$)/m, `$1${internalVersion}$2`);
   fs.writeFileSync(cargoPath, cargo);

@@ -1,9 +1,13 @@
-# Oxide Editor B1.3.2
+# Oxide Editor B1.3.2 — The Compatibility Update
 
-B1.3.2 begins Oxide's native package-update system.
+B1.3.2 expands Oxide beyond Windows and starts its cross-platform native package updater.
 
-- Existing Oxide installations can update from dedicated signed ZIP packages instead of running the Windows installer for every update.
-- Oxide downloads and cryptographically verifies the package before handing it to the Oxide Update Service.
-- The Oxide Update Service backs up the current runtime files, replaces them, rolls back on installation failure, and restarts the editor.
-- The update helper uses its own Oxide-styled interface.
-- The normal NSIS installer remains available for first-time installation and repair.
+- Added Linux x86_64 support with Pop!_OS / Ubuntu / Debian-family systems as the first target.
+- GitHub Actions now verifies and releases both Windows and Linux builds.
+- Linux releases include both `.deb` and AppImage packages.
+- AppImage builds use Oxide's own signed package updater and rollback-aware Linux update helper.
+- `.deb` builds are supported for package-manager installation; automatic self-update currently targets the AppImage distribution so Oxide does not overwrite root-owned package files.
+- Oxide now finds rustup's `~/.cargo/bin` toolchain when launched from a Linux desktop environment that does not inherit shell PATH configuration.
+- Linux file paths are treated as case-sensitive.
+- Update feeds are platform-specific: `oxide-latest-windows-x86_64.json` and `oxide-latest-linux-x86_64.json`.
+- Windows keeps the B1.3.1 legacy `latest.json` bridge and the no-background-console release behavior.

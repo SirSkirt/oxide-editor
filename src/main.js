@@ -6,6 +6,7 @@ const app = document.querySelector('#app');
 
 const state = {
   projectPath: '',
+  platform: { os: 'unknown', arch: 'unknown', pathCaseSensitive: false, automaticUpdates: false, updateMode: 'unknown' },
   tabs: [],
   activeTabPath: '',
   currentFile: '',
@@ -514,7 +515,18 @@ function pathParent(path = '') {
 }
 
 function normalizePath(path = '') {
-  return path.replaceAll('\\', '/').replace(/\/$/, '').toLowerCase();
+  const normalized = path.replaceAll('\\', '/').replace(/\/$/, '');
+  return state.platform.pathCaseSensitive ? normalized : normalized.toLowerCase();
+}
+
+async function detectPlatform() {
+  try {
+    const info = await invoke('platform_info');
+    state.platform = info;
+    document.documentElement.dataset.oxideOs = info.os || 'unknown';
+  } catch (error) {
+    console.warn('Could not detect Oxide platform information:', error);
+  }
 }
 
 function setLamp(element, ok) {
@@ -2033,6 +2045,14 @@ function showUpdatePrompt(update) {
   els.updateNewVersion.textContent = update.displayVersion || `B${update.version}`;
   els.updateReleaseDate.textContent = update.date ? `Published ${update.date}` : 'A newer Oxide package is available.';
   els.updateNotes.textContent = update.body?.trim() || 'This release does not include update notes.';
+
+  if (update.installSupported === false) {
+    els.updateInstall.disabled = true;
+    els.updateInstall.textContent = 'APPIMAGE AUTO-UPDATE ONLY';
+    els.updateError.hidden = false;
+    els.updateError.textContent = update.installHint || 'Automatic installation is not available for this Oxide package type.';
+  }
+
   if (!els.updateDialog.open) els.updateDialog.showModal();
 }
 
@@ -2134,7 +2154,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.2</span><p>A Rust-first workbench with Cargo project management, compiler diagnostics, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
+  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.2</span><p>A cross-platform Rust-first workbench for Windows and Linux, with Cargo project management, compiler diagnostics, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
 }
 
 function showShortcuts() {
@@ -2528,5 +2548,5 @@ renderProblems();
 renderOutput();
 resetLayout();
 setProjectUiState();
-detectToolchain();
+detectPlatform().finally(() => detectToolchain());
 window.setTimeout(() => checkForOxideUpdates({ manual: false }), 1400);

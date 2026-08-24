@@ -29,9 +29,6 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "nsis"
-    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -52,7 +49,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJCREYyODg2QzUzNDY0QTAKUldTZ1pEVEZoaWpmdTE2L1h0Rnc1ZE1yRWY3T1VobWZOQnUvNUYxZUJxZUtVWDVhakdWWHdzQkwK",
       "endpoints": [
-        "https://github.com/SirSkirt/oxide-editor/releases/latest/download/oxide-latest.json"
+        "https://github.com/SirSkirt/oxide-editor/releases/latest/download/oxide-latest-{{target}}-{{arch}}.json"
       ]
     }
   }

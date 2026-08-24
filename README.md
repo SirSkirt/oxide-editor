@@ -1,65 +1,154 @@
-# Oxide Editor B1.3.2
+# Oxide Editor B1.3.2 — The Compatibility Update
 
-Oxide is a Rust-first desktop editor built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, and update orchestration are handled by Rust.
+Oxide is a Rust-first desktop editor built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, and update orchestration are handled by Rust.
 
-## B1.3.2 — Oxide Package Update System
+B1.3.2 is internally dubbed **The Compatibility Update**. It starts Oxide's native package-update system and adds the first Linux desktop target, with **Pop!_OS / Ubuntu / Debian-family x86_64** as the initial compatibility baseline.
 
-B1.3.2 begins Oxide's own update path instead of using the Windows installer as the normal update mechanism.
+## Windows + Linux
 
-### New update flow
+Supported release targets in B1.3.2:
 
-1. Oxide checks `oxide-latest.json` on the latest GitHub Release.
-2. Tauri's updater transport downloads the announced ZIP and verifies its signature with Oxide's existing embedded public key.
-3. Oxide stages the verified ZIP under the user's temporary directory.
-4. Oxide copies and launches the installed `oxide-updater.exe` helper from that temporary directory.
-5. The editor exits so its installed executable can be replaced.
-6. **Oxide Update Service** opens in an Oxide-styled window, extracts the package to a staging directory, creates rollback copies, replaces the runtime files, and restarts Oxide.
-7. If file replacement fails, the helper restores the previous runtime files before reporting the failure.
+- **Windows x86_64** — NSIS installer plus Oxide's signed native ZIP update packages
+- **Linux x86_64 AppImage** — portable build with Oxide automatic package updates
+- **Linux x86_64 .deb** — native Debian/Ubuntu/Pop!_OS package
 
-The package format is intentionally simple in B1.3.2:
+The Linux CI build runs on Ubuntu 22.04 so the produced binaries target a reasonably old WebKitGTK/glibc baseline instead of accidentally requiring the newest Ubuntu release.
+
+### Linux Rust toolchain discovery
+
+Linux desktop launchers do not necessarily inherit PATH additions from `.bashrc`, `.profile`, or other interactive shell configuration. Oxide now resolves Rust tools from PATH **and** the standard rustup location:
 
 ```text
-oxide-update-win-x64-1.3.2.zip
+~/.cargo/bin/cargo
+~/.cargo/bin/rustc
+```
+
+This prevents a desktop-launched Oxide from reporting that Cargo is missing when it works normally in a terminal.
+
+### Linux path handling
+
+Oxide now treats Linux paths as case-sensitive. Files such as `Thing.rs` and `thing.rs` are no longer normalized as though they were the same file.
+
+## Oxide Package Update System
+
+B1.3.2 uses platform-specific signed update packages published on GitHub Releases.
+
+Oxide checks:
+
+```text
+oxide-latest-{{target}}-{{arch}}.json
+```
+
+which resolves to feeds such as:
+
+```text
+oxide-latest-windows-x86_64.json
+oxide-latest-linux-x86_64.json
+```
+
+The downloaded package is still cryptographically verified with Oxide's existing Tauri updater signing key before Oxide hands it to its own updater logic.
+
+### Windows update package
+
+```text
+oxide-update-windows-x86_64-1.3.2.zip
 ├── oxide-editor.exe
 ├── oxide-updater.exe
 └── update-package.json
 ```
 
-The full runtime is shipped instead of differential patches. This is larger than a delta update but substantially simpler to verify, recover, and maintain.
+The temporary Oxide Update Service backs up the installed runtime, replaces it, rolls back on failure, and restarts Oxide.
 
-### GitHub Release assets
-
-The release workflow now publishes both the normal installer and the package updater assets:
+### Linux AppImage update package
 
 ```text
-Oxide Editor B1.3.2
-├── Oxide Editor ... setup.exe        # first install / repair / legacy updater bridge
-├── ...setup.exe.sig
-├── oxide-update-win-x64-1.3.2.zip    # B1.3.2+ package updater
-├── oxide-update-win-x64-1.3.2.zip.sig
-├── latest.json                       # compatibility feed for B1.3.1 and older
-└── oxide-latest.json                 # native Oxide package feed
+oxide-update-linux-x86_64-1.3.2.zip
+├── oxide-editor.AppImage
+└── update-package.json
 ```
 
-### Migration from the old updater
+For AppImage installs, Oxide downloads and verifies the package, launches a small Linux update helper, exits, replaces the original AppImage with rollback protection, restores executable permissions, and relaunches Oxide.
 
-B1.3.1 and older updater-enabled versions are already configured to read `latest.json`. That feed remains available and points to the signed NSIS installer, so those builds can still update to B1.3.2 using the old mechanism.
+### Linux .deb updates
 
-B1.3.2 switches to `oxide-latest.json`. Future B1.3.2+ releases can therefore use the Oxide ZIP updater without breaking older installed versions that have not crossed the B1.3.2 bridge yet.
+The `.deb` build is supported for normal installation on Pop!_OS/Ubuntu, but B1.3.2 does **not** silently overwrite root-owned package-manager files. If Oxide is running from a `.deb` installation, it can still detect new releases but tells the user to install the newer `.deb` package.
 
-The signing keypair does **not** change. The same private key stored in GitHub Actions signs both compatibility installer artifacts and Oxide update packages; the public key remains embedded in Oxide. Tauri's updater download API verifies the package signature before returning the bytes to Oxide's update engine.
+Use the AppImage build if you want Oxide's automatic self-update path on Linux.
 
-### Updater helper build
+### Compatibility bridge
 
-The updater is a second small Tauri/Rust executable under `updater/`. It has its own compact Oxide-styled UI and is bundled with the main installer as a Tauri sidecar.
+`latest.json` is still published for B1.3.1 and older updater-enabled **Windows** builds. It points to the signed NSIS installer so older installations can cross the bridge into B1.3.2. B1.3.2 and newer use the platform-specific Oxide package feeds above.
 
-`npm run tauri dev` and `npm run tauri build` invoke:
+## GitHub Actions
+
+Every normal build now verifies both platforms:
 
 ```text
-npm run prepare:updater
+Windows x64 verification
+Linux x64 verification (Ubuntu 22.04 / Pop!_OS baseline)
 ```
 
-which builds the helper and stages the correctly target-suffixed sidecar in `src-tauri/binaries/` before Tauri bundles the main editor.
+A release produces both Windows and Linux assets in the same GitHub Release.
+
+Typical B1.3.2 assets:
+
+```text
+Windows
+├── Oxide Editor ... setup.exe
+├── oxide-update-windows-x86_64-1.3.2.zip
+├── oxide-update-windows-x86_64-1.3.2.zip.sig
+├── oxide-latest-windows-x86_64.json
+└── latest.json
+
+Linux
+├── Oxide Editor ... amd64.deb
+├── Oxide Editor ... amd64.AppImage
+├── oxide-update-linux-x86_64-1.3.2.zip
+├── oxide-update-linux-x86_64-1.3.2.zip.sig
+└── oxide-latest-linux-x86_64.json
+```
+
+## Linux development on Pop!_OS / Ubuntu
+
+Run the included helper once:
+
+```bash
+./scripts/setup-linux.sh
+```
+
+Then:
+
+```bash
+npm install
+npm run tauri dev
+```
+
+Build local Linux bundles:
+
+```bash
+npm run tauri build -- --bundles deb,appimage
+```
+
+## Windows development
+
+Requirements:
+
+- Node.js / npm
+- current Rust toolchain with Cargo
+- Tauri 2 Windows prerequisites
+
+```powershell
+npm install
+npm run tauri dev
+```
+
+Release-style Windows bundle:
+
+```powershell
+npm run tauri build -- --bundles nsis
+```
+
+Windows release builds use the GUI subsystem, so Oxide does not leave a background Command Prompt open.
 
 ## Interactive Rust Tutorial
 
@@ -93,40 +182,22 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 - Problems pane and clickable compiler diagnostics
 - floating interactive Run Terminal with real stdin/stdout
 - GUI/native-window run mode
-- Windows release builds use the GUI subsystem, so no background Command Prompt appears
-
-## Run Oxide
-
-Requirements:
-
-- Node.js / npm
-- current Rust toolchain with Cargo
-- Tauri 2 Windows prerequisites
-
-```powershell
-npm install
-npm run tauri dev
-```
-
-Release build:
-
-```powershell
-npm run tauri build
-```
-
-The first build may take longer because Oxide also compiles the Update Service sidecar.
+- signed Oxide-native update packages
 
 ## Versioning
 
 - Package/build version: `1.3.2`
 - User-facing version: **B1.3.2**
+- Internal update name: **The Compatibility Update**
 
-To move both the editor and updater helper to a future version:
+To move all editor/updater components to a future version:
 
 ```powershell
 npm run release:version -- 1.3.3 B1.3.3
 ```
 
+The version helper updates the main editor, Windows Update Service, and Linux Update Service together.
+
 ## Release
 
-See [UPDATER_SETUP.md](UPDATER_SETUP.md) for signing-key and GitHub Actions details. The normal release workflow builds the installer, builds the native update package, signs both paths, creates both update feeds, and uploads the assets to GitHub Releases.
+See [UPDATER_SETUP.md](UPDATER_SETUP.md) for signing-key and GitHub Actions details.

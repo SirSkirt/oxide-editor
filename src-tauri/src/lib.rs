@@ -23,6 +23,16 @@ struct ToolchainInfo {
     rustc: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PlatformInfo {
+    os: String,
+    arch: String,
+    path_case_sensitive: bool,
+    automatic_updates: bool,
+    update_mode: String,
+}
+
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,6 +42,9 @@ struct OxideUpdateInfo {
     current_version: String,
     body: Option<String>,
     date: Option<String>,
+    install_supported: bool,
+    install_hint: Option<String>,
+    update_mode: String,
 }
 
 #[derive(Clone, Serialize)]
@@ -227,13 +240,68 @@ impl Default for TerminalRuntime {
     }
 }
 
+fn resolve_program(program: &str) -> PathBuf {
+    let executable_name = if cfg!(windows) && !program.to_ascii_lowercase().ends_with(".exe") {
+        format!("{program}.exe")
+    } else {
+        program.to_string()
+    };
+
+    if let Some(path_value) = env::var_os("PATH") {
+        for directory in env::split_paths(&path_value) {
+            let candidate = directory.join(&executable_name);
+            if candidate.is_file() {
+                return candidate;
+            }
+        }
+    }
+
+    // Linux desktop launchers do not necessarily inherit ~/.cargo/bin from shell dotfiles.
+    if let Some(home) = env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }) {
+        let candidate = PathBuf::from(home).join(".cargo").join("bin").join(&executable_name);
+        if candidate.is_file() {
+            return candidate;
+        }
+    }
+
+    PathBuf::from(program)
+}
+
+fn program_command(program: &str) -> Command {
+    Command::new(resolve_program(program))
+}
+
 fn command_version(program: &str) -> Option<String> {
-    Command::new(program)
+    program_command(program)
         .arg("--version")
         .output()
         .ok()
         .filter(|output| output.status.success())
         .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+#[tauri::command]
+fn platform_info() -> PlatformInfo {
+    #[cfg(target_os = "windows")]
+    let (automatic_updates, update_mode) = (true, "native-package".to_string());
+
+    #[cfg(target_os = "linux")]
+    let (automatic_updates, update_mode) = if env::var_os("APPIMAGE").is_some() {
+        (true, "appimage-package".to_string())
+    } else {
+        (false, "linux-package-manager".to_string())
+    };
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    let (automatic_updates, update_mode) = (false, "unsupported".to_string());
+
+    PlatformInfo {
+        os: env::consts::OS.to_string(),
+        arch: env::consts::ARCH.to_string(),
+        path_case_sensitive: !cfg!(windows),
+        automatic_updates,
+        update_mode,
+    }
 }
 
 #[tauri::command]
@@ -389,7 +457,13 @@ fn filesystem_roots() -> Vec<BrowserRoot> {
         });
     }
 
-    roots.dedup_by(|a, b| a.path.eq_ignore_ascii_case(&b.path));
+    roots.dedup_by(|a, b| {
+        if cfg!(windows) {
+            a.path.eq_ignore_ascii_case(&b.path)
+        } else {
+            a.path == b.path
+        }
+    });
     roots
 }
 
@@ -745,7 +819,7 @@ fn run_cargo(
         },
     );
 
-    let mut command = Command::new("cargo");
+    let mut command = program_command("cargo");
     command
         .args(&args)
         .current_dir(&project_path)
@@ -901,7 +975,7 @@ fn diagnostic_from_message(project_path: &Path, message: &JsonValue) -> Option<R
 }
 
 fn collect_cargo_diagnostics(project_path: String, release: bool) -> Result<DiagnosticsResult, String> {
-    let mut command = Command::new("cargo");
+    let mut command = program_command("cargo");
     command.arg("check").arg("--message-format=json");
     if release {
         command.arg("--release");
@@ -1051,7 +1125,7 @@ fn terminal_start(
             },
         );
 
-        let mut build = Command::new("cargo");
+        let mut build = program_command("cargo");
         build.arg("build").arg("--message-format=json");
         if release {
             build.arg("--release");
@@ -2943,12 +3017,34 @@ async fn oxide_update_check(app: AppHandle) -> Result<Option<OxideUpdateInfo>, S
         .await
         .map_err(|error| format!("Could not check the Oxide release feed: {error}"))?;
 
-    Ok(update.map(|update| OxideUpdateInfo {
-        version: update.version.to_string(),
-        display_version: updater_display_version(&update),
-        current_version: update.current_version.clone(),
-        body: update.body.clone(),
-        date: update.date.map(|date| date.to_string()),
+    Ok(update.map(|update| {
+        #[cfg(target_os = "windows")]
+        let (install_supported, install_hint, update_mode) = (true, None, "native-package".to_string());
+
+        #[cfg(target_os = "linux")]
+        let (install_supported, install_hint, update_mode) = if env::var_os("APPIMAGE").is_some() {
+            (true, None, "appimage-package".to_string())
+        } else {
+            (
+                false,
+                Some("Automatic Oxide package updates currently use the AppImage build on Linux. If you installed the .deb package, install the newer .deb from GitHub Releases or switch to the AppImage build for automatic updates.".to_string()),
+                "linux-package-manager".to_string(),
+            )
+        };
+
+        #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+        let (install_supported, install_hint, update_mode) = (false, Some("Automatic package updates are not implemented for this platform yet.".to_string()), "unsupported".to_string());
+
+        OxideUpdateInfo {
+            version: update.version.to_string(),
+            display_version: updater_display_version(&update),
+            current_version: update.current_version.clone(),
+            body: update.body.clone(),
+            date: update.date.map(|date| date.to_string()),
+            install_supported,
+            install_hint,
+            update_mode,
+        }
     }))
 }
 
@@ -3053,23 +3149,60 @@ async fn oxide_update_prepare(app: AppHandle, version: String) -> Result<OxideUp
     fs::copy(&helper, &temp_helper)
         .map_err(|error| format!("Could not prepare the Oxide Update Service: {error}"))?;
 
-    let app_exe_name = current_exe
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| "Could not determine the Oxide executable name.".to_string())?
-        .to_string();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = fs::metadata(&temp_helper)
+            .map_err(|error| format!("Could not inspect the Oxide Update Service: {error}"))?
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&temp_helper, permissions)
+            .map_err(|error| format!("Could not make the Oxide Update Service executable: {error}"))?;
+    }
 
-    Command::new(&temp_helper)
-        .arg("--package")
-        .arg(&package_path)
-        .arg("--install-dir")
-        .arg(&install_dir)
-        .arg("--app-exe")
-        .arg(&app_exe_name)
-        .arg("--version")
-        .arg(&version)
-        .spawn()
-        .map_err(|error| format!("Could not launch the Oxide Update Service: {error}"))?;
+    #[cfg(target_os = "windows")]
+    {
+        let app_exe_name = current_exe
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| "Could not determine the Oxide executable name.".to_string())?
+            .to_string();
+
+        Command::new(&temp_helper)
+            .arg("--package")
+            .arg(&package_path)
+            .arg("--install-dir")
+            .arg(&install_dir)
+            .arg("--app-exe")
+            .arg(&app_exe_name)
+            .arg("--version")
+            .arg(&version)
+            .spawn()
+            .map_err(|error| format!("Could not launch the Oxide Update Service: {error}"))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let appimage = env::var_os("APPIMAGE")
+            .map(PathBuf::from)
+            .filter(|path| path.is_file())
+            .ok_or_else(|| "Automatic Oxide package updates on Linux currently require the AppImage build. Install the newer .deb manually, or use Oxide's AppImage build for automatic updates.".to_string())?;
+
+        Command::new(&temp_helper)
+            .arg("--package")
+            .arg(&package_path)
+            .arg("--appimage")
+            .arg(&appimage)
+            .arg("--version")
+            .arg(&version)
+            .arg("--pid")
+            .arg(std::process::id().to_string())
+            .spawn()
+            .map_err(|error| format!("Could not launch the Linux Oxide Update Service: {error}"))?;
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    return Err("Oxide package updates are not implemented for this operating system yet.".into());
 
     Ok(OxideUpdateStageResult {
         version,
@@ -3111,6 +3244,7 @@ pub fn run() {
         })
         .manage(TerminalRuntime::default())
         .invoke_handler(tauri::generate_handler![
+            platform_info,
             toolchain_info,
             list_project_files,
             read_text_file,
