@@ -1,4 +1,4 @@
-# Oxide Editor B1.2.2-U
+# Oxide Editor B1.2.2
 
 ## B1.2.2 editor indentation patch
 
@@ -73,8 +73,8 @@ npm run tauri build
 
 ## Versioning
 
-- Package/build version: `1.2.3`
-- User-facing version: **B1.2.2-U**
+- Package/build version: `1.2.2`
+- User-facing version: **B1.2.2**
 
 ## Notes on live checking
 
@@ -115,7 +115,7 @@ B1.2.2-U adds the release/update pipeline for the public repository:
 - Oxide-styled update prompt with release notes and download progress
 - `Help -> Check for Updates...` manual check
 - Tauri updater + process plugins
-- signed updater artifacts for release builds (`src-tauri/tauri.release.conf.json` enables `createUpdaterArtifacts`)
+- signed updater artifacts (`createUpdaterArtifacts: true`)
 - GitHub Releases endpoint: `releases/latest/download/latest.json`
 - NSIS-first Windows release/update path
 - passive Windows updater installation
@@ -167,8 +167,6 @@ git push origin v1.2.3
 ```
 
 `tauri-action` uploads the NSIS installer, updater signature and `latest.json`. Installed updater-enabled copies of Oxide read that `latest.json` automatically.
-
-Normal local `npm run tauri build` builds do **not** require the updater private key. The GitHub release workflow merges `src-tauri/tauri.release.conf.json` only for signed release builds.
 
 For later versions, the included helper keeps the three internal version declarations synchronized:
 
