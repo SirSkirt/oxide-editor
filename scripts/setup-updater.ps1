@@ -55,9 +55,7 @@ if (-not (Test-Path $PublicKeyPath)) {
 $PublicKey = (Get-Content $PublicKeyPath -Raw).TrimEnd()
 $Config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 $Config.plugins.updater.pubkey = $PublicKey
-$Json = $Config | ConvertTo-Json -Depth 30
-$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($ConfigPath, $Json, $Utf8NoBom)
+$Config | ConvertTo-Json -Depth 30 | Set-Content -Path $ConfigPath -Encoding UTF8
 
 Write-Host ''
 Write-Host 'Updater public key written to src-tauri\tauri.conf.json.' -ForegroundColor Green

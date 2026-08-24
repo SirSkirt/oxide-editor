@@ -1604,6 +1604,800 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                 ),
             ],
         },
+        TutorialLesson {
+            id: "parameters".into(),
+            course: "Beginner".into(),
+            title: "Give Functions Input".into(),
+            summary: "Pass different values into the same function instead of rewriting it.".into(),
+            skill: "Function parameters".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "make-parameter",
+                    "Give the function an input",
+                    "A parameter gives a function a named value to work with.",
+                    "fn show_score(score: i32) {\n    println!(\"Score: {score}\");\n}",
+                    vec![
+                        ("score", "is the parameter's name"),
+                        (": i32", "says the input is an integer"),
+                        ("{score}", "uses that input inside the function"),
+                    ],
+                    "Now you try: above main, create show_score(score: i32) and make it print Score: followed by the value.",
+                    "A parameter is a local name that receives a value whenever the function is called. The : i32 annotation tells Rust that this parameter accepts a 32-bit signed integer, using the integer type you already worked with earlier.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "call-parameter",
+                    "Send a value in",
+                    "A value passed into a function call is called an argument.",
+                    "show_score(10);",
+                    vec![("10", "is the argument sent into score")],
+                    "Now you try: call show_score with 10 inside main, then Run the program and make it print Score: 10.",
+                    "The function's parameter and the call's argument are two sides of the same handoff. When show_score(10) runs, score receives 10 for the duration of that call.",
+                    true,
+                ),
+                tutorial_step(
+                    "parameter-challenge",
+                    "Challenge: reuse it",
+                    "The same function can work with another argument without changing its definition.",
+                    "Add a second call using 25 and Run again so Score: 25 appears too.",
+                    "Reusable functions are one of the main reasons parameters exist. The behavior stays in one place while each call supplies the data that changes.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "return-values".into(),
+            course: "Beginner".into(),
+            title: "Get Values Back".into(),
+            summary: "Make functions calculate a value and return it to the caller.".into(),
+            skill: "Return values".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "make-return",
+                    "Return a value",
+                    "-> i32 says this function gives an integer back to its caller.",
+                    "fn add_one(number: i32) -> i32 {\n    number + 1\n}",
+                    vec![
+                        ("-> i32", "declares the return type"),
+                        ("number + 1", "is the value returned from the function"),
+                        ("no ;", "lets the final expression become the return value"),
+                    ],
+                    "Now you try: above main, create add_one(number: i32) -> i32 and return number + 1.",
+                    "Rust functions can return the value of their final expression automatically. Leaving the semicolon off that final expression is significant: adding one would turn it into a statement whose value is (), so it would no longer satisfy an i32 return type.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "use-return",
+                    "Use what came back",
+                    "A returned value can be stored in a variable like any other value.",
+                    "let result = add_one(4);",
+                    vec![("result", "stores the value returned by add_one"), ("4", "is the argument sent into number")],
+                    "Now you try: store add_one(4) in result, print Result: {result}, and Run until the output says Result: 5.",
+                    "A function call is an expression, so it can appear anywhere Rust expects a value: in a let binding, another function call, a condition, or a larger calculation.",
+                    true,
+                ),
+                tutorial_step(
+                    "return-challenge",
+                    "Challenge: double it",
+                    "Use the same parameter-and-return pattern for a different calculation.",
+                    "Create double(number: i32) -> i32 that returns number * 2, call double(6), and print 12.",
+                    "This is the same structure as add_one with a different expression. Learning to recognize reusable shapes is more useful than memorizing individual examples.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "conditions".into(),
+            course: "Beginner".into(),
+            title: "Make Decisions".into(),
+            summary: "Use if, else, and comparisons to choose what the program does.".into(),
+            skill: "Conditions".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "make-if",
+                    "Run code only when something is true",
+                    "if runs its block only when the condition is true.",
+                    "if score >= 10 {\n    println!(\"High score!\");\n}",
+                    vec![("if", "starts a condition"), (">= 10", "means greater than or equal to 10"), ("{ ... }", "runs only when the condition is true")],
+                    "Now you try: use the existing score variable and print High score! when score is at least 10, then Run it.",
+                    "An if condition must produce a bool. Rust does not automatically treat numbers or other values as true or false, so the condition has to be explicit.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "make-else",
+                    "Handle the other case",
+                    "else runs when the if condition is false.",
+                    "else {\n    println!(\"Low score\");\n}",
+                    vec![("else", "handles the false case")],
+                    "Now you try: add an else branch, change score to 5, and Run until the program prints Low score.",
+                    "if and else form one expression with mutually exclusive branches. Exactly one branch runs when the program reaches it.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "equality-challenge",
+                    "Check for an exact value",
+                    "== compares two values for equality.",
+                    "if lives == 0 {\n    println!(\"Game over\");\n}",
+                    vec![("==", "asks whether both values are equal")],
+                    "Now you try: create lives = 0, check whether it equals 0, and Run until Game over appears.",
+                    "A single = assigns a value; == compares values. Keeping those jobs visually different helps prevent accidental assignment where a comparison was intended.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "loops".into(),
+            course: "Beginner".into(),
+            title: "Repeat Work".into(),
+            summary: "Repeat code with for and while instead of copying the same line.".into(),
+            skill: "Loops".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "for-range",
+                    "Loop over a range",
+                    "for repeats a block once for each value in a sequence.",
+                    "for number in 1..=3 {\n    println!(\"Number: {number}\");\n}",
+                    vec![("for number in", "gives each value the name number"), ("1..=3", "means 1 through 3, including 3")],
+                    "Now you try: add this kind of for loop and Run until Number: 1, Number: 2, and Number: 3 appear.",
+                    "Ranges generate a sequence of values. The ..= form includes both ends; 1..=3 produces 1, 2, and 3.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "while-loop",
+                    "Loop while a condition stays true",
+                    "while repeats as long as its condition remains true.",
+                    "let mut count = 1;\nwhile count <= 3 {\n    println!(\"Count: {count}\");\n    count += 1;\n}",
+                    vec![("while", "checks a condition before each repetition"), ("count += 1", "adds 1 to count after each pass")],
+                    "Now you try: make count start at 1 and use a while loop that prints Count: 1 through Count: 3.",
+                    "A while loop needs something to eventually change its condition. Here count increases each time, so count <= 3 eventually becomes false and the loop stops.",
+                    true,
+                ),
+                tutorial_step(
+                    "loop-challenge",
+                    "Challenge: choose the simpler loop",
+                    "Use a for loop when you already know the range of values you want.",
+                    "Add a for loop that prints Number: 4, Number: 5, and Number: 6, then Run it.",
+                    "Both for and while can repeat work, but for is usually clearer when iterating over a known sequence. while is useful when repetition depends on changing state or an open-ended condition.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "strings".into(),
+            course: "Beginner".into(),
+            title: "Build Text".into(),
+            summary: "Create owned Strings, change them, and print the result.".into(),
+            skill: "Strings".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "make-string",
+                    "Create owned text",
+                    "String::from creates a String value that your program owns.",
+                    "let mut message = String::from(\"Hello\");",
+                    vec![("String::from", "creates an owned String from text"), ("mut", "lets the String be changed later")],
+                    "Now you try: create a mutable String named message containing Hello.",
+                    "Rust distinguishes borrowed string slices such as &str from owned String values. String owns its text and can grow or change, which makes it useful for text built while a program runs.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "append-string",
+                    "Add more text",
+                    "push_str appends text to the end of a String.",
+                    "message.push_str(\", Oxide!\");",
+                    vec![(".", "calls a method on message"), ("push_str", "adds text to the end")],
+                    "Now you try: append , Oxide! to message.",
+                    "Methods are functions associated with a value or type and are commonly called with dot syntax. push_str mutates the existing String rather than creating a completely separate one.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "print-string",
+                    "See the finished String",
+                    "A String can be formatted by println! just like the values you used earlier.",
+                    "println!(\"{message}\");",
+                    vec![("{message}", "inserts the current String contents")],
+                    "Now you try: print message and Run until the terminal says Hello, Oxide!",
+                    "String implements Rust's Display formatting trait, so println! knows how to represent its contents as normal text.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "vectors".into(),
+            course: "Beginner".into(),
+            title: "Store a List of Values".into(),
+            summary: "Create a Vec, read an item, then grow the list.".into(),
+            skill: "Vectors".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "make-vector",
+                    "Create a vector",
+                    "vec! creates a growable list whose items share one type.",
+                    "let scores = vec![10, 20, 30];",
+                    vec![("vec!", "creates a Vec"), ("[10, 20, 30]", "contains the starting items")],
+                    "Now you try: create scores containing 10, 20, and 30.",
+                    "Vec<T> stores values next to one another and can grow at runtime. Rust infers the element type from the values here, so this becomes a vector of integers.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "read-vector",
+                    "Read one item",
+                    "An index chooses an item by position, starting from 0.",
+                    "println!(\"First: {}\", scores[0]);",
+                    vec![("scores[0]", "reads the first item because indexes start at 0")],
+                    "Now you try: print the first score and Run until First: 10 appears.",
+                    "Indexing is concise, but an out-of-bounds index will panic at runtime. Later Rust code often uses safer access patterns when the index is not known to be valid.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "grow-vector",
+                    "Add another item",
+                    "push adds one value to the end of a mutable vector.",
+                    "scores.push(40);",
+                    vec![("push(40)", "adds 40 after the existing items")],
+                    "Now you try: make scores mutable, push 40, print scores[3] as Last: 40, and Run it.",
+                    "Growing a Vec can require it to move its storage to a larger allocation. Rust manages that memory automatically while still enforcing ownership rules around who may use or modify the vector.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "structs".into(),
+            course: "Beginner".into(),
+            title: "Group Related Data".into(),
+            summary: "Define a struct, create a value, and read its fields.".into(),
+            skill: "Structs".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "define-struct",
+                    "Describe a Player",
+                    "struct defines a new type with named fields.",
+                    "struct Player {\n    name: String,\n    score: i32,\n}",
+                    vec![("Player", "is the new type's name"), ("name: String", "defines a text field"), ("score: i32", "defines an integer field")],
+                    "Now you try: above main, define Player with name: String and score: i32.",
+                    "A struct lets several related values travel together as one type. Each field has a name and type, so Rust knows exactly what a valid Player must contain.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "make-struct",
+                    "Create one Player",
+                    "A struct value supplies a value for each field.",
+                    "let player = Player {\n    name: String::from(\"Quinn\"),\n    score: 10,\n};",
+                    vec![("Player { ... }", "creates a Player value"), ("name:", "sets the name field"), ("score:", "sets the score field")],
+                    "Now you try: inside main, create player with name Quinn and score 10.",
+                    "Struct construction names each field explicitly. This makes the meaning of each value visible and lets the compiler reject missing, duplicated, or incorrectly typed fields.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "use-fields",
+                    "Read the fields",
+                    "Dot syntax reads a named field from a struct value.",
+                    "println!(\"{}: {}\", player.name, player.score);",
+                    vec![("player.name", "reads the name field"), ("player.score", "reads the score field")],
+                    "Now you try: print the player's name and score, then Run until the terminal contains Quinn: 10.",
+                    "Field access is checked at compile time. Rust knows Player has name and score, so a typo such as player.scroe becomes a compiler error instead of silently reading the wrong thing.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "enums-match".into(),
+            course: "Beginner".into(),
+            title: "Choose Between Possibilities".into(),
+            summary: "Represent a fixed set of states with an enum and handle them with match.".into(),
+            skill: "Enums and match".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "define-enum",
+                    "Define the possible directions",
+                    "enum creates a type whose value must be one of its listed variants.",
+                    "enum Direction {\n    Left,\n    Right,\n}",
+                    vec![("enum", "defines a set of named possibilities"), ("Left / Right", "are Direction variants")],
+                    "Now you try: above main, define Direction with Left and Right variants.",
+                    "Enums are useful when a value can be one of a known set of meaningful states. Unlike loose strings or numbers, the compiler knows every valid variant of the type.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "make-enum",
+                    "Choose one variant",
+                    ":: selects a variant that belongs to an enum type.",
+                    "let direction = Direction::Left;",
+                    vec![("Direction::Left", "creates the Left variant of Direction")],
+                    "Now you try: create direction containing Direction::Left.",
+                    "The :: path syntax identifies an item inside a type, module, or namespace. Here it makes clear that Left is specifically a Direction variant.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "match-enum",
+                    "Handle every direction",
+                    "match compares a value against patterns and runs the matching arm.",
+                    "match direction {\n    Direction::Left => println!(\"Going left\"),\n    Direction::Right => println!(\"Going right\"),\n}",
+                    vec![("match direction", "examines direction"), ("=>", "connects a pattern to what should run")],
+                    "Now you try: match direction and Run until Going left appears.",
+                    "Rust checks whether a match is exhaustive. For an enum, that means every possible variant must be handled unless a broader pattern intentionally catches the remaining cases.",
+                    true,
+                ),
+                tutorial_step(
+                    "match-challenge",
+                    "Challenge: take the other path",
+                    "Changing the enum value should make the other match arm run without changing the match itself.",
+                    "Change direction to Direction::Right and Run until Going right appears.",
+                    "The data chooses the behavior. This is a common Rust pattern: represent state explicitly with an enum, then use match to handle each valid state deliberately.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "ownership".into(),
+            course: "Beginner".into(),
+            title: "Break It: Ownership".into(),
+            summary: "Move a String, trigger the real moved-value error, then deliberately copy it.".into(),
+            skill: "Ownership basics".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "see-move",
+                    "Move ownership",
+                    "Assigning a String to another variable moves that owned value by default.",
+                    "let moved_name = name;",
+                    vec![("name", "gives its owned String to moved_name"), ("moved_name", "becomes the new owner")],
+                    "Now you try: Run the starter program and confirm it prints Oxide through moved_name.",
+                    "String owns heap-allocated text, so Rust does not silently duplicate it during ordinary assignment. Moving the value transfers responsibility for that allocation to the new binding.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "break-move",
+                    "Use the old owner",
+                    "After a move, using the old variable makes rustc report a moved-value error.",
+                    "println!(\"Original: {name}\");",
+                    vec![("name", "tries to use the value after ownership moved away")],
+                    "Now you try: add that println! after the move and wait for Oxide to show rustc error E0382.",
+                    "E0382 prevents use-after-move bugs. Rust knows name no longer owns the String, so it rejects later access instead of risking two owners freeing or mutating the same resource incorrectly.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "clone-value",
+                    "Make a real copy",
+                    "clone explicitly duplicates a value when you truly need two owned copies.",
+                    "let moved_name = name.clone();",
+                    vec![("clone()", "creates a separate owned copy instead of moving the original")],
+                    "Now you try: change the move to name.clone(), keep both print statements, and Run successfully.",
+                    "Cloning can be useful, but it may allocate and copy data. Rust makes that cost explicit. The next lesson shows how borrowing often lets code use a value without moving or cloning it.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "borrowing".into(),
+            course: "Beginner".into(),
+            title: "Borrow Instead of Move".into(),
+            summary: "Let a function read a String while the original owner keeps it.".into(),
+            skill: "Borrowing and references".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "borrow-value",
+                    "Lend the String to a function",
+                    "& creates a reference so code can use a value without taking ownership.",
+                    "show_name(&name);",
+                    vec![("&name", "borrows name instead of moving its String")],
+                    "Now you try: call the provided show_name function with &name, then Run until Borrowed: Oxide appears.",
+                    "A shared reference gives temporary read access to a value. The owner remains responsible for the String and can continue using it after the borrowed access ends.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "owner-still-works",
+                    "Use the owner again",
+                    "Borrowing leaves ownership where it was.",
+                    "println!(\"Still mine: {name}\");",
+                    vec![("name", "is still valid because show_name only borrowed it")],
+                    "Now you try: print Still mine: {name} after show_name and Run until both lines appear.",
+                    "The borrow used by show_name ends when that call no longer needs the reference. Because ownership never moved, name remains valid afterward.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "borrow-challenge",
+                    "Challenge: borrow it again",
+                    "A value can be borrowed again whenever the borrowing rules allow it.",
+                    "fn show_twice(name: &String) {\n    println!(\"{name} {name}\");\n}",
+                    vec![("&String", "accepts a shared reference to a String")],
+                    "Now you try: create show_twice(name: &String), call it with &name, and Run until Oxide Oxide appears.",
+                    "Shared references are cheap handles to existing data. Rust tracks their lifetimes so the referenced value cannot disappear while a valid reference still needs it.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "string-slices".into(),
+            course: "Beginner".into(),
+            title: "Borrow Just the Text".into(),
+            summary: "Use &str when code only needs a borrowed view of string text.".into(),
+            skill: "String slices".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "slice-function",
+                    "Accept borrowed text",
+                    "&str is a borrowed view of string text.",
+                    "fn show_label(label: &str) {\n    println!(\"Label: {label}\");\n}",
+                    vec![("&str", "borrows string text without taking ownership"), ("label", "is the borrowed text inside the function")],
+                    "Now you try: create show_label(label: &str), call it with &label, and Run until Label: Oxide appears.",
+                    "A string slice does not own the text it points at. It describes a valid region of UTF-8 string data for as long as that data remains available. Functions that only need to read text often accept &str because both String values and string literals can be borrowed as slices.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "literal-slice",
+                    "Pass text directly",
+                    "A string literal such as \"Rust\" already behaves like borrowed &str text.",
+                    "show_label(\"Rust\");",
+                    vec![("\"Rust\"", "is a string literal that can be passed as &str")],
+                    "Now you try: call show_label with the literal \"Rust\" and Run until Label: Rust appears.",
+                    "String literals live in the program binary and have a static lifetime. Their type is &str, so a function taking &str can use them directly without creating an owned String first.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "slice-challenge",
+                    "Challenge: reuse the pattern",
+                    "The same &str parameter can be used by any function that only needs to read text.",
+                    "fn shout(text: &str) {\n    println!(\"{text}!\");\n}",
+                    vec![("text: &str", "accepts borrowed text")],
+                    "Now you try: create shout(text: &str), call shout(\"Go\"), and Run until Go! appears.",
+                    "Using &str in read-only text APIs makes them flexible: callers can pass a slice, a literal, or a borrowed String without transferring ownership.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "mutable-references".into(),
+            course: "Beginner".into(),
+            title: "Borrow It and Change It".into(),
+            summary: "Use &mut to temporarily let a function modify a value it does not own.".into(),
+            skill: "Mutable references".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "mut-ref-function",
+                    "Give temporary write access",
+                    "&mut creates a mutable reference that can change the borrowed value.",
+                    "fn add_point(score: &mut i32) {\n    *score += 1;\n}",
+                    vec![("&mut i32", "borrows an integer with permission to change it"), ("*score", "accesses the value through the reference")],
+                    "Now you try: create add_point(score: &mut i32), make score mutable, call add_point(&mut score), print score afterward, and Run until Score: 11 appears.",
+                    "A mutable reference temporarily grants exclusive write access to a value. The * operator dereferences the reference so the code can modify the integer stored behind it.",
+                    true,
+                ),
+                tutorial_step(
+                    "break-mut-ref",
+                    "Break the permission",
+                    "A value must itself be mutable before Rust will let you borrow it as &mut.",
+                    "Remove mut from let mut score = 10; and wait for rustc to reject add_point(&mut score).",
+                    "Rust does not let mutable borrowing bypass the original binding's rules. If score is immutable, creating &mut score would grant write access that the binding never allowed, so rustc reports an error such as E0596.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "fix-mut-ref",
+                    "Restore it and borrow twice",
+                    "Separate mutable borrows can happen one after another.",
+                    "add_point(&mut score);\nadd_point(&mut score);",
+                    vec![("&mut score", "temporarily lends score with write access")],
+                    "Now you try: restore mut, make the program call add_point exactly twice in total, and Run until Score: 12 appears.",
+                    "Rust permits repeated mutable borrows when the previous borrow is finished. What it prevents is conflicting access to the same value at the same time.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "methods".into(),
+            course: "Beginner".into(),
+            title: "Give a Struct Behavior".into(),
+            summary: "Use impl, self, and methods to put behavior next to a struct.".into(),
+            skill: "Methods and impl".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "show-method",
+                    "Add a method",
+                    "impl is where methods for a type are defined.",
+                    "impl Counter {\n    fn show(&self) {\n        println!(\"Count: {}\", self.value);\n    }\n}",
+                    vec![("impl Counter", "adds behavior to Counter"), ("&self", "borrows the Counter the method was called on"), ("self.value", "reads that Counter's value field")],
+                    "Now you try: add show(&self), replace the direct println! with counter.show(), and Run until Count: 3 appears.",
+                    "Methods are ordinary functions associated with a type, but self gives them convenient access to the value they were called on. &self means the method only needs shared read access.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "changing-method",
+                    "Make a changing method",
+                    "&mut self lets a method change the value it was called on.",
+                    "fn add_one(&mut self) {\n    self.value += 1;\n}",
+                    vec![("&mut self", "borrows this Counter with permission to change it"), ("self.value += 1", "increments its value field")],
+                    "Now you try: add add_one(&mut self), make counter mutable, call counter.add_one(), then counter.show().",
+                    "&mut self follows the same mutable-reference rules you just practiced. The method receives temporary exclusive access to the Counter while it changes the field.",
+                    false,
+                ),
+                tutorial_step(
+                    "method-challenge",
+                    "Challenge: call it twice",
+                    "Methods can be called repeatedly as long as Rust's borrowing rules are satisfied.",
+                    "Call counter.add_one() twice before show(), then Run until Count: 5 appears.",
+                    "Each method call finishes its mutable borrow before the next call begins, so the same Counter can be modified repeatedly in sequence.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "option".into(),
+            course: "Beginner".into(),
+            title: "A Value Might Be Missing".into(),
+            summary: "Use Option, Some, and None instead of inventing magic missing values.".into(),
+            skill: "Option".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "run-some",
+                    "See Some",
+                    "Some(value) means an Option currently contains a value.",
+                    "let score = Some(10);",
+                    vec![("Some(10)", "stores the value 10 inside an Option")],
+                    "Now you try: Run the starter and confirm it prints Score: 10.",
+                    "Option<T> represents either Some(T) or None. The type forces code to acknowledge that a value might be absent instead of relying on a special number or null pointer.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "use-none",
+                    "Represent no value",
+                    "None means an Option contains no value.",
+                    "let score: Option<i32> = None;",
+                    vec![("Option<i32>", "means an optional i32"), ("None", "means there is currently no i32 value")],
+                    "Now you try: change score to Option<i32> = None and Run until No score appears.",
+                    "None does not carry a value, so Rust sometimes needs an explicit type annotation to know what kind of Option you mean. Here Option<i32> says a future value would be an i32.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "option-challenge",
+                    "Challenge: make another Option",
+                    "match lets you safely handle both Some and None.",
+                    "match lives {\n    Some(value) => println!(\"Lives: {value}\"),\n    None => println!(\"No lives\"),\n}",
+                    vec![("Some(value)", "extracts the contained value"), ("None", "handles the missing case")],
+                    "Now you try: create lives = Some(3), match it, and Run until Lives: 3 appears.",
+                    "Matching an Option is exhaustive: Rust requires both the present and missing cases to be covered unless another pattern deliberately handles the remainder.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "result".into(),
+            course: "Beginner".into(),
+            title: "Success or Failure".into(),
+            summary: "Use Result to handle operations that can succeed or fail.".into(),
+            skill: "Result and basic error handling".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "parse-result",
+                    "Get a Result",
+                    "parse::<i32>() tries to convert text into an integer and returns a Result.",
+                    "let parsed = \"42\".parse::<i32>();",
+                    vec![("parse::<i32>()", "tries to make an i32 from the text"), ("parsed", "stores the Result of that attempt")],
+                    "Now you try: Run the starter and confirm it prints Number: 42.",
+                    "Result<T, E> is Rust's standard way to represent an operation that can either return a useful value or an error. Parsing text can fail, so parse does not pretend success is guaranteed.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "result-error",
+                    "Take the error path",
+                    "Err means the operation failed instead of producing the requested value.",
+                    "let parsed = \"not a number\".parse::<i32>();",
+                    vec![("Err", "is the Result variant used for failure")],
+                    "Now you try: change the input text to not a number and Run until Could not parse appears.",
+                    "The error value inside Err can carry detailed information. This lesson ignores the details with Err(_) so you can focus on the success/failure shape first.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "result-challenge",
+                    "Challenge: parse another number",
+                    "Ok(value) contains the successful value produced by a Result.",
+                    "Ok(number) => println!(\"Number: {number}\"),",
+                    vec![("Ok(number)", "extracts the successful integer")],
+                    "Now you try: change the input to \"100\" and Run until Number: 100 appears.",
+                    "Matching Result makes failure handling explicit. Later Rust code can also use helpers and the ? operator to propagate errors when handling them locally would only add noise.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "hashmaps".into(),
+            course: "Beginner".into(),
+            title: "Look Up Values by Name".into(),
+            summary: "Store key/value pairs in a HashMap and retrieve them safely.".into(),
+            skill: "Hash maps".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "make-map",
+                    "Create a hash map",
+                    "HashMap::new creates an empty key/value collection.",
+                    "let scores: HashMap<&str, i32> = HashMap::new();",
+                    vec![("HashMap::new()", "creates an empty hash map"), ("HashMap<&str, i32>", "stores text keys with i32 values")],
+                    "Now you try: Run the starter and confirm it reports 0 entries.",
+                    "A HashMap stores values by keys instead of numeric positions. Rust's standard HashMap lives in std::collections, which is why the starter imports it with use.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "insert-map",
+                    "Insert a score",
+                    "insert stores a value under a key.",
+                    "scores.insert(\"Quinn\", 10);",
+                    vec![("\"Quinn\"", "is the lookup key"), ("10", "is the value stored under that key")],
+                    "Now you try: make scores mutable, insert Quinn with score 10, and print the map length so it reports 1 entry.",
+                    "If a key already exists, insert replaces its value and returns the old one. The map owns or borrows its keys and values according to the types you put into it.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "get-map",
+                    "Look up the score",
+                    "get returns an Option because the requested key might not exist.",
+                    "match scores.get(\"Quinn\") {\n    Some(score) => println!(\"Quinn: {score}\"),\n    None => println!(\"Missing\"),\n}",
+                    vec![("get(\"Quinn\")", "looks up the key"), ("Some(score)", "handles a value that was found")],
+                    "Now you try: look up Quinn and Run until Quinn: 10 appears.",
+                    "HashMap::get returns Option<&V>, which combines two ideas you already know: the value might be missing, and a successful lookup borrows the stored value instead of moving it out of the map.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "modules".into(),
+            course: "Beginner".into(),
+            title: "Organize Code into Modules".into(),
+            summary: "Group related code with mod, expose functions with pub, and call them by path.".into(),
+            skill: "Modules".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "run-module",
+                    "Use a module",
+                    "mod groups related Rust items under one name.",
+                    "mod greetings {\n    pub fn hello() {\n        println!(\"Hello from module!\");\n    }\n}",
+                    vec![("mod greetings", "creates the greetings module"), ("pub", "makes hello callable from outside that module")],
+                    "Now you try: Run the starter and confirm it prints Hello from module!.",
+                    "Modules create namespaces and privacy boundaries. Items are private by default, so pub intentionally exposes an item to code outside its module.",
+                    true,
+                ),
+                tutorial_step_with_example(
+                    "module-path",
+                    "Call through the module path",
+                    ":: selects an item inside a module.",
+                    "greetings::hello();",
+                    vec![("greetings::", "enters the greetings module"), ("hello()", "calls its public function")],
+                    "Now you try: add a public goodbye function that prints Goodbye from module!.",
+                    "The :: path syntax is used throughout Rust to locate items in modules, types, crates, and the standard library.",
+                    false,
+                ),
+                tutorial_step(
+                    "module-challenge",
+                    "Challenge: call the new function",
+                    "Once a module function is public, main can call it through the same module path.",
+                    "Call greetings::goodbye() and Run until Goodbye from module! appears.",
+                    "Larger Rust projects commonly move modules into separate files, but the visibility and path rules remain the same. This inline module lets you practice the core idea before file layout is added later.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "user-input".into(),
+            course: "Beginner".into(),
+            title: "Talk to the Program".into(),
+            summary: "Read keyboard input through stdin and use what the user typed.".into(),
+            skill: "Interactive terminal input".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "read-line",
+                    "Read one line",
+                    "read_line stores one line of terminal input into a mutable String.",
+                    "let mut name = String::new();\nstd::io::stdin().read_line(&mut name).expect(\"Failed to read input\");",
+                    vec![("String::new()", "creates an empty String for the input"), ("read_line(&mut name)", "fills name with what the user types"), ("expect(...) ", "stops with a message if reading fails")],
+                    "Now you try: add those two lines inside main so the program can receive terminal input.",
+                    "stdin returns the process's standard input handle. read_line appends input into the provided String and returns a Result, while expect is a simple way to stop the program if that operation unexpectedly fails.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "trim-input",
+                    "Remove the Enter key",
+                    "trim returns the text without surrounding whitespace such as the newline from Enter.",
+                    "let name = name.trim();",
+                    vec![("trim()", "borrows the String without its leading or trailing whitespace")],
+                    "Now you try: trim name and print Hello, {name}!.",
+                    "read_line keeps the newline that ended the input. trim returns a &str slice into the same String with surrounding whitespace removed, so the greeting does not contain an unwanted line break.",
+                    false,
+                ),
+                tutorial_step(
+                    "input-run",
+                    "Have a conversation",
+                    "The Oxide Run Terminal sends your typed input to the real program's stdin.",
+                    "Run the program, type Quinn into the Run Terminal, press Enter, and make it print Hello, Quinn!.",
+                    "Oxide's terminal is connected to the child process's real stdin/stdout pipes. The tutorial is not simulating the interaction; your compiled executable receives the characters you type.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "mini-calculator".into(),
+            course: "Beginner".into(),
+            title: "Mini Project: Calculator".into(),
+            summary: "Combine functions, input, parsing, variables, and arithmetic into a usable CLI program.".into(),
+            skill: "Combining input and calculations".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "second-number",
+                    "Read another number",
+                    "A helper function lets you reuse the same input-and-parse workflow.",
+                    "let second = read_number(\"Second number:\");\nprintln!(\"Second: {second}\");",
+                    vec![("read_number(...) ", "calls the provided helper and receives its i32 result"), ("{second}", "uses the returned value immediately")],
+                    "Now you try: after first, read a second number using read_number and print Second: {second}.",
+                    "The helper hides repeated stdin and parsing details behind a function that returns i32. This is one reason functions matter: main can describe the program at a higher level.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "calculator-total",
+                    "Add the values",
+                    "The + operator adds numeric values.",
+                    "let total = first + second;\nprintln!(\"Total: {total}\");",
+                    vec![("first + second", "adds the two i32 values"), ("total", "stores the result")],
+                    "Now you try: calculate total and print it.",
+                    "Both inputs are i32 values because read_number parsed them before returning. That means ordinary integer arithmetic works without another conversion step.",
+                    false,
+                ),
+                tutorial_step(
+                    "calculator-run",
+                    "Run your calculator",
+                    "A project becomes useful when you can feed it real values and verify the behavior.",
+                    "Run the calculator, enter 4 and 6 when prompted, and make the terminal print Total: 10.",
+                    "This small program already combines reusable functions, borrowed prompt text, terminal input, Result-based parsing through expect, variables, return values, and arithmetic.",
+                    true,
+                ),
+                tutorial_step(
+                    "calculator-challenge",
+                    "Challenge: add subtraction",
+                    "Use the same two values to calculate another result without another worked example.",
+                    "Also print Difference: -2 when the inputs are 4 and 6, then Run it again.",
+                    "The challenge deliberately gives you the desired behavior rather than the exact code. At this point you already know variables, arithmetic expressions, and println!, so Oxide can reduce the scaffolding.",
+                    true,
+                ),
+            ],
+        },
+        TutorialLesson {
+            id: "mini-scoreboard".into(),
+            course: "Beginner".into(),
+            title: "Mini Project: Scoreboard".into(),
+            summary: "Combine structs, vectors, loops, and conditions into a small data-driven program.".into(),
+            skill: "Combining data structures and control flow".into(),
+            steps: vec![
+                tutorial_step_with_example(
+                    "add-player",
+                    "Grow the roster",
+                    "A Vec can store several values of the same struct type.",
+                    "players.push(Player { name: String::from(\"Oxide\"), score: 20 });",
+                    vec![("players.push(...) ", "adds another Player to the vector")],
+                    "Now you try: make players mutable, then add an Oxide player with score 20 to the provided players vector.",
+                    "Because every item is a Player, Rust guarantees that each vector entry has the same fields and field types. That makes later iteration predictable.",
+                    false,
+                ),
+                tutorial_step_with_example(
+                    "scoreboard-loop",
+                    "Print every player",
+                    "for can visit each value stored in a collection.",
+                    "for player in &players {\n    println!(\"{}: {}\", player.name, player.score);\n}",
+                    vec![("&players", "borrows the vector so the loop does not consume it"), ("player", "is each borrowed Player in turn")],
+                    "Now you try: loop over &players and print every player's name and score.",
+                    "Borrowing the vector in the loop keeps players available afterward. Each player is therefore a shared reference to an item rather than an owned Player moved out of the Vec.",
+                    false,
+                ),
+                tutorial_step(
+                    "scoreboard-run",
+                    "Run the scoreboard",
+                    "The program should now turn structured data into visible output.",
+                    "Run until the terminal contains both Quinn: 10 and Oxide: 20.",
+                    "This is a small but real data flow: values are grouped into structs, stored in a vector, borrowed by a loop, and formatted for the user.",
+                    true,
+                ),
+                tutorial_step(
+                    "scoreboard-challenge",
+                    "Challenge: mark the winner",
+                    "Use a condition inside the loop to react to a player's score.",
+                    "Make the program also print Winner: Oxide for the player whose score is 20, then Run it.",
+                    "You now have enough pieces to solve this without a worked answer: field access gives you player.score, an if expression can test it, and player.name can be printed when the condition is true.",
+                    true,
+                ),
+            ],
+        },
     ]
 }
 
@@ -1615,6 +2409,26 @@ fn tutorial_initial_source(lesson_id: &str) -> Option<&'static str> {
         "mutability" => Some("fn main() {\n    let mut score = 10;\n    println!(\"Starting score: {score}\");\n    score = 11;\n    println!(\"Score: {score}\");\n}\n"),
         "basic-types" => Some("fn main() {\n\n}\n"),
         "functions" => Some("fn main() {\n\n}\n"),
+        "parameters" => Some("fn main() {\n\n}\n"),
+        "return-values" => Some("fn main() {\n\n}\n"),
+        "conditions" => Some("fn main() {\n    let score = 12;\n\n}\n"),
+        "loops" => Some("fn main() {\n\n}\n"),
+        "strings" => Some("fn main() {\n\n}\n"),
+        "vectors" => Some("fn main() {\n\n}\n"),
+        "structs" => Some("fn main() {\n\n}\n"),
+        "enums-match" => Some("fn main() {\n\n}\n"),
+        "ownership" => Some("fn main() {\n    let name = String::from(\"Oxide\");\n    let moved_name = name;\n    println!(\"{moved_name}\");\n}\n"),
+        "borrowing" => Some("fn show_name(name: &String) {\n    println!(\"Borrowed: {name}\");\n}\n\nfn main() {\n    let name = String::from(\"Oxide\");\n\n}\n"),
+        "string-slices" => Some("fn main() {\n    let label = String::from(\"Oxide\");\n    println!(\"{label}\");\n}\n"),
+        "mutable-references" => Some("fn main() {\n    let score = 10;\n    println!(\"Score: {score}\");\n}\n"),
+        "methods" => Some("struct Counter {\n    value: i32,\n}\n\nfn main() {\n    let counter = Counter { value: 3 };\n    println!(\"Count: {}\", counter.value);\n}\n"),
+        "option" => Some("fn main() {\n    let score = Some(10);\n\n    match score {\n        Some(value) => println!(\"Score: {value}\"),\n        None => println!(\"No score\"),\n    }\n}\n"),
+        "result" => Some("fn main() {\n    let parsed = \"42\".parse::<i32>();\n\n    match parsed {\n        Ok(number) => println!(\"Number: {number}\"),\n        Err(_) => println!(\"Could not parse\"),\n    }\n}\n"),
+        "hashmaps" => Some("use std::collections::HashMap;\n\nfn main() {\n    let scores: HashMap<&str, i32> = HashMap::new();\n    println!(\"Entries: {}\", scores.len());\n}\n"),
+        "modules" => Some("mod greetings {\n    pub fn hello() {\n        println!(\"Hello from module!\");\n    }\n}\n\nfn main() {\n    greetings::hello();\n}\n"),
+        "user-input" => Some("fn main() {\n\n}\n"),
+        "mini-calculator" => Some("fn read_number(prompt: &str) -> i32 {\n    println!(\"{prompt}\");\n    let mut input = String::new();\n    std::io::stdin()\n        .read_line(&mut input)\n        .expect(\"Failed to read input\");\n    input.trim().parse::<i32>().expect(\"Please enter a number\")\n}\n\nfn main() {\n    let first = read_number(\"First number:\");\n    println!(\"First: {first}\");\n}\n"),
+        "mini-scoreboard" => Some("struct Player {\n    name: String,\n    score: i32,\n}\n\nfn main() {\n    let players = vec![\n        Player { name: String::from(\"Quinn\"), score: 10 },\n    ];\n\n    println!(\"{}: {}\", players[0].name, players[0].score);\n}\n"),
         _ => None,
     }
 }
@@ -1815,7 +2629,251 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
                 && ran_ok
                 && output.contains("You can do this!")
         }
-        _ => false,
+        ("parameters", 0) => {
+            compact.contains("fnshow_score(score:i32){")
+                && compact.contains("println!(\"Score:{score}\");")
+        }
+        ("parameters", 1) => compact.contains("show_score(10);") && ran_ok && output.contains("Score: 10"),
+        ("parameters", 2) => compact.contains("show_score(25);") && ran_ok && output.contains("Score: 25"),
+        ("return-values", 0) => {
+            compact.contains("fnadd_one(number:i32)->i32{") && compact.contains("number+1}")
+        }
+        ("return-values", 1) => {
+            compact.contains("letresult=add_one(4);")
+                && ran_ok
+                && output.replace(' ', "").contains("Result:5")
+        }
+        ("return-values", 2) => {
+            compact.contains("fndouble(number:i32)->i32{")
+                && compact.contains("number*2}")
+                && compact.contains("double(6)")
+                && ran_ok
+                && output.contains("12")
+        }
+        ("conditions", 0) => compact.contains("ifscore>=10{") && ran_ok && output.contains("High score!"),
+        ("conditions", 1) => compact.contains("letscore=5;") && compact.contains("else{") && ran_ok && output.contains("Low score"),
+        ("conditions", 2) => {
+            compact.contains("letlives=0;")
+                && compact.contains("iflives==0{")
+                && ran_ok
+                && output.contains("Game over")
+        }
+        ("loops", 0) => {
+            compact.contains("fornumberin1..=3{")
+                && ran_ok
+                && output.contains("Number: 1")
+                && output.contains("Number: 2")
+                && output.contains("Number: 3")
+        }
+        ("loops", 1) => {
+            compact.contains("letmutcount=1;")
+                && compact.contains("whilecount<=3{")
+                && compact.contains("count+=1;")
+                && ran_ok
+                && output.contains("Count: 1")
+                && output.contains("Count: 3")
+        }
+        ("loops", 2) => {
+            compact.contains("fornumberin4..=6{")
+                && ran_ok
+                && output.contains("Number: 4")
+                && output.contains("Number: 6")
+        }
+        ("strings", 0) => compact.contains("letmutmessage=String::from(\"Hello\");"),
+        ("strings", 1) => compact.contains("message.push_str(\",Oxide!\");"),
+        ("strings", 2) => ran_ok && output.contains("Hello, Oxide!"),
+        ("vectors", 0) => compact.contains("letscores=vec![10,20,30];") || compact.contains("letmutscores=vec![10,20,30];"),
+        ("vectors", 1) => compact.contains("scores[0]") && ran_ok && output.replace(' ', "").contains("First:10"),
+        ("vectors", 2) => {
+            compact.contains("letmutscores=vec![10,20,30];")
+                && compact.contains("scores.push(40);")
+                && compact.contains("scores[3]")
+                && ran_ok
+                && output.replace(' ', "").contains("Last:40")
+        }
+        ("structs", 0) => {
+            compact.contains("structPlayer{")
+                && compact.contains("name:String,")
+                && compact.contains("score:i32,")
+        }
+        ("structs", 1) => {
+            compact.contains("letplayer=Player{")
+                && compact.contains("name:String::from(\"Quinn\")")
+                && compact.contains("score:10")
+        }
+        ("structs", 2) => {
+            compact.contains("player.name")
+                && compact.contains("player.score")
+                && ran_ok
+                && output.replace(' ', "").contains("Quinn:10")
+        }
+        ("enums-match", 0) => {
+            compact.contains("enumDirection{") && compact.contains("Left,") && compact.contains("Right,")
+        }
+        ("enums-match", 1) => compact.contains("letdirection=Direction::Left;"),
+        ("enums-match", 2) => {
+            compact.contains("matchdirection{")
+                && compact.contains("Direction::Left=>")
+                && compact.contains("Direction::Right=>")
+                && ran_ok
+                && output.contains("Going left")
+        }
+        ("enums-match", 3) => compact.contains("letdirection=Direction::Right;") && ran_ok && output.contains("Going right"),
+        ("ownership", 0) => ran_ok && output.contains("Oxide"),
+        ("ownership", 1) => {
+            compact.contains("letmoved_name=name;")
+                && compact.contains("println!(\"Original:{name}\");")
+                && (has_code("E0382") || has_message("borrow of moved value") || has_message("moved value"))
+        }
+        ("ownership", 2) => {
+            compact.contains("letmoved_name=name.clone();")
+                && compact.contains("println!(\"Original:{name}\");")
+                && !has_level("error")
+                && ran_ok
+                && output.contains("Oxide")
+        }
+        ("borrowing", 0) => compact.contains("show_name(&name);") && ran_ok && output.contains("Borrowed: Oxide"),
+        ("borrowing", 1) => {
+            compact.contains("println!(\"Stillmine:{name}\");")
+                && ran_ok
+                && output.contains("Borrowed: Oxide")
+                && output.contains("Still mine: Oxide")
+        }
+        ("borrowing", 2) => {
+            compact.contains("fnshow_twice(name:&String){")
+                && compact.contains("show_twice(&name);")
+                && ran_ok
+                && output.contains("Oxide Oxide")
+        }
+        ("string-slices", 0) => {
+            compact.contains("fnshow_label(label:&str){")
+                && compact.contains("show_label(&label);")
+                && ran_ok
+                && output.contains("Label: Oxide")
+        }
+        ("string-slices", 1) => compact.contains("show_label(\"Rust\");") && ran_ok && output.contains("Label: Rust"),
+        ("string-slices", 2) => {
+            compact.contains("fnshout(text:&str){")
+                && compact.contains("shout(\"Go\");")
+                && ran_ok
+                && output.contains("Go!")
+        }
+        ("mutable-references", 0) => {
+            compact.contains("fnadd_point(score:&muti32){")
+                && compact.contains("*score+=1;")
+                && compact.contains("add_point(&mutscore);")
+                && ran_ok
+                && output.replace(' ', "").contains("Score:11")
+        }
+        ("mutable-references", 1) => {
+            !compact.contains("letmutscore=10;")
+                && compact.contains("add_point(&mutscore);")
+                && (has_code("E0596") || has_message("cannot borrow") || has_message("not declared as mutable"))
+        }
+        ("mutable-references", 2) => {
+            compact.contains("letmutscore=10;")
+                && compact.matches("add_point(&mutscore);").count() >= 2
+                && ran_ok
+                && output.replace(' ', "").contains("Score:12")
+        }
+        ("methods", 0) => {
+            compact.contains("implCounter{")
+                && compact.contains("fnshow(&self){")
+                && compact.contains("counter.show();")
+                && ran_ok
+                && output.replace(' ', "").contains("Count:3")
+        }
+        ("methods", 1) => {
+            compact.contains("fnadd_one(&mutself){")
+                && compact.contains("self.value+=1;")
+                && compact.contains("letmutcounter=Counter{")
+                && compact.contains("counter.add_one();")
+        }
+        ("methods", 2) => {
+            compact.matches("counter.add_one();").count() >= 2
+                && ran_ok
+                && output.replace(' ', "").contains("Count:5")
+        }
+        ("option", 0) => ran_ok && output.replace(' ', "").contains("Score:10"),
+        ("option", 1) => {
+            compact.contains("letscore:Option<i32>=None;")
+                && ran_ok
+                && output.contains("No score")
+        }
+        ("option", 2) => {
+            compact.contains("letlives=Some(3);")
+                && compact.contains("matchlives{")
+                && compact.contains("Some(value)=>")
+                && ran_ok
+                && output.replace(' ', "").contains("Lives:3")
+        }
+        ("result", 0) => ran_ok && output.replace(' ', "").contains("Number:42"),
+        ("result", 1) => compact.contains("\"notanumber\".parse::<i32>()") && ran_ok && output.contains("Could not parse"),
+        ("result", 2) => compact.contains("\"100\".parse::<i32>()") && ran_ok && output.replace(' ', "").contains("Number:100"),
+        ("hashmaps", 0) => {
+            compact.contains("HashMap::new();")
+                && ran_ok
+                && output.replace(' ', "").contains("Entries:0")
+        }
+        ("hashmaps", 1) => {
+            compact.contains("letmutscores:HashMap<&str,i32>=HashMap::new();")
+                && compact.contains("scores.insert(\"Quinn\",10);")
+                && ran_ok
+                && output.replace(' ', "").contains("Entries:1")
+        }
+        ("hashmaps", 2) => {
+            compact.contains("scores.get(\"Quinn\")")
+                && compact.contains("Some(score)=>")
+                && ran_ok
+                && output.replace(' ', "").contains("Quinn:10")
+        }
+        ("modules", 0) => ran_ok && output.contains("Hello from module!"),
+        ("modules", 1) => {
+            compact.contains("pubfngoodbye(){")
+                && compact.contains("println!(\"Goodbyefrommodule!\");")
+        }
+        ("modules", 2) => compact.contains("greetings::goodbye();") && ran_ok && output.contains("Goodbye from module!"),
+        ("user-input", 0) => {
+            compact.contains("letmutname=String::new();")
+                && compact.contains("std::io::stdin().read_line(&mutname).expect(")
+        }
+        ("user-input", 1) => {
+            compact.contains("letname=name.trim();")
+                && (compact.contains("println!(\"Hello,{name}!\");") || compact.contains("println!(\"Hello,{}!\",name);"))
+        }
+        ("user-input", 2) => ran_ok && output.contains("Hello, Quinn!"),
+        ("mini-calculator", 0) => {
+            compact.contains("letsecond=read_number(\"Secondnumber:\");")
+                && (compact.contains("println!(\"Second:{second}\");") || compact.contains("println!(\"Second:{}\",second);"))
+        },
+        ("mini-calculator", 1) => {
+            compact.contains("lettotal=first+second;")
+                && (compact.contains("println!(\"Total:{total}\");") || compact.contains("println!(\"Total:{}\",total);"))
+        }
+        ("mini-calculator", 2) => ran_ok && output.replace(' ', "").contains("Total:10"),
+        ("mini-calculator", 3) => ran_ok && output.replace(' ', "").contains("Total:10") && output.replace(' ', "").contains("Difference:-2"),
+        ("mini-scoreboard", 0) => {
+            compact.contains("letmutplayers=vec![")
+                && compact.contains("players.push(Player{")
+                && compact.contains("name:String::from(\"Oxide\")")
+                && compact.contains("score:20")
+        }
+        ("mini-scoreboard", 1) => {
+            compact.contains("forplayerin&players{")
+                && compact.contains("player.name")
+                && compact.contains("player.score")
+        }
+        ("mini-scoreboard", 2) => {
+            ran_ok
+                && output.replace(' ', "").contains("Quinn:10")
+                && output.replace(' ', "").contains("Oxide:20")
+        }
+        ("mini-scoreboard", 3) => {
+            compact.contains("ifplayer.score==20{")
+                && ran_ok
+                && output.contains("Winner: Oxide")
+        }
+        _ => false
     };
 
     TutorialEvaluationResult {

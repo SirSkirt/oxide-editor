@@ -1,4 +1,40 @@
-# Oxide Editor B1.2.2
+# Oxide Editor B1.3.0
+
+## B1.3.0 tutorial expansion
+
+The Beginner course now contains **26 real Cargo lessons**. B1.3.0 expands the course from isolated fundamentals into practical Rust building blocks and small projects. New lessons added across this milestone include:
+
+- Give Functions Input — parameters and arguments
+- Get Values Back — return types and returned expressions
+- Make Decisions — `if`, `else`, and comparisons
+- Repeat Work — `for`, ranges, and `while`
+- Build Text — owned `String` values and methods
+- Store a List of Values — `Vec`, indexing, and `push`
+- Group Related Data — structs and fields
+- Choose Between Possibilities — enums and `match`
+- Break It: Ownership — moves, real rustc E0382, and `clone`
+- Borrow Instead of Move — shared references and reusable borrows
+- Borrow Just the Text — idiomatic `&str` string slices
+- Borrow It and Change It — `&mut`, dereferencing, and real mutable-borrow errors
+- Give a Struct Behavior — `impl`, `&self`, and `&mut self` methods
+- A Value Might Be Missing — `Option`, `Some`, and `None`
+- Success or Failure — `Result`, `Ok`, `Err`, and parsing
+- Look Up Values by Name — `HashMap`, insertion, lookup, and `Option` results
+- Organize Code into Modules — `mod`, `pub`, and module paths
+- Talk to the Program — real interactive stdin through the Oxide Run Terminal
+- Mini Project: Calculator — input, parsing, functions, arithmetic, and a reduced-guidance challenge
+- Mini Project: Scoreboard — structs, vectors, borrowing, loops, conditions, and another reduced-guidance challenge
+
+Every new lesson follows Oxide's tutorial rule: **small example → one short explanation for each new piece of syntax → Now You Try → real compiler/run verification**. Completed activities still wait for the learner to press **Next Step**, and deeper explanations remain optional behind **Learn More**.
+
+The tutorial continues to use normal Oxide Cargo projects, the normal editor, live rustc diagnostics, Build Bay, and the normal Run Terminal. No separate tutorial parser, fake compiler, or second editor was added.
+
+## B1.3.0 Windows release behavior
+
+- Windows release builds now use the GUI subsystem, so installed/release copies of Oxide launch without a Command Prompt window sitting behind the editor.
+- Debug builds remain console-friendly for development.
+- This change ships in the same B1.3.0 GitHub release as the tutorial expansion.
+
 
 ## B1.2.2 editor indentation patch
 
@@ -73,8 +109,8 @@ npm run tauri build
 
 ## Versioning
 
-- Package/build version: `1.2.2`
-- User-facing version: **B1.2.2**
+- Package/build version: `1.3.0`
+- User-facing version: **B1.3.0**
 
 ## Notes on live checking
 
@@ -96,7 +132,7 @@ The startup layout now uses an explicitly single-column application grid. The on
 - Existing activities follow the short teaching standard, with deeper detail behind **Learn More**.
 - A completed activity now waits for the learner to press **Next Step**, so the explanation remains on screen for re-reading.
 - Completed lessons expose a direct **Next Lesson** action, and active lessons retain **Tutorial Home** and checkpoint restore controls.
-- Beginner now includes: Hello Rust, Variables, Warnings vs Errors, Mutability, Basic Data Types, and Functions.
+- Beginner now includes 26 lessons, from Hello Rust and Variables through functions, control flow, collections, structs/enums, ownership/borrowing, Option/Result, modules, interactive input, and small combined projects.
 - The Warnings vs Errors lesson intentionally demonstrates that warnings still build while errors block compilation.
 
 The intended pacing is: **see it, understand the minimum needed, use it immediately**. Longer explanations are optional rather than blocking the activity.

@@ -160,7 +160,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">OXIDE EDITOR · B1.2.2-U</div>
+        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.0</div>
         <h1>Welcome to the Oxide Editor</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -260,7 +260,7 @@ app.innerHTML = `
       <span id="file-status">NO FILE</span>
       <span id="analysis-status">RUST CHECK: IDLE</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>OXIDE B1.2.2-U</span>
+      <span>OXIDE B1.3.0</span>
     </footer>
   </main>
 
@@ -324,7 +324,7 @@ app.innerHTML = `
       </div>
       <div class="tutorial-course-grid">
         <section class="tutorial-course-card">
-          <div class="tutorial-course-head"><span>BEGINNER</span><small>NEW TO RUST</small></div>
+          <div class="tutorial-course-head"><span>BEGINNER</span><small id="tutorial-beginner-meta">NEW TO RUST</small></div>
           <p>Short explanations followed by real coding, deliberate mistakes, fixes, runs, and challenges.</p>
           <div id="tutorial-beginner-lessons" class="tutorial-lesson-list"></div>
         </section>
@@ -364,7 +364,7 @@ app.innerHTML = `
   <dialog id="update-dialog" class="oxide-dialog update-dialog">
     <div class="dialog-head"><div><span>OXIDE UPDATE</span><small>AUTOMATIC UPDATE SERVICE</small></div><button type="button" id="update-close" class="dialog-close" aria-label="Close">×</button></div>
     <div class="update-body">
-      <div class="update-version-row"><span id="update-current-version">CURRENT 1.2.3</span><b>→</b><strong id="update-new-version">NEW VERSION</strong></div>
+      <div class="update-version-row"><span id="update-current-version">CURRENT 1.3.0</span><b>→</b><strong id="update-new-version">NEW VERSION</strong></div>
       <div id="update-release-date" class="update-release-date"></div>
       <div class="update-notes-title">WHAT CHANGED</div>
       <div id="update-notes" class="update-notes">Release notes are unavailable.</div>
@@ -472,6 +472,7 @@ const els = {
   runDetection: $('#run-detection'),
   tutorialDialog: $('#tutorial-dialog'),
   tutorialBeginnerLessons: $('#tutorial-beginner-lessons'),
+  tutorialBeginnerMeta: $('#tutorial-beginner-meta'),
   tutorialAdvancedTopics: $('#tutorial-advanced-topics'),
   tutorialCapabilitySummary: $('#tutorial-capability-summary'),
   tutorialPanel: $('#tutorial-panel'),
@@ -1643,6 +1644,7 @@ function tutorialCapabilitySummary() {
 
 function renderTutorialHome() {
   const beginner = state.tutorial.catalog?.beginner || [];
+  els.tutorialBeginnerMeta.textContent = `${beginner.length} LESSONS · NEW TO RUST`;
   els.tutorialBeginnerLessons.innerHTML = beginner.map((lesson, index) => {
     const progress = lessonProgress(lesson.id);
     const status = progress.completed ? 'COMFORTABLE' : progress.completed_steps > 0 ? 'LEARNING' : 'NOT STARTED';
@@ -2021,7 +2023,7 @@ function resetUpdateDialog() {
 function showUpdatePrompt(update) {
   state.updater.pending = update;
   resetUpdateDialog();
-  els.updateCurrentVersion.textContent = `CURRENT ${escapeHtml(update.currentVersion || '1.2.3')}`;
+  els.updateCurrentVersion.textContent = `CURRENT ${escapeHtml(update.currentVersion || '1.3.0')}`;
   els.updateNewVersion.textContent = `VERSION ${update.version}`;
   els.updateReleaseDate.textContent = update.date ? `Published ${update.date}` : 'A newer Oxide build is available.';
   els.updateNotes.textContent = update.body?.trim() || 'This release does not include update notes.';
@@ -2121,7 +2123,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.2.2-U</span><p>A Rust-first workbench with Cargo project management, compiler diagnostics, automatic signed updates, a floating interactive Run Terminal, hands-on Rust tutorial foundations, and an interface designed around explicit Rust workflows.</p></div>`);
+  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.0</span><p>A Rust-first workbench with Cargo project management, compiler diagnostics, automatic signed updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
 }
 
 function showShortcuts() {
