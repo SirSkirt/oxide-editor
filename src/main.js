@@ -160,7 +160,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.0</div>
+        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.1</div>
         <h1>Welcome to the Oxide Editor</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -260,7 +260,7 @@ app.innerHTML = `
       <span id="file-status">NO FILE</span>
       <span id="analysis-status">RUST CHECK: IDLE</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>OXIDE B1.3.0</span>
+      <span>OXIDE B1.3.1</span>
     </footer>
   </main>
 
@@ -320,7 +320,7 @@ app.innerHTML = `
     <div class="tutorial-home">
       <div class="tutorial-home-intro">
         <strong>Write code first. Read only when it helps.</strong>
-        <p>Lessons use Oxide's real editor, Cargo projects, rustc diagnostics, Build Bay, and Run Terminal. There is no tutorial-only compiler hiding behind the curtain.</p>
+        <p>Lessons use Oxide's real editor, Cargo projects, rustc diagnostics, Build Bay, and Run Terminal. There is no tutorial-only compiler hiding behind the curtain. Challenge steps accept multiple valid solutions when they demonstrate the requested concept and result.</p>
       </div>
       <div class="tutorial-course-grid">
         <section class="tutorial-course-card">
@@ -1700,7 +1700,12 @@ function renderTutorialPanel() {
   els.tutorialLearnMore.hidden = false;
   els.tutorialLearnMoreText.hidden = true;
   els.tutorialLearnMore.textContent = 'LEARN MORE';
-  els.tutorialFeedback.textContent = step.run_required ? 'When the code is ready, use Oxide’s normal Run button.' : 'Write directly in the real editor. Oxide will recognize the objective.';
+  const flexibleChallenge = step.id.toLowerCase().includes('challenge');
+  els.tutorialFeedback.textContent = flexibleChallenge
+    ? '◆ Multiple solutions accepted. Oxide checks the concept and result, not your exact names or layout.'
+    : step.run_required
+      ? 'When the code is ready, use Oxide’s normal Run button.'
+      : 'Write directly in the real editor. Oxide will recognize the objective.';
   els.tutorialFeedback.classList.remove('success');
   els.tutorialExperimentNote.hidden = true;
 }
@@ -1801,9 +1806,12 @@ async function evaluateTutorialStep() {
     }
     els.tutorialFeedback.classList.remove('success');
     const step = currentTutorialStep();
+    const flexibleChallenge = step.id.toLowerCase().includes('challenge');
     els.tutorialFeedback.textContent = step.run_required && state.tutorial.runSuccess == null
       ? 'Code is yours to experiment with. Run it when you want Oxide to verify the result.'
-      : result.feedback;
+      : flexibleChallenge
+        ? 'Not quite there yet. Multiple solutions are valid — focus on the requested behavior and concept rather than matching Oxide’s example exactly.'
+        : result.feedback;
     els.tutorialExperimentNote.hidden = els.editor.value === state.tutorial.checkpoint;
   } catch (error) {
     els.tutorialFeedback.textContent = `Tutorial tracker could not check this step: ${error}`;
@@ -2023,7 +2031,7 @@ function resetUpdateDialog() {
 function showUpdatePrompt(update) {
   state.updater.pending = update;
   resetUpdateDialog();
-  els.updateCurrentVersion.textContent = `CURRENT ${escapeHtml(update.currentVersion || '1.3.0')}`;
+  els.updateCurrentVersion.textContent = `CURRENT ${escapeHtml(update.currentVersion || '1.3.1')}`;
   els.updateNewVersion.textContent = `VERSION ${update.version}`;
   els.updateReleaseDate.textContent = update.date ? `Published ${update.date}` : 'A newer Oxide build is available.';
   els.updateNotes.textContent = update.body?.trim() || 'This release does not include update notes.';
@@ -2123,7 +2131,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.0</span><p>A Rust-first workbench with Cargo project management, compiler diagnostics, automatic signed updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
+  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.1</span><p>A Rust-first workbench with Cargo project management, compiler diagnostics, automatic signed updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
 }
 
 function showShortcuts() {

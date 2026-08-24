@@ -1,8 +1,8 @@
-# Oxide Editor B1.3.0
+# Oxide Editor B1.3.1
 
-## B1.3.0 tutorial expansion
+## B1.3.1 tutorial expansion
 
-The Beginner course now contains **26 real Cargo lessons**. B1.3.0 expands the course from isolated fundamentals into practical Rust building blocks and small projects. New lessons added across this milestone include:
+The Beginner course now contains **26 real Cargo lessons**. B1.3.1 expands the course from isolated fundamentals into practical Rust building blocks and small projects. New lessons added across this milestone include:
 
 - Give Functions Input — parameters and arguments
 - Get Values Back — return types and returned expressions
@@ -29,11 +29,19 @@ Every new lesson follows Oxide's tutorial rule: **small example → one short ex
 
 The tutorial continues to use normal Oxide Cargo projects, the normal editor, live rustc diagnostics, Build Bay, and the normal Run Terminal. No separate tutorial parser, fake compiler, or second editor was added.
 
-## B1.3.0 Windows release behavior
+
+## B1.3.1 tutorial evaluator polish
+
+- Tutorial output matching is now case-insensitive unless capitalization is explicitly part of a future lesson objective.
+- Answers such as `High score`, `High Score`, and `HIGH SCORE` are treated as the same observable result.
+- Rust source code itself remains case-sensitive; this normalization applies only to lesson output verification.
+- Challenge evaluators continue to accept multiple valid implementations when the required concept and result are demonstrated.
+
+## B1.3.1 Windows release behavior
 
 - Windows release builds now use the GUI subsystem, so installed/release copies of Oxide launch without a Command Prompt window sitting behind the editor.
 - Debug builds remain console-friendly for development.
-- This change ships in the same B1.3.0 GitHub release as the tutorial expansion.
+- This change ships in the same B1.3.1 GitHub release as the tutorial expansion.
 
 
 ## B1.2.2 editor indentation patch
@@ -109,8 +117,8 @@ npm run tauri build
 
 ## Versioning
 
-- Package/build version: `1.3.0`
-- User-facing version: **B1.3.0**
+- Package/build version: `1.3.1`
+- User-facing version: **B1.3.1**
 
 ## Notes on live checking
 

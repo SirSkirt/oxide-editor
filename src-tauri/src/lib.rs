@@ -1598,7 +1598,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "function-challenge",
                     "Challenge: make another one",
                     "Reuse the function pattern without another worked example.",
-                    "Create a function named cheer that prints You can do this!, call it from main, and Run the program.",
+                    "Create another function that prints You can do this!, call it from main, and Run the program. You choose the function name.",
                     "This challenge asks you to transfer the same structure to a new function instead of copying a new worked answer. That gradual reduction in guidance is how later Oxide lessons will build independence.",
                     true,
                 ),
@@ -1639,7 +1639,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "parameter-challenge",
                     "Challenge: reuse it",
                     "The same function can work with another argument without changing its definition.",
-                    "Add a second call using 25 and Run again so Score: 25 appears too.",
+                    "Reuse the parameterized function with 25 and Run again so Score: 25 appears too. You can rename your function or parameter if you want; the result is what matters here.",
                     "Reusable functions are one of the main reasons parameters exist. The behavior stays in one place while each call supplies the data that changes.",
                     true,
                 ),
@@ -1680,7 +1680,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "return-challenge",
                     "Challenge: double it",
                     "Use the same parameter-and-return pattern for a different calculation.",
-                    "Create double(number: i32) -> i32 that returns number * 2, call double(6), and print 12.",
+                    "Create another function that takes an i32 and returns twice that value. Call it with 6 and make the program print 12. You choose the function and variable names.",
                     "This is the same structure as add_one with a different expression. Learning to recognize reusable shapes is more useful than memorizing individual examples.",
                     true,
                 ),
@@ -2570,30 +2570,35 @@ fn compact_source(source: &str) -> String {
 fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationResult {
     let compact = compact_source(&request.source);
     let output = request.run_output.replace('\r', "");
+    // Tutorial output comparisons are intentionally case-insensitive unless a
+    // future lesson explicitly teaches capitalization. Rust source itself stays
+    // case-sensitive; only the observable program output is normalized here.
+    let output_lower = output.to_lowercase();
+    let output_compact_lower: String = output_lower.chars().filter(|character| !character.is_whitespace()).collect();
     let ran_ok = request.run_success == Some(true);
     let has_code = |code: &str| request.diagnostic_codes.iter().any(|item| item.eq_ignore_ascii_case(code));
     let has_message = |needle: &str| request.diagnostic_messages.iter().any(|item| item.to_lowercase().contains(&needle.to_lowercase()));
     let has_level = |level: &str| request.diagnostic_levels.iter().any(|item| item.eq_ignore_ascii_case(level));
 
     let complete = match (request.lesson_id.as_str(), request.step_index) {
-        ("hello-world", 0) => ran_ok && output.contains("Hello, world!"),
-        ("hello-world", 1) => compact.contains("println!(\"Hello,Oxide!\");") && ran_ok && output.contains("Hello, Oxide!"),
+        ("hello-world", 0) => ran_ok && output_lower.contains("hello, world!"),
+        ("hello-world", 1) => compact.contains("println!(\"Hello,Oxide!\");") && ran_ok && output_lower.contains("hello, oxide!"),
         ("variables", 0) => compact.contains("letname") && compact.contains("=\"Quinn\";"),
         ("variables", 1) => {
             compact.contains("println!(\"{name}\");")
                 || compact.contains("println!(\"{}\",name);")
                 || (compact.contains("println!(") && compact.contains(",name);"))
         }
-        ("variables", 2) => ran_ok && output.contains("Quinn"),
+        ("variables", 2) => ran_ok && output_lower.contains("quinn"),
         ("variables", 3) => {
             compact.contains("letscore")
                 && compact.contains("=10;")
                 && (compact.contains("{score}") || compact.contains(",score)"))
                 && ran_ok
-                && output.contains("10")
+                && output_lower.contains("10")
         }
         ("warnings-errors", 0) => {
-            has_level("warning") && has_message("unused variable") && ran_ok && output.contains("Program still runs.")
+            has_level("warning") && has_message("unused variable") && ran_ok && output_lower.contains("program still runs.")
         }
         ("warnings-errors", 1) => {
             compact.contains("letmessage=\"Hello\"")
@@ -2606,90 +2611,95 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
                 && !has_level("error")
                 && !has_message("unused variable")
                 && ran_ok
-                && output.contains("Hello")
+                && output_lower.contains("hello")
         }
-        ("mutability", 0) => ran_ok && output.contains("Starting score: 10") && output.contains("Score: 11"),
+        ("mutability", 0) => ran_ok && output_lower.contains("starting score: 10") && output_lower.contains("score: 11"),
         ("mutability", 1) => {
             !(compact.contains("letmutscore") && compact.contains("=10;"))
                 && (has_code("E0384") || has_message("cannot assign twice to immutable variable") || has_message("immutable"))
         }
-        ("mutability", 2) => compact.contains("letmutscore") && compact.contains("=10;") && ran_ok && output.contains("Score: 11"),
+        ("mutability", 2) => compact.contains("letmutscore") && compact.contains("=10;") && ran_ok && output_lower.contains("score: 11"),
         ("basic-types", 0) => compact.contains("letlives=3;"),
         ("basic-types", 1) => compact.contains("letready=true;"),
         ("basic-types", 2) => {
-            ran_ok && output.contains("Lives: 3") && output.to_lowercase().contains("ready: true")
+            ran_ok && output_lower.contains("lives: 3") && output.to_lowercase().contains("ready: true")
         }
         ("functions", 0) => {
             compact.contains("fngreet(){") && compact.contains("println!(\"Hello!\");")
         }
-        ("functions", 1) => compact.contains("greet();") && ran_ok && output.contains("Hello!"),
+        ("functions", 1) => compact.contains("greet();") && ran_ok && output_lower.contains("hello!"),
         ("functions", 2) => {
-            compact.contains("fncheer(){")
-                && compact.contains("cheer();")
+            // Challenge steps are outcome-first: require the concept (a second function)
+            // and the expected behavior, but do not require Oxide's suggested identifier.
+            compact.matches("fn").count() >= 2
                 && ran_ok
-                && output.contains("You can do this!")
+                && output_lower.contains("you can do this!")
         }
         ("parameters", 0) => {
             compact.contains("fnshow_score(score:i32){")
                 && compact.contains("println!(\"Score:{score}\");")
         }
-        ("parameters", 1) => compact.contains("show_score(10);") && ran_ok && output.contains("Score: 10"),
-        ("parameters", 2) => compact.contains("show_score(25);") && ran_ok && output.contains("Score: 25"),
+        ("parameters", 1) => compact.contains("show_score(10);") && ran_ok && output_lower.contains("score: 10"),
+        ("parameters", 2) => {
+            compact.contains(":i32")
+                && compact.contains("(25)")
+                && ran_ok
+                && output_lower.contains("score: 25")
+        },
         ("return-values", 0) => {
             compact.contains("fnadd_one(number:i32)->i32{") && compact.contains("number+1}")
         }
         ("return-values", 1) => {
             compact.contains("letresult=add_one(4);")
                 && ran_ok
-                && output.replace(' ', "").contains("Result:5")
+                && output_compact_lower.contains("result:5")
         }
         ("return-values", 2) => {
-            compact.contains("fndouble(number:i32)->i32{")
-                && compact.contains("number*2}")
-                && compact.contains("double(6)")
+            // Accept double(), create_double(), twice(), etc. The learner must still
+            // demonstrate the return-value concept instead of merely printing 12.
+            compact.matches("->i32{").count() >= 2
+                && compact.contains("*2")
+                && compact.contains("(6)")
                 && ran_ok
-                && output.contains("12")
+                && output_lower.contains("12")
         }
-        ("conditions", 0) => compact.contains("ifscore>=10{") && ran_ok && output.contains("High score!"),
-        ("conditions", 1) => compact.contains("letscore=5;") && compact.contains("else{") && ran_ok && output.contains("Low score"),
+        ("conditions", 0) => compact.contains("ifscore>=10{") && ran_ok && output_lower.contains("high score!"),
+        ("conditions", 1) => compact.contains("letscore=5;") && compact.contains("else{") && ran_ok && output_lower.contains("low score"),
         ("conditions", 2) => {
-            compact.contains("letlives=0;")
-                && compact.contains("iflives==0{")
+            compact.contains("if")
                 && ran_ok
-                && output.contains("Game over")
+                && output_lower.contains("game over")
         }
         ("loops", 0) => {
             compact.contains("fornumberin1..=3{")
                 && ran_ok
-                && output.contains("Number: 1")
-                && output.contains("Number: 2")
-                && output.contains("Number: 3")
+                && output_lower.contains("number: 1")
+                && output_lower.contains("number: 2")
+                && output_lower.contains("number: 3")
         }
         ("loops", 1) => {
             compact.contains("letmutcount=1;")
                 && compact.contains("whilecount<=3{")
                 && compact.contains("count+=1;")
                 && ran_ok
-                && output.contains("Count: 1")
-                && output.contains("Count: 3")
+                && output_lower.contains("count: 1")
+                && output_lower.contains("count: 3")
         }
         ("loops", 2) => {
-            compact.contains("fornumberin4..=6{")
+            (compact.contains("for") || compact.contains("while"))
                 && ran_ok
-                && output.contains("Number: 4")
-                && output.contains("Number: 6")
+                && output_lower.contains("number: 4")
+                && output_lower.contains("number: 6")
         }
         ("strings", 0) => compact.contains("letmutmessage=String::from(\"Hello\");"),
         ("strings", 1) => compact.contains("message.push_str(\",Oxide!\");"),
-        ("strings", 2) => ran_ok && output.contains("Hello, Oxide!"),
+        ("strings", 2) => ran_ok && output_lower.contains("hello, oxide!"),
         ("vectors", 0) => compact.contains("letscores=vec![10,20,30];") || compact.contains("letmutscores=vec![10,20,30];"),
-        ("vectors", 1) => compact.contains("scores[0]") && ran_ok && output.replace(' ', "").contains("First:10"),
+        ("vectors", 1) => compact.contains("scores[0]") && ran_ok && output_compact_lower.contains("first:10"),
         ("vectors", 2) => {
-            compact.contains("letmutscores=vec![10,20,30];")
-                && compact.contains("scores.push(40);")
-                && compact.contains("scores[3]")
+            compact.contains(".push(40)")
                 && ran_ok
-                && output.replace(' ', "").contains("Last:40")
+                && output_compact_lower.contains("last:40")
         }
         ("structs", 0) => {
             compact.contains("structPlayer{")
@@ -2702,10 +2712,10 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
                 && compact.contains("score:10")
         }
         ("structs", 2) => {
-            compact.contains("player.name")
-                && compact.contains("player.score")
+            compact.contains(".name")
+                && compact.contains(".score")
                 && ran_ok
-                && output.replace(' ', "").contains("Quinn:10")
+                && output_compact_lower.contains("quinn:10")
         }
         ("enums-match", 0) => {
             compact.contains("enumDirection{") && compact.contains("Left,") && compact.contains("Right,")
@@ -2716,10 +2726,10 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
                 && compact.contains("Direction::Left=>")
                 && compact.contains("Direction::Right=>")
                 && ran_ok
-                && output.contains("Going left")
+                && output_lower.contains("going left")
         }
-        ("enums-match", 3) => compact.contains("letdirection=Direction::Right;") && ran_ok && output.contains("Going right"),
-        ("ownership", 0) => ran_ok && output.contains("Oxide"),
+        ("enums-match", 3) => compact.contains("match") && ran_ok && output_lower.contains("going right"),
+        ("ownership", 0) => ran_ok && output_lower.contains("oxide"),
         ("ownership", 1) => {
             compact.contains("letmoved_name=name;")
                 && compact.contains("println!(\"Original:{name}\");")
@@ -2730,40 +2740,40 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
                 && compact.contains("println!(\"Original:{name}\");")
                 && !has_level("error")
                 && ran_ok
-                && output.contains("Oxide")
+                && output_lower.contains("oxide")
         }
-        ("borrowing", 0) => compact.contains("show_name(&name);") && ran_ok && output.contains("Borrowed: Oxide"),
+        ("borrowing", 0) => compact.contains("show_name(&name);") && ran_ok && output_lower.contains("borrowed: oxide"),
         ("borrowing", 1) => {
             compact.contains("println!(\"Stillmine:{name}\");")
                 && ran_ok
-                && output.contains("Borrowed: Oxide")
-                && output.contains("Still mine: Oxide")
+                && output_lower.contains("borrowed: oxide")
+                && output_lower.contains("still mine: oxide")
         }
         ("borrowing", 2) => {
-            compact.contains("fnshow_twice(name:&String){")
-                && compact.contains("show_twice(&name);")
+            compact.contains("&String")
+                && compact.matches("fn").count() >= 2
                 && ran_ok
-                && output.contains("Oxide Oxide")
+                && output_lower.contains("oxide oxide")
         }
         ("string-slices", 0) => {
             compact.contains("fnshow_label(label:&str){")
                 && compact.contains("show_label(&label);")
                 && ran_ok
-                && output.contains("Label: Oxide")
+                && output_lower.contains("label: oxide")
         }
-        ("string-slices", 1) => compact.contains("show_label(\"Rust\");") && ran_ok && output.contains("Label: Rust"),
+        ("string-slices", 1) => compact.contains("show_label(\"Rust\");") && ran_ok && output_lower.contains("label: rust"),
         ("string-slices", 2) => {
-            compact.contains("fnshout(text:&str){")
-                && compact.contains("shout(\"Go\");")
+            compact.contains("&str")
+                && compact.matches("fn").count() >= 2
                 && ran_ok
-                && output.contains("Go!")
+                && output_lower.contains("go!")
         }
         ("mutable-references", 0) => {
             compact.contains("fnadd_point(score:&muti32){")
                 && compact.contains("*score+=1;")
                 && compact.contains("add_point(&mutscore);")
                 && ran_ok
-                && output.replace(' ', "").contains("Score:11")
+                && output_compact_lower.contains("score:11")
         }
         ("mutable-references", 1) => {
             !compact.contains("letmutscore=10;")
@@ -2771,17 +2781,16 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
                 && (has_code("E0596") || has_message("cannot borrow") || has_message("not declared as mutable"))
         }
         ("mutable-references", 2) => {
-            compact.contains("letmutscore=10;")
-                && compact.matches("add_point(&mutscore);").count() >= 2
+            compact.contains("&mut")
                 && ran_ok
-                && output.replace(' ', "").contains("Score:12")
+                && output_compact_lower.contains("score:12")
         }
         ("methods", 0) => {
             compact.contains("implCounter{")
                 && compact.contains("fnshow(&self){")
                 && compact.contains("counter.show();")
                 && ran_ok
-                && output.replace(' ', "").contains("Count:3")
+                && output_compact_lower.contains("count:3")
         }
         ("methods", 1) => {
             compact.contains("fnadd_one(&mutself){")
@@ -2790,49 +2799,49 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
                 && compact.contains("counter.add_one();")
         }
         ("methods", 2) => {
-            compact.matches("counter.add_one();").count() >= 2
+            compact.contains("implCounter{")
+                && compact.contains("&mutself")
                 && ran_ok
-                && output.replace(' ', "").contains("Count:5")
+                && output_compact_lower.contains("count:5")
         }
-        ("option", 0) => ran_ok && output.replace(' ', "").contains("Score:10"),
+        ("option", 0) => ran_ok && output_compact_lower.contains("score:10"),
         ("option", 1) => {
             compact.contains("letscore:Option<i32>=None;")
                 && ran_ok
-                && output.contains("No score")
+                && output_lower.contains("no score")
         }
         ("option", 2) => {
-            compact.contains("letlives=Some(3);")
-                && compact.contains("matchlives{")
-                && compact.contains("Some(value)=>")
+            compact.contains("Some(3)")
+                && compact.contains("match")
                 && ran_ok
-                && output.replace(' ', "").contains("Lives:3")
+                && output_compact_lower.contains("lives:3")
         }
-        ("result", 0) => ran_ok && output.replace(' ', "").contains("Number:42"),
-        ("result", 1) => compact.contains("\"notanumber\".parse::<i32>()") && ran_ok && output.contains("Could not parse"),
-        ("result", 2) => compact.contains("\"100\".parse::<i32>()") && ran_ok && output.replace(' ', "").contains("Number:100"),
+        ("result", 0) => ran_ok && output_compact_lower.contains("number:42"),
+        ("result", 1) => compact.contains("\"notanumber\".parse::<i32>()") && ran_ok && output_lower.contains("could not parse"),
+        ("result", 2) => compact.contains("parse::<i32>()") && compact.contains("100") && ran_ok && output_compact_lower.contains("number:100"),
         ("hashmaps", 0) => {
             compact.contains("HashMap::new();")
                 && ran_ok
-                && output.replace(' ', "").contains("Entries:0")
+                && output_compact_lower.contains("entries:0")
         }
         ("hashmaps", 1) => {
             compact.contains("letmutscores:HashMap<&str,i32>=HashMap::new();")
                 && compact.contains("scores.insert(\"Quinn\",10);")
                 && ran_ok
-                && output.replace(' ', "").contains("Entries:1")
+                && output_compact_lower.contains("entries:1")
         }
         ("hashmaps", 2) => {
             compact.contains("scores.get(\"Quinn\")")
                 && compact.contains("Some(score)=>")
                 && ran_ok
-                && output.replace(' ', "").contains("Quinn:10")
+                && output_compact_lower.contains("quinn:10")
         }
-        ("modules", 0) => ran_ok && output.contains("Hello from module!"),
+        ("modules", 0) => ran_ok && output_lower.contains("hello from module!"),
         ("modules", 1) => {
             compact.contains("pubfngoodbye(){")
                 && compact.contains("println!(\"Goodbyefrommodule!\");")
         }
-        ("modules", 2) => compact.contains("greetings::goodbye();") && ran_ok && output.contains("Goodbye from module!"),
+        ("modules", 2) => compact.contains("::") && ran_ok && output_lower.contains("goodbye from module!"),
         ("user-input", 0) => {
             compact.contains("letmutname=String::new();")
                 && compact.contains("std::io::stdin().read_line(&mutname).expect(")
@@ -2841,7 +2850,7 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
             compact.contains("letname=name.trim();")
                 && (compact.contains("println!(\"Hello,{name}!\");") || compact.contains("println!(\"Hello,{}!\",name);"))
         }
-        ("user-input", 2) => ran_ok && output.contains("Hello, Quinn!"),
+        ("user-input", 2) => ran_ok && output_lower.contains("hello, quinn!"),
         ("mini-calculator", 0) => {
             compact.contains("letsecond=read_number(\"Secondnumber:\");")
                 && (compact.contains("println!(\"Second:{second}\");") || compact.contains("println!(\"Second:{}\",second);"))
@@ -2850,8 +2859,8 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
             compact.contains("lettotal=first+second;")
                 && (compact.contains("println!(\"Total:{total}\");") || compact.contains("println!(\"Total:{}\",total);"))
         }
-        ("mini-calculator", 2) => ran_ok && output.replace(' ', "").contains("Total:10"),
-        ("mini-calculator", 3) => ran_ok && output.replace(' ', "").contains("Total:10") && output.replace(' ', "").contains("Difference:-2"),
+        ("mini-calculator", 2) => ran_ok && output_compact_lower.contains("total:10"),
+        ("mini-calculator", 3) => ran_ok && output_compact_lower.contains("total:10") && output_compact_lower.contains("difference:-2"),
         ("mini-scoreboard", 0) => {
             compact.contains("letmutplayers=vec![")
                 && compact.contains("players.push(Player{")
@@ -2865,13 +2874,11 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
         }
         ("mini-scoreboard", 2) => {
             ran_ok
-                && output.replace(' ', "").contains("Quinn:10")
-                && output.replace(' ', "").contains("Oxide:20")
+                && output_compact_lower.contains("quinn:10")
+                && output_compact_lower.contains("oxide:20")
         }
         ("mini-scoreboard", 3) => {
-            compact.contains("ifplayer.score==20{")
-                && ran_ok
-                && output.contains("Winner: Oxide")
+            ran_ok && output_lower.contains("winner: oxide")
         }
         _ => false
     };

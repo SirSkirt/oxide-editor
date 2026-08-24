@@ -1,6 +1,6 @@
 [package]
 name = "oxide-editor"
-version = "1.3.0"
+version = "1.3.1"
 description = "Oxide Editor - a Rust-first Cargo workbench"
 authors = ["Oxide Editor contributors"]
 edition = "2021"
