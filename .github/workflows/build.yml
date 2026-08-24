@@ -21,9 +21,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: |
+            ./src-tauri -> target
+            ./updater/src-tauri -> target
       - name: Install frontend dependencies
         run: npm install
+      - name: Build and stage updater helper
+        run: npm run prepare:updater
       - name: Build frontend
         run: npm run build
       - name: Check Rust backend

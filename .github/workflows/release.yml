@@ -28,45 +28,181 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
-      - name: Cache Rust build
+      - name: Cache Rust builds
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: |
+            ./src-tauri -> target
+            ./updater/src-tauri -> target
 
       - name: Install frontend dependencies
         run: npm install
 
-      - name: Verify updater signing configuration
+      - name: Verify signing configuration
         shell: pwsh
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
           $config = Get-Content 'src-tauri/tauri.conf.json' -Raw | ConvertFrom-Json
           if ($config.plugins.updater.pubkey -eq 'OXIDE_UPDATER_PUBLIC_KEY_NOT_CONFIGURED') {
-            throw 'Updater public key is not configured. Run scripts/setup-updater.ps1 locally, commit the public-key config, and add the private key to GitHub Actions secrets.'
+            throw 'Updater public key is not configured. Run scripts/setup-updater.ps1 locally and commit tauri.conf.json.'
           }
           if (-not $env:TAURI_SIGNING_PRIVATE_KEY) {
             throw 'Missing TAURI_SIGNING_PRIVATE_KEY repository secret.'
           }
 
-      - name: Build, sign, and publish release
-        uses: tauri-apps/tauri-action@v1
+      - name: Read release version
+        id: version
+        shell: pwsh
+        run: |
+          $package = Get-Content 'package.json' -Raw | ConvertFrom-Json
+          "version=$($package.version)" >> $env:GITHUB_OUTPUT
+          "display=$($package.displayVersion)" >> $env:GITHUB_OUTPUT
+          "tag=v$($package.version)" >> $env:GITHUB_OUTPUT
+
+      - name: Build and stage Oxide Update Service
+        run: npm run prepare:updater
+
+      - name: Build Oxide and installer
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tagName: v__VERSION__
-          releaseName: 'Oxide Editor v__VERSION__'
-          releaseBody: |
-            Automated Oxide Editor release.
+        run: npm run tauri build -- --config src-tauri/tauri.release.conf.json
 
-            The NSIS installer can be used for a new installation, while existing updater-enabled Oxide installations will receive this release through the built-in update checker.
-          releaseDraft: false
-          prerelease: false
-          updaterJsonPreferNsis: true
-          uploadUpdaterJson: true
-          uploadUpdaterSignatures: true
-          uploadWorkflowArtifacts: true
-          workflowArtifactNamePattern: 'oxide-[platform]-[arch]-[bundle]'
-          args: --config src-tauri/tauri.release.conf.json
+      - name: Create signed Oxide update package
+        id: package
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          OXIDE_VERSION: ${{ steps.version.outputs.version }}
+          OXIDE_DISPLAY_VERSION: ${{ steps.version.outputs.display }}
+          OXIDE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $releaseDir = Join-Path $PWD 'release-assets'
+          $stageDir = Join-Path $releaseDir 'update-package'
+          New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
+
+          $editorExe = Join-Path $PWD 'src-tauri\target\release\oxide-editor.exe'
+          $updaterExe = Join-Path $PWD 'updater\src-tauri\target\release\oxide-updater.exe'
+          if (-not (Test-Path $editorExe)) { throw "Missing built editor executable: $editorExe" }
+          if (-not (Test-Path $updaterExe)) { throw "Missing built updater executable: $updaterExe" }
+
+          Copy-Item $editorExe (Join-Path $stageDir 'oxide-editor.exe')
+          Copy-Item $updaterExe (Join-Path $stageDir 'oxide-updater.exe')
+
+          $packageManifest = [ordered]@{
+            format = 1
+            version = $env:OXIDE_VERSION
+            display_version = $env:OXIDE_DISPLAY_VERSION
+            platform = 'windows-x86_64'
+            files = @('oxide-editor.exe', 'oxide-updater.exe')
+          } | ConvertTo-Json -Depth 5
+          [System.IO.File]::WriteAllText(
+            (Join-Path $stageDir 'update-package.json'),
+            $packageManifest,
+            (New-Object System.Text.UTF8Encoding($false))
+          )
+
+          $assetName = "oxide-update-win-x64-$($env:OXIDE_VERSION).zip"
+          $packagePath = Join-Path $releaseDir $assetName
+          if (Test-Path $packagePath) { Remove-Item $packagePath -Force }
+          Compress-Archive -Path (Join-Path $stageDir '*') -DestinationPath $packagePath -CompressionLevel Optimal
+
+          npm.cmd run tauri -- signer sign $packagePath
+          if ($LASTEXITCODE -ne 0) { throw "Tauri signer failed with exit code $LASTEXITCODE" }
+
+          $signaturePath = "$packagePath.sig"
+          if (-not (Test-Path $signaturePath)) { throw "Signer did not produce $signaturePath" }
+          $signature = (Get-Content $signaturePath -Raw).Trim()
+          $sha256 = (Get-FileHash $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          $downloadUrl = "https://github.com/${{ github.repository }}/releases/download/$($env:OXIDE_TAG)/$assetName"
+          $notes = if (Test-Path 'RELEASE_NOTES.md') { (Get-Content 'RELEASE_NOTES.md' -Raw).Trim() } else { "Oxide Editor $($env:OXIDE_DISPLAY_VERSION)" }
+
+          $latest = [ordered]@{
+            version = $env:OXIDE_VERSION
+            display_version = $env:OXIDE_DISPLAY_VERSION
+            notes = $notes
+            pub_date = (Get-Date).ToUniversalTime().ToString('o')
+            url = $downloadUrl
+            signature = $signature
+            sha256 = $sha256
+          } | ConvertTo-Json -Depth 8
+          $latestPath = Join-Path $releaseDir 'oxide-latest.json'
+          [System.IO.File]::WriteAllText($latestPath, $latest, (New-Object System.Text.UTF8Encoding($false)))
+
+          $installer = Get-ChildItem 'src-tauri\target\release\bundle\nsis\*-setup.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'The NSIS installer was not produced.' }
+          $installerSignaturePath = "$($installer.FullName).sig"
+          if (-not (Test-Path $installerSignaturePath)) { throw "The signed NSIS updater signature was not produced: $installerSignaturePath" }
+          $installerSignature = (Get-Content $installerSignaturePath -Raw).Trim()
+          $installerUrl = "https://github.com/${{ github.repository }}/releases/download/$($env:OXIDE_TAG)/$($installer.Name)"
+
+          # Compatibility feed for B1.3.1 and older updater-enabled builds.
+          $legacyLatest = [ordered]@{
+            version = $env:OXIDE_VERSION
+            notes = $notes
+            pub_date = (Get-Date).ToUniversalTime().ToString('o')
+            url = $installerUrl
+            signature = $installerSignature
+          } | ConvertTo-Json -Depth 8
+          $legacyLatestPath = Join-Path $releaseDir 'latest.json'
+          [System.IO.File]::WriteAllText($legacyLatestPath, $legacyLatest, (New-Object System.Text.UTF8Encoding($false)))
+
+          "package=$packagePath" >> $env:GITHUB_OUTPUT
+          "signature=$signaturePath" >> $env:GITHUB_OUTPUT
+          "latest=$latestPath" >> $env:GITHUB_OUTPUT
+          "legacyLatest=$legacyLatestPath" >> $env:GITHUB_OUTPUT
+          "installer=$($installer.FullName)" >> $env:GITHUB_OUTPUT
+          "installerSignature=$installerSignaturePath" >> $env:GITHUB_OUTPUT
+
+      - name: Create or update GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OXIDE_TAG: ${{ steps.version.outputs.tag }}
+          OXIDE_DISPLAY_VERSION: ${{ steps.version.outputs.display }}
+        run: |
+          $notesFile = if (Test-Path 'RELEASE_NOTES.md') { 'RELEASE_NOTES.md' } else { $null }
+          gh release view $env:OXIDE_TAG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            if ($notesFile) {
+              gh release edit $env:OXIDE_TAG --title "Oxide Editor $env:OXIDE_DISPLAY_VERSION" --notes-file $notesFile
+            } else {
+              gh release edit $env:OXIDE_TAG --title "Oxide Editor $env:OXIDE_DISPLAY_VERSION" --notes "Oxide Editor $env:OXIDE_DISPLAY_VERSION"
+            }
+          } else {
+            if ($notesFile) {
+              gh release create $env:OXIDE_TAG --title "Oxide Editor $env:OXIDE_DISPLAY_VERSION" --notes-file $notesFile
+            } else {
+              gh release create $env:OXIDE_TAG --title "Oxide Editor $env:OXIDE_DISPLAY_VERSION" --notes "Oxide Editor $env:OXIDE_DISPLAY_VERSION"
+            }
+          }
+
+      - name: Upload installer and package-update assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OXIDE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh release upload $env:OXIDE_TAG `
+            "${{ steps.package.outputs.installer }}" `
+            "${{ steps.package.outputs.package }}" `
+            "${{ steps.package.outputs.signature }}" `
+            "${{ steps.package.outputs.latest }}" `
+            "${{ steps.package.outputs.legacyLatest }}" `
+            "${{ steps.package.outputs.installerSignature }}" `
+            --clobber
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxide-windows-x64-${{ steps.version.outputs.version }}
+          path: |
+            ${{ steps.package.outputs.installer }}
+            ${{ steps.package.outputs.package }}
+            ${{ steps.package.outputs.signature }}
+            ${{ steps.package.outputs.latest }}
+            ${{ steps.package.outputs.legacyLatest }}
+            ${{ steps.package.outputs.installerSignature }}
