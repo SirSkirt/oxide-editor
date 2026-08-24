@@ -201,3 +201,7 @@ The version helper updates the main editor, Windows Update Service, and Linux Up
 ## Release
 
 See [UPDATER_SETUP.md](UPDATER_SETUP.md) for signing-key and GitHub Actions details.
+
+### Updater dialog reliability
+
+B1.3.2 fixes an updater UI wiring bug inherited from B1.3.1: the **Later** and **Download & Update** controls are now application-level controls that are bound once at startup, independent of editor/project state. Unexpected frontend updater failures are also surfaced in the dialog instead of appearing as dead buttons.

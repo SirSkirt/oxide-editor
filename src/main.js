@@ -783,14 +783,7 @@ function setEditorFromTab(tab) {
     state.currentFile = '';
     state.dirty = false;
     els.editor.value = '';
-    els.updateClose.addEventListener('click', () => { if (!state.updater.installing) els.updateDialog.close(); });
-els.updateLater.addEventListener('click', () => { if (!state.updater.installing) els.updateDialog.close(); });
-els.updateInstall.addEventListener('click', installPendingUpdate);
-els.updateDialog.addEventListener('cancel', (event) => {
-  if (state.updater.installing) event.preventDefault();
-});
-
-els.editor.readOnly = true;
+    els.editor.readOnly = true;
     els.editor.placeholder = 'Open a .rs, .toml, or text file from the project tree.';
     els.fileStatus.textContent = state.projectPath ? 'NO FILE OPEN' : 'NO FILE';
     els.save.disabled = true;
@@ -2401,6 +2394,38 @@ els.messageDialog.addEventListener('cancel', (event) => {
 });
 $('#info-close').addEventListener('click', () => els.infoDialog.close());
 $('#info-close-x').addEventListener('click', () => els.infoDialog.close());
+
+function dismissUpdatePrompt() {
+  if (state.updater.installing) return;
+  if (els.updateDialog.open) els.updateDialog.close();
+}
+
+// Update controls are application-level UI. Bind them once during startup so
+// they work whether Oxide is on the welcome screen, editing a file, or has no
+// project loaded at all.
+els.updateClose.addEventListener('click', dismissUpdatePrompt);
+els.updateLater.addEventListener('click', dismissUpdatePrompt);
+els.updateInstall.addEventListener('click', async () => {
+  try {
+    await installPendingUpdate();
+  } catch (error) {
+    // installPendingUpdate normally handles its own errors, but keep the
+    // button from ever failing silently if an unexpected frontend error leaks.
+    state.updater.installing = false;
+    els.updateLater.disabled = false;
+    els.updateInstall.disabled = false;
+    els.updateInstall.textContent = 'TRY AGAIN';
+    els.updateError.hidden = false;
+    els.updateError.textContent = `Update failed: ${error}`;
+  }
+});
+els.updateDialog.addEventListener('cancel', (event) => {
+  if (state.updater.installing) {
+    event.preventDefault();
+    return;
+  }
+  dismissUpdatePrompt();
+});
 
 $('#run-close').addEventListener('click', () => els.runDialog.close());
 $('#run-cancel').addEventListener('click', () => els.runDialog.close());

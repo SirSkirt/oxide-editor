@@ -11,3 +11,9 @@ B1.3.2 expands Oxide beyond Windows and starts its cross-platform native package
 - Linux file paths are treated as case-sensitive.
 - Update feeds are platform-specific: `oxide-latest-windows-x86_64.json` and `oxide-latest-linux-x86_64.json`.
 - Windows keeps the B1.3.1 legacy `latest.json` bridge and the no-background-console release behavior.
+
+## Updater dialog reliability
+
+- Fixed a B1.3.1-era UI wiring bug where **Later** and **Download & Update** could render without active click handlers.
+- Update dialog controls are now bound once at application startup and work from the welcome screen, normal projects, and tutorial projects.
+- Unexpected frontend update errors are shown in the update dialog instead of failing silently.
