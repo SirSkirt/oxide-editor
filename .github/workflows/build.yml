@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   windows-build:
+    name: Windows x64 verification
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -31,4 +32,42 @@ jobs:
       - name: Build frontend
         run: npm run build
       - name: Check Rust backend
+        run: cargo check --manifest-path src-tauri/Cargo.toml
+
+  linux-build:
+    name: Linux x64 verification (Ubuntu 22.04 / Pop!_OS baseline)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            xdg-utils
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            ./src-tauri -> target
+            ./linux-updater -> target
+      - name: Install frontend dependencies
+        run: npm install
+      - name: Build and stage Linux updater helper
+        run: npm run prepare:updater
+      - name: Build frontend
+        run: npm run build
+      - name: Check Linux Rust backend
         run: cargo check --manifest-path src-tauri/Cargo.toml

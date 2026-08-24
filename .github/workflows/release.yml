@@ -10,10 +10,57 @@ permissions:
   contents: write
 
 jobs:
+  prepare-release:
+    name: Prepare GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      display: ${{ steps.version.outputs.display }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Read release version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          DISPLAY=$(node -p "require('./package.json').displayVersion")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "display=$DISPLAY" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OXIDE_TAG: ${{ steps.version.outputs.tag }}
+          OXIDE_DISPLAY_VERSION: ${{ steps.version.outputs.display }}
+        run: |
+          if gh release view "$OXIDE_TAG" >/dev/null 2>&1; then
+            if [ -f RELEASE_NOTES.md ]; then
+              gh release edit "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION" --notes-file RELEASE_NOTES.md
+            else
+              gh release edit "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION" --notes "Oxide Editor $OXIDE_DISPLAY_VERSION"
+            fi
+          else
+            if [ -f RELEASE_NOTES.md ]; then
+              gh release create "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION" --notes-file RELEASE_NOTES.md
+            else
+              gh release create "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION" --notes "Oxide Editor $OXIDE_DISPLAY_VERSION"
+            fi
+          fi
+
   windows-release:
     name: Windows x64 release
+    needs: prepare-release
     runs-on: windows-latest
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v5
@@ -45,43 +92,34 @@ jobs:
         run: |
           $config = Get-Content 'src-tauri/tauri.conf.json' -Raw | ConvertFrom-Json
           if ($config.plugins.updater.pubkey -eq 'OXIDE_UPDATER_PUBLIC_KEY_NOT_CONFIGURED') {
-            throw 'Updater public key is not configured. Run scripts/setup-updater.ps1 locally and commit tauri.conf.json.'
+            throw 'Updater public key is not configured.'
           }
           if (-not $env:TAURI_SIGNING_PRIVATE_KEY) {
             throw 'Missing TAURI_SIGNING_PRIVATE_KEY repository secret.'
           }
 
-      - name: Read release version
-        id: version
-        shell: pwsh
-        run: |
-          $package = Get-Content 'package.json' -Raw | ConvertFrom-Json
-          "version=$($package.version)" >> $env:GITHUB_OUTPUT
-          "display=$($package.displayVersion)" >> $env:GITHUB_OUTPUT
-          "tag=v$($package.version)" >> $env:GITHUB_OUTPUT
-
-      - name: Build and stage Oxide Update Service
+      - name: Build and stage Windows Update Service
         run: npm run prepare:updater
 
-      - name: Build Oxide and installer
+      - name: Build Oxide NSIS installer
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: npm run tauri build -- --config src-tauri/tauri.release.conf.json
+        run: npm run tauri build -- --bundles nsis --config src-tauri/tauri.release.conf.json
 
-      - name: Create signed Oxide update package
+      - name: Create signed Windows Oxide package
         id: package
         shell: pwsh
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          OXIDE_VERSION: ${{ steps.version.outputs.version }}
-          OXIDE_DISPLAY_VERSION: ${{ steps.version.outputs.display }}
-          OXIDE_TAG: ${{ steps.version.outputs.tag }}
+          OXIDE_VERSION: ${{ needs.prepare-release.outputs.version }}
+          OXIDE_DISPLAY_VERSION: ${{ needs.prepare-release.outputs.display }}
+          OXIDE_TAG: ${{ needs.prepare-release.outputs.tag }}
         run: |
           $ErrorActionPreference = 'Stop'
           $releaseDir = Join-Path $PWD 'release-assets'
-          $stageDir = Join-Path $releaseDir 'update-package'
+          $stageDir = Join-Path $releaseDir 'update-package-windows'
           New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
 
           $editorExe = Join-Path $PWD 'src-tauri\target\release\oxide-editor.exe'
@@ -105,16 +143,14 @@ jobs:
             (New-Object System.Text.UTF8Encoding($false))
           )
 
-          $assetName = "oxide-update-win-x64-$($env:OXIDE_VERSION).zip"
+          $assetName = "oxide-update-windows-x86_64-$($env:OXIDE_VERSION).zip"
           $packagePath = Join-Path $releaseDir $assetName
           if (Test-Path $packagePath) { Remove-Item $packagePath -Force }
           Compress-Archive -Path (Join-Path $stageDir '*') -DestinationPath $packagePath -CompressionLevel Optimal
 
           npm.cmd run tauri -- signer sign $packagePath
           if ($LASTEXITCODE -ne 0) { throw "Tauri signer failed with exit code $LASTEXITCODE" }
-
           $signaturePath = "$packagePath.sig"
-          if (-not (Test-Path $signaturePath)) { throw "Signer did not produce $signaturePath" }
           $signature = (Get-Content $signaturePath -Raw).Trim()
           $sha256 = (Get-FileHash $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()
           $downloadUrl = "https://github.com/${{ github.repository }}/releases/download/$($env:OXIDE_TAG)/$assetName"
@@ -129,7 +165,7 @@ jobs:
             signature = $signature
             sha256 = $sha256
           } | ConvertTo-Json -Depth 8
-          $latestPath = Join-Path $releaseDir 'oxide-latest.json'
+          $latestPath = Join-Path $releaseDir 'oxide-latest-windows-x86_64.json'
           [System.IO.File]::WriteAllText($latestPath, $latest, (New-Object System.Text.UTF8Encoding($false)))
 
           $installer = Get-ChildItem 'src-tauri\target\release\bundle\nsis\*-setup.exe' | Select-Object -First 1
@@ -139,7 +175,7 @@ jobs:
           $installerSignature = (Get-Content $installerSignaturePath -Raw).Trim()
           $installerUrl = "https://github.com/${{ github.repository }}/releases/download/$($env:OXIDE_TAG)/$($installer.Name)"
 
-          # Compatibility feed for B1.3.1 and older updater-enabled builds.
+          # Legacy bridge for B1.3.1 and older Windows updater-enabled builds.
           $legacyLatest = [ordered]@{
             version = $env:OXIDE_VERSION
             notes = $notes
@@ -157,34 +193,11 @@ jobs:
           "installer=$($installer.FullName)" >> $env:GITHUB_OUTPUT
           "installerSignature=$installerSignaturePath" >> $env:GITHUB_OUTPUT
 
-      - name: Create or update GitHub Release
+      - name: Upload Windows release assets
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OXIDE_TAG: ${{ steps.version.outputs.tag }}
-          OXIDE_DISPLAY_VERSION: ${{ steps.version.outputs.display }}
-        run: |
-          $notesFile = if (Test-Path 'RELEASE_NOTES.md') { 'RELEASE_NOTES.md' } else { $null }
-          gh release view $env:OXIDE_TAG *> $null
-          if ($LASTEXITCODE -eq 0) {
-            if ($notesFile) {
-              gh release edit $env:OXIDE_TAG --title "Oxide Editor $env:OXIDE_DISPLAY_VERSION" --notes-file $notesFile
-            } else {
-              gh release edit $env:OXIDE_TAG --title "Oxide Editor $env:OXIDE_DISPLAY_VERSION" --notes "Oxide Editor $env:OXIDE_DISPLAY_VERSION"
-            }
-          } else {
-            if ($notesFile) {
-              gh release create $env:OXIDE_TAG --title "Oxide Editor $env:OXIDE_DISPLAY_VERSION" --notes-file $notesFile
-            } else {
-              gh release create $env:OXIDE_TAG --title "Oxide Editor $env:OXIDE_DISPLAY_VERSION" --notes "Oxide Editor $env:OXIDE_DISPLAY_VERSION"
-            }
-          }
-
-      - name: Upload installer and package-update assets
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OXIDE_TAG: ${{ steps.version.outputs.tag }}
+          OXIDE_TAG: ${{ needs.prepare-release.outputs.tag }}
         run: |
           gh release upload $env:OXIDE_TAG `
             "${{ steps.package.outputs.installer }}" `
@@ -195,14 +208,167 @@ jobs:
             "${{ steps.package.outputs.installerSignature }}" `
             --clobber
 
-      - name: Upload workflow artifacts
+      - name: Upload Windows workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: oxide-windows-x64-${{ steps.version.outputs.version }}
+          name: oxide-windows-x64-${{ needs.prepare-release.outputs.version }}
           path: |
             ${{ steps.package.outputs.installer }}
             ${{ steps.package.outputs.package }}
             ${{ steps.package.outputs.signature }}
             ${{ steps.package.outputs.latest }}
             ${{ steps.package.outputs.legacyLatest }}
-            ${{ steps.package.outputs.installerSignature }}
+
+  linux-release:
+    name: Linux x64 release (Ubuntu / Pop!_OS)
+    needs: prepare-release
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            xdg-utils
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust builds
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            ./src-tauri -> target
+            ./linux-updater -> target
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Verify signing configuration
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          node -e "const c=require('./src-tauri/tauri.conf.json'); if(c.plugins.updater.pubkey==='OXIDE_UPDATER_PUBLIC_KEY_NOT_CONFIGURED') process.exit(2)"
+          test -n "$TAURI_SIGNING_PRIVATE_KEY" || (echo 'Missing TAURI_SIGNING_PRIVATE_KEY repository secret.' && exit 3)
+
+      - name: Build and stage Linux Update Service
+        run: npm run prepare:updater
+
+      - name: Build Oxide .deb and AppImage
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri build -- --bundles deb,appimage --config src-tauri/tauri.release.conf.json
+
+      - name: Create signed Linux AppImage update package
+        id: package
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          OXIDE_VERSION: ${{ needs.prepare-release.outputs.version }}
+          OXIDE_DISPLAY_VERSION: ${{ needs.prepare-release.outputs.display }}
+          OXIDE_TAG: ${{ needs.prepare-release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          release_dir="$PWD/release-assets-linux"
+          stage_dir="$release_dir/update-package-linux"
+          mkdir -p "$stage_dir"
+
+          appimage=$(find src-tauri/target/release/bundle/appimage -maxdepth 1 -type f -name '*.AppImage' | head -n 1)
+          deb=$(find src-tauri/target/release/bundle/deb -maxdepth 1 -type f -name '*.deb' | head -n 1)
+          test -n "$appimage" && test -f "$appimage"
+          test -n "$deb" && test -f "$deb"
+
+          cp "$appimage" "$stage_dir/oxide-editor.AppImage"
+          chmod +x "$stage_dir/oxide-editor.AppImage"
+          cat > "$stage_dir/update-package.json" <<JSON
+          {
+            "format": 1,
+            "version": "$OXIDE_VERSION",
+            "display_version": "$OXIDE_DISPLAY_VERSION",
+            "platform": "linux-x86_64-appimage",
+            "files": ["oxide-editor.AppImage"]
+          }
+          JSON
+
+          asset_name="oxide-update-linux-x86_64-$OXIDE_VERSION.zip"
+          package_path="$release_dir/$asset_name"
+          python3 - "$stage_dir" "$package_path" <<'PY'
+          import os, sys, zipfile
+          stage, output = sys.argv[1:]
+          with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as z:
+              for name in sorted(os.listdir(stage)):
+                  z.write(os.path.join(stage, name), arcname=name)
+          PY
+
+          npm run tauri -- signer sign "$package_path"
+          signature_path="$package_path.sig"
+          signature=$(cat "$signature_path" | tr -d '\r\n')
+          sha256=$(sha256sum "$package_path" | awk '{print $1}')
+          download_url="https://github.com/${{ github.repository }}/releases/download/$OXIDE_TAG/$asset_name"
+          notes=$(cat RELEASE_NOTES.md 2>/dev/null || printf 'Oxide Editor %s' "$OXIDE_DISPLAY_VERSION")
+          latest_path="$release_dir/oxide-latest-linux-x86_64.json"
+          python3 - "$latest_path" "$OXIDE_VERSION" "$OXIDE_DISPLAY_VERSION" "$download_url" "$signature" "$sha256" "$notes" <<'PY'
+          import datetime, json, sys
+          path, version, display, url, signature, sha256, notes = sys.argv[1:]
+          payload = {
+              'version': version,
+              'display_version': display,
+              'notes': notes,
+              'pub_date': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              'url': url,
+              'signature': signature,
+              'sha256': sha256,
+          }
+          with open(path, 'w', encoding='utf-8', newline='\n') as f:
+              json.dump(payload, f, indent=2)
+              f.write('\n')
+          PY
+
+          echo "package=$package_path" >> "$GITHUB_OUTPUT"
+          echo "signature=$signature_path" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest_path" >> "$GITHUB_OUTPUT"
+          echo "appimage=$appimage" >> "$GITHUB_OUTPUT"
+          echo "deb=$deb" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Linux release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OXIDE_TAG: ${{ needs.prepare-release.outputs.tag }}
+        run: |
+          gh release upload "$OXIDE_TAG" \
+            "${{ steps.package.outputs.deb }}" \
+            "${{ steps.package.outputs.appimage }}" \
+            "${{ steps.package.outputs.package }}" \
+            "${{ steps.package.outputs.signature }}" \
+            "${{ steps.package.outputs.latest }}" \
+            --clobber
+
+      - name: Upload Linux workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxide-linux-x64-${{ needs.prepare-release.outputs.version }}
+          path: |
+            ${{ steps.package.outputs.deb }}
+            ${{ steps.package.outputs.appimage }}
+            ${{ steps.package.outputs.package }}
+            ${{ steps.package.outputs.signature }}
+            ${{ steps.package.outputs.latest }}
