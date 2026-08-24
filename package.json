@@ -1,0 +1,22 @@
+{
+  "name": "oxide-editor",
+  "private": true,
+  "version": "1.2.3",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 1420",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "release:version": "node scripts/set-release-version.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-updater": "^2.10.1",
+    "@tauri-apps/plugin-process": "^2.3.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
+    "vite": "^7.0.0"
+  }
+}
