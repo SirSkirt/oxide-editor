@@ -1,12 +1,12 @@
-# Oxide Editor B1.3.2 — The Compatibility Update
+# Oxide Editor B1.3.3
 
 Oxide is a Rust-first desktop editor built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, and update orchestration are handled by Rust.
 
-B1.3.2 is internally dubbed **The Compatibility Update**. It starts Oxide's native package-update system and adds the first Linux desktop target, with **Pop!_OS / Ubuntu / Debian-family x86_64** as the initial compatibility baseline.
+B1.3.3 builds on B1.3.2 **The Compatibility Update** and adds Oxide's first rust-analyzer-backed language intelligence: **Rust Code Analyzer/Completer**. Windows and **Pop!_OS / Ubuntu / Debian-family x86_64** remain the current desktop targets.
 
 ## Windows + Linux
 
-Supported release targets in B1.3.2:
+Supported release targets in B1.3.3:
 
 - **Windows x86_64** — NSIS installer plus Oxide's signed native ZIP update packages
 - **Linux x86_64 AppImage** — portable build with Oxide automatic package updates
@@ -31,7 +31,7 @@ Oxide now treats Linux paths as case-sensitive. Files such as `Thing.rs` and `th
 
 ## Oxide Package Update System
 
-B1.3.2 uses platform-specific signed update packages published on GitHub Releases.
+B1.3.3 continues to use the platform-specific signed update packages introduced in B1.3.2.
 
 Oxide checks:
 
@@ -51,7 +51,7 @@ The downloaded package is still cryptographically verified with Oxide's existing
 ### Windows update package
 
 ```text
-oxide-update-windows-x86_64-1.3.2.zip
+oxide-update-windows-x86_64-1.3.3.zip
 ├── oxide-editor.exe
 ├── oxide-updater.exe
 └── update-package.json
@@ -62,7 +62,7 @@ The temporary Oxide Update Service backs up the installed runtime, replaces it, 
 ### Linux AppImage update package
 
 ```text
-oxide-update-linux-x86_64-1.3.2.zip
+oxide-update-linux-x86_64-1.3.3.zip
 ├── oxide-editor.AppImage
 └── update-package.json
 ```
@@ -90,27 +90,27 @@ Linux x64 verification (Ubuntu 22.04 / Pop!_OS baseline)
 
 A release produces both Windows and Linux assets in the same GitHub Release.
 
-Typical B1.3.2 assets:
+Typical B1.3.3 assets:
 
 ```text
 Windows
 ├── Oxide Editor ... setup.exe
-├── oxide-update-windows-x86_64-1.3.2.zip
-├── oxide-update-windows-x86_64-1.3.2.zip.sig
+├── oxide-update-windows-x86_64-1.3.3.zip
+├── oxide-update-windows-x86_64-1.3.3.zip.sig
 ├── oxide-latest-windows-x86_64.json
 └── latest.json
 
 Linux
 ├── Oxide Editor ... amd64.deb
 ├── Oxide Editor ... amd64.AppImage
-├── oxide-update-linux-x86_64-1.3.2.zip
-├── oxide-update-linux-x86_64-1.3.2.zip.sig
+├── oxide-update-linux-x86_64-1.3.3.zip
+├── oxide-update-linux-x86_64-1.3.3.zip.sig
 └── oxide-latest-linux-x86_64.json
 ```
 
 ## Linux development on Pop!_OS / Ubuntu
 
-Run the included helper once:
+Run the included helper once (it also installs the rust-analyzer rustup component when rustup is available):
 
 ```bash
 ./scripts/setup-linux.sh
@@ -133,7 +133,7 @@ npm run tauri build -- --bundles deb,appimage
 
 Requirements:
 
-- Node.js / npm
+- Node.js 24+ / npm
 - current Rust toolchain with Cargo
 - Tauri 2 Windows prerequisites
 
@@ -149,6 +149,33 @@ npm run tauri build -- --bundles nsis
 ```
 
 Windows release builds use the GUI subsystem, so Oxide does not leave a background Command Prompt open.
+
+## Rust Code Analyzer/Completer
+
+B1.3.3 adds Oxide's own Visual Studio-style Rust completion experience, backed by the real **rust-analyzer** language server.
+
+As you type Rust, Oxide requests context-aware suggestions from rust-analyzer and filters/ranks them against the current prefix. The popup can include local variables, functions, methods, fields, modules, structs, enums, traits, associated items, macros, and Rust keywords. A detail pane shows the symbol kind, signature/detail text, and documentation when rust-analyzer provides it.
+
+Controls:
+
+```text
+Type normally     automatic completion
+Ctrl+Space        request completion manually
+Up / Down         select a suggestion
+Enter / Tab       accept
+Escape            dismiss
+```
+
+Function-call signature help is also requested while entering arguments. Oxide applies rust-analyzer's replacement edits and additional import edits when they are supplied.
+
+Install/verify the analyzer with:
+
+```text
+rustup component add rust-analyzer
+rust-analyzer --version
+```
+
+Oxide starts one persistent rust-analyzer session per active Cargo project instead of spawning a new process for every keystroke. The status rail reports **ANALYZER: READY**, **NOT FOUND**, or **ERROR**.
 
 ## Interactive Rust Tutorial
 
@@ -175,6 +202,8 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 - normal Cargo project creation with version `0.0.1` by default
 - multi-file tabs with independent dirty/cursor/scroll state
 - automatic brace-aware indentation
+- **Rust Code Analyzer/Completer** powered by rust-analyzer/LSP
+- context-aware completion popup with details and signature help
 - Cargo Check / Build / Run / Test / Clean
 - Cargo.toml package/dependency GUI
 - live rustc diagnostics using `cargo check --message-format=json`
@@ -186,14 +215,14 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 
 ## Versioning
 
-- Package/build version: `1.3.2`
-- User-facing version: **B1.3.2**
-- Internal update name: **The Compatibility Update**
+- Package/build version: `1.3.3`
+- User-facing version: **B1.3.3**
+- B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:
 
 ```powershell
-npm run release:version -- 1.3.3 B1.3.3
+npm run release:version -- 1.3.4 B1.3.4
 ```
 
 The version helper updates the main editor, Windows Update Service, and Linux Update Service together.

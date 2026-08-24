@@ -1,6 +1,6 @@
 [package]
 name = "oxide-updater-linux"
-version = "1.3.2"
+version = "1.3.3"
 description = "Oxide Editor Linux AppImage update helper"
 edition = "2021"
 

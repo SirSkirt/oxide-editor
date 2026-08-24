@@ -39,3 +39,11 @@ echo
 echo 'Linux prerequisites are ready.'
 echo 'Run: npm install'
 echo 'Then: npm run tauri dev'
+
+
+if command -v rustup >/dev/null 2>&1; then
+  echo "Installing rust-analyzer component for Oxide Rust Code Analyzer/Completer..."
+  rustup component add rust-analyzer
+else
+  echo "rustup was not found. Install Rust with rustup, then run: rustup component add rust-analyzer"
+fi

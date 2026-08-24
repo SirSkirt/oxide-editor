@@ -31,6 +31,17 @@ const state = {
   analysisRunning: false,
   analysisQueued: false,
   analysisGeneration: 0,
+  completer: {
+    enabled: true,
+    available: false,
+    visible: false,
+    items: [],
+    selected: 0,
+    requestToken: 0,
+    timer: null,
+    prefixStart: 0,
+    signatureVisible: false,
+  },
   terminalRunning: false,
   terminalEnded: false,
   terminalVisible: false,
@@ -110,6 +121,8 @@ app.innerHTML = `
             <div class="menu-separator"></div>
             <button role="menuitem" data-menu-action="toggle-live-check"><span><i class="menu-check" data-check="live-check">✓</i> Live Rust Check</span></button>
             <button role="menuitem" data-menu-action="analyze-now"><span>Analyze Project Now</span><kbd>Ctrl+F6</kbd></button>
+            <button role="menuitem" data-menu-action="toggle-completer"><span><i class="menu-check" data-check="completer">✓</i> Rust Code Analyzer/Completer</span></button>
+            <button role="menuitem" data-menu-action="trigger-completion"><span>Trigger Code Completion</span><kbd>Ctrl+Space</kbd></button>
             <div class="menu-separator"></div>
             <button role="menuitem" data-menu-action="tutorial"><span>Interactive Rust Tutorial…</span><kbd>Ctrl+Alt+T</kbd></button>
             <div class="menu-separator"></div>
@@ -159,7 +172,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.2</div>
+        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.3</div>
         <h1>Welcome to the Oxide Editor</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -202,6 +215,18 @@ app.innerHTML = `
         <div class="editor-wrap">
           <div id="line-numbers" class="line-numbers" aria-hidden="true"><span class="line-number">1</span></div>
           <textarea id="editor" class="code-editor" spellcheck="false" aria-label="Code editor" placeholder="Open a .rs, .toml, or text file from the project tree."></textarea>
+          <div id="code-completer" class="code-completer" hidden role="listbox" aria-label="Rust Code Analyzer/Completer suggestions">
+            <div id="completion-list" class="completion-list"></div>
+            <aside class="completion-detail">
+              <div class="completion-detail-head"><span id="completion-detail-kind">SYMBOL</span><strong id="completion-detail-label"></strong></div>
+              <code id="completion-detail-signature"></code>
+              <div id="completion-detail-docs" class="completion-detail-docs"></div>
+            </aside>
+          </div>
+          <div id="signature-help" class="signature-help" hidden>
+            <div id="signature-help-label" class="signature-help-label"></div>
+            <div id="signature-help-docs" class="signature-help-docs"></div>
+          </div>
         </div>
       </section>
       <aside id="tutorial-panel" class="tutorial-panel panel" hidden>
@@ -258,8 +283,9 @@ app.innerHTML = `
     <footer class="status-rail">
       <span id="file-status">NO FILE</span>
       <span id="analysis-status">RUST CHECK: IDLE</span>
+      <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>OXIDE B1.3.2</span>
+      <span>OXIDE B1.3.3</span>
     </footer>
   </main>
 
@@ -405,6 +431,16 @@ const els = {
   menuProjectReadout: $('#menu-project-readout'),
   fileStatus: $('#file-status'),
   analysisStatus: $('#analysis-status'),
+  analyzerStatus: $('#analyzer-status'),
+  codeCompleter: $('#code-completer'),
+  completionList: $('#completion-list'),
+  completionDetailKind: $('#completion-detail-kind'),
+  completionDetailLabel: $('#completion-detail-label'),
+  completionDetailSignature: $('#completion-detail-signature'),
+  completionDetailDocs: $('#completion-detail-docs'),
+  signatureHelp: $('#signature-help'),
+  signatureHelpLabel: $('#signature-help-label'),
+  signatureHelpDocs: $('#signature-help-docs'),
   profileStatus: $('#profile-status'),
   cargoLamp: $('#cargo-lamp'),
   rustcLamp: $('#rustc-lamp'),
@@ -584,6 +620,12 @@ function updateMenuAvailability() {
   document.querySelectorAll('[data-check="live-check"]').forEach((check) => {
     check.textContent = state.liveCheck ? '✓' : '';
   });
+  document.querySelectorAll('[data-check="completer"]').forEach((check) => {
+    check.textContent = state.completer.enabled ? '✓' : '';
+  });
+  document.querySelectorAll('[data-menu-action="trigger-completion"]').forEach((button) => {
+    button.disabled = !projectLoaded || !fileLoaded || !state.completer.available || !state.completer.enabled;
+  });
 }
 
 async function detectToolchain() {
@@ -597,6 +639,17 @@ async function detectToolchain() {
     setLamp(els.rustcLamp, info.rustc_found);
     setLamp(els.welcomeCargoLamp, info.cargo_found);
     setLamp(els.welcomeRustcLamp, info.rustc_found);
+    try {
+      const analyzer = await invoke('rust_analyzer_status');
+      state.completer.available = Boolean(analyzer.available);
+      els.analyzerStatus.textContent = analyzer.available ? 'ANALYZER: READY' : 'ANALYZER: NOT FOUND';
+      els.analyzerStatus.title = analyzer.available ? analyzer.version : analyzer.message;
+    } catch (analyzerError) {
+      state.completer.available = false;
+      els.analyzerStatus.textContent = 'ANALYZER: ERROR';
+      els.analyzerStatus.title = String(analyzerError);
+    }
+    updateMenuAvailability();
   } catch (error) {
     setLamp(els.cargoLamp, false);
     setLamp(els.rustcLamp, false);
@@ -613,6 +666,22 @@ function fileBadge(name) {
   if (name.endsWith('.toml')) return '<b class="badge toml">Tm</b>';
   if (name.endsWith('.lock')) return '<b class="badge lock">Lk</b>';
   return '<b class="badge">•</b>';
+}
+
+async function warmRustAnalyzer(projectPath = state.projectPath) {
+  if (!projectPath || !state.completer.enabled || !state.completer.available) return;
+  els.analyzerStatus.textContent = 'ANALYZER: STARTING';
+  try {
+    await invoke('rust_analyzer_warmup', { projectPath });
+    if (state.projectPath === projectPath) {
+      els.analyzerStatus.textContent = 'ANALYZER: READY';
+      els.analyzerStatus.title = 'Rust Code Analyzer/Completer is connected to this Cargo project.';
+    }
+  } catch (error) {
+    els.analyzerStatus.textContent = 'ANALYZER: RETRY';
+    els.analyzerStatus.title = String(error);
+    updateMenuAvailability();
+  }
 }
 
 function renderTree(entries) {
@@ -682,6 +751,7 @@ async function openProjectPath(projectPath, { keepBrowserOpen = false, created =
 
     renderProblems();
     setProjectUiState();
+    warmRustAnalyzer(projectPath);
     if (!keepBrowserOpen && els.browserDialog.open) els.browserDialog.close();
     if (state.liveCheck) scheduleAnalysis(350);
     return true;
@@ -778,6 +848,7 @@ function updateActiveTabVisual() {
 }
 
 function setEditorFromTab(tab) {
+  closeCompletionUi();
   if (!tab) {
     state.activeTabPath = '';
     state.currentFile = '';
@@ -941,6 +1012,8 @@ async function closeProject() {
   if (state.tutorial.active) exitTutorialMode();
   hideTerminalWindow();
 
+  try { await invoke('rust_analyzer_stop'); } catch { /* analyzer may not have started */ }
+  closeCompletionUi();
   state.projectPath = '';
   state.manifest = null;
   state.diagnostics = [];
@@ -1989,6 +2062,343 @@ async function runEditCommand(action) {
   if (['cut', 'undo', 'redo'].includes(action)) requestAnimationFrame(markEditorChanged);
 }
 
+function isRustEditorContext() {
+  return Boolean(
+    state.projectPath &&
+    state.currentFile &&
+    state.currentFile.toLowerCase().endsWith('.rs') &&
+    !els.editor.readOnly
+  );
+}
+
+function lspPositionAt(text, offset) {
+  const before = text.slice(0, Math.max(0, offset));
+  const line = (before.match(/\n/g) || []).length;
+  const lastBreak = before.lastIndexOf('\n');
+  return { line, character: before.length - lastBreak - 1 };
+}
+
+function offsetFromLspPosition(text, position) {
+  const targetLine = Math.max(0, Number(position?.line || 0));
+  const targetCharacter = Math.max(0, Number(position?.character || 0));
+  let line = 0;
+  let offset = 0;
+  while (line < targetLine && offset < text.length) {
+    const next = text.indexOf('\n', offset);
+    if (next === -1) return text.length;
+    offset = next + 1;
+    line += 1;
+  }
+  const end = text.indexOf('\n', offset);
+  const lineEnd = end === -1 ? text.length : end;
+  return Math.min(offset + targetCharacter, lineEnd);
+}
+
+function completionPrefixAt(text, offset) {
+  const before = text.slice(0, offset);
+  const match = before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+  const prefix = match?.[0] || '';
+  const start = offset - prefix.length;
+  const previous = start > 0 ? text[start - 1] : '';
+  const memberAccess = previous === '.' || before.endsWith('::') || /[.:]$/.test(before);
+  return { prefix, start, memberAccess };
+}
+
+function closeCompletionUi() {
+  state.completer.requestToken += 1;
+  state.completer.visible = false;
+  state.completer.items = [];
+  state.completer.selected = 0;
+  els.codeCompleter.hidden = true;
+  els.signatureHelp.hidden = true;
+  state.completer.signatureVisible = false;
+}
+
+function caretPopupPoint() {
+  const text = els.editor.value;
+  const position = els.editor.selectionStart;
+  const before = text.slice(0, position);
+  const line = (before.match(/\n/g) || []).length;
+  const lastBreak = before.lastIndexOf('\n');
+  const column = before.length - lastBreak - 1;
+  const style = getComputedStyle(els.editor);
+  const fontSize = parseFloat(style.fontSize) || 13;
+  const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.55;
+  const canvas = caretPopupPoint.canvas || (caretPopupPoint.canvas = document.createElement('canvas'));
+  const context = canvas.getContext('2d');
+  context.font = style.font;
+  const charWidth = context.measureText('M').width || fontSize * 0.62;
+  const left = els.editor.offsetLeft + (parseFloat(style.paddingLeft) || 14) + column * charWidth - els.editor.scrollLeft;
+  const top = els.editor.offsetTop + (parseFloat(style.paddingTop) || 12) + (line + 1) * lineHeight - els.editor.scrollTop;
+  return { left, top };
+}
+
+function positionCompletionUi() {
+  const point = caretPopupPoint();
+  const wrap = els.editor.parentElement;
+  const popupWidth = Math.min(650, Math.max(470, wrap.clientWidth * 0.52));
+  const popupHeight = 250;
+  let left = point.left;
+  let top = point.top + 4;
+  if (left + popupWidth > wrap.clientWidth - 8) left = Math.max(52, wrap.clientWidth - popupWidth - 8);
+  if (top + popupHeight > wrap.clientHeight - 8) top = Math.max(8, point.top - popupHeight - 24);
+  els.codeCompleter.style.left = `${Math.max(52, left)}px`;
+  els.codeCompleter.style.top = `${Math.max(8, top)}px`;
+  els.codeCompleter.style.width = `${popupWidth}px`;
+
+  const signatureTop = Math.max(8, top - 72);
+  els.signatureHelp.style.left = `${Math.max(52, left)}px`;
+  els.signatureHelp.style.top = `${signatureTop}px`;
+  els.signatureHelp.style.maxWidth = `${Math.min(720, wrap.clientWidth - Math.max(52, left) - 12)}px`;
+}
+
+function completionKindGlyph(kind) {
+  const glyphs = {
+    Method: 'M', Function: 'ƒ', Field: 'F', Variable: 'V', Module: '▣',
+    Keyword: 'K', Struct: 'S', Enum: 'E', Constant: 'C', Property: 'P',
+    Constructor: 'N', Reference: 'R', Trait: 'T', 'Enum Member': 'E', 'Type Parameter': 'T', Symbol: '•',
+  };
+  return glyphs[kind] || '•';
+}
+
+function updateCompletionDetail() {
+  const item = state.completer.items[state.completer.selected];
+  if (!item) return;
+  els.completionDetailKind.textContent = item.kind || 'SYMBOL';
+  els.completionDetailLabel.textContent = item.label || '';
+  els.completionDetailSignature.textContent = item.detail || item.insertText || '';
+  els.completionDetailDocs.textContent = item.documentation || 'rust-analyzer did not provide additional documentation for this item.';
+  els.completionList.querySelectorAll('.completion-item').forEach((element, index) => {
+    element.classList.toggle('selected', index === state.completer.selected);
+    element.setAttribute('aria-selected', index === state.completer.selected ? 'true' : 'false');
+  });
+  els.completionList.querySelector('.completion-item.selected')?.scrollIntoView({ block: 'nearest' });
+}
+
+function renderCompletionItems(items) {
+  state.completer.items = items;
+  state.completer.selected = Math.min(state.completer.selected, Math.max(0, items.length - 1));
+  if (!items.length) {
+    els.codeCompleter.hidden = true;
+    state.completer.visible = false;
+    return;
+  }
+  els.completionList.innerHTML = items.map((item, index) => `
+    <button type="button" class="completion-item ${index === state.completer.selected ? 'selected' : ''}" data-completion-index="${index}" role="option" aria-selected="${index === state.completer.selected}">
+      <span class="completion-kind completion-kind-${escapeHtml((item.kind || 'symbol').toLowerCase().replaceAll(' ', '-'))}">${escapeHtml(completionKindGlyph(item.kind))}</span>
+      <span class="completion-label">${escapeHtml(item.label)}</span>
+      <span class="completion-type">${escapeHtml(item.kind || 'Symbol')}</span>
+    </button>`).join('');
+  els.completionList.querySelectorAll('.completion-item').forEach((button) => {
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      state.completer.selected = Number(button.dataset.completionIndex || 0);
+      acceptCompletion();
+    });
+  });
+  els.codeCompleter.hidden = false;
+  state.completer.visible = true;
+  positionCompletionUi();
+  updateCompletionDetail();
+}
+
+function normalizeCompletionInsert(text = '') {
+  return String(text)
+    .replace(/\$\{\d+:([^}]*)\}/g, '$1')
+    .replace(/\$\{\d+\}/g, '')
+    .replace(/\$\d+/g, '');
+}
+
+function applyTextEdits(original, edits) {
+  const normalized = edits.map((edit) => ({
+    start: offsetFromLspPosition(original, edit.range.start),
+    end: offsetFromLspPosition(original, edit.range.end),
+    text: normalizeCompletionInsert(edit.newText),
+    primary: Boolean(edit.primary),
+  })).sort((a, b) => b.start - a.start || b.end - a.end);
+
+  const primary = normalized.find((edit) => edit.primary);
+  let caret = primary ? primary.start + primary.text.length : els.editor.selectionStart;
+  if (primary) {
+    for (const edit of normalized) {
+      if (edit === primary) continue;
+      if (edit.start <= primary.start) caret += edit.text.length - (edit.end - edit.start);
+    }
+  }
+
+  let value = original;
+  for (const edit of normalized) value = value.slice(0, edit.start) + edit.text + value.slice(edit.end);
+  return { value, caret: Math.max(0, caret) };
+}
+
+function acceptCompletion() {
+  const item = state.completer.items[state.completer.selected];
+  if (!item) return false;
+  const original = els.editor.value;
+  const cursor = els.editor.selectionStart;
+  const edits = [];
+  for (const edit of item.additionalTextEdits || []) edits.push({ ...edit, primary: false });
+  if (item.textEdit) {
+    edits.push({ ...item.textEdit, primary: true });
+    const applied = applyTextEdits(original, edits);
+    els.editor.value = applied.value;
+    els.editor.setSelectionRange(Math.min(applied.caret, applied.value.length), Math.min(applied.caret, applied.value.length));
+  } else {
+    const start = state.completer.prefixStart;
+    const insert = normalizeCompletionInsert(item.insertText || item.label);
+    els.editor.setRangeText(insert, start, cursor, 'end');
+  }
+  closeCompletionUi();
+  markEditorChanged();
+  els.editor.focus();
+  const inserted = item.insertText || item.label || '';
+  if (inserted.includes('(')) requestSignatureHelp();
+  return true;
+}
+
+function handleCompleterKey(event) {
+  if ((event.ctrlKey || event.metaKey) && event.code === 'Space') {
+    event.preventDefault();
+    requestCodeCompletion({ manual: true });
+    return true;
+  }
+  if (!state.completer.visible) {
+    if (event.key === 'Escape' && state.completer.signatureVisible) {
+      event.preventDefault();
+      els.signatureHelp.hidden = true;
+      state.completer.signatureVisible = false;
+      return true;
+    }
+    return false;
+  }
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    state.completer.selected = (state.completer.selected + 1) % state.completer.items.length;
+    updateCompletionDetail();
+    return true;
+  }
+  if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    state.completer.selected = (state.completer.selected - 1 + state.completer.items.length) % state.completer.items.length;
+    updateCompletionDetail();
+    return true;
+  }
+  if (event.key === 'Enter' || event.key === 'Tab') {
+    event.preventDefault();
+    acceptCompletion();
+    return true;
+  }
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeCompletionUi();
+    return true;
+  }
+  return false;
+}
+
+async function requestCodeCompletion({ manual = false } = {}) {
+  if (!state.completer.enabled || !state.completer.available || !isRustEditorContext()) {
+    if (manual && !state.completer.available) {
+      showInfo('RUST CODE ANALYZER/COMPLETER', '<p>rust-analyzer was not found. Install it with <code>rustup component add rust-analyzer</code>, then choose Tools → Refresh Toolchain.</p>');
+    }
+    return;
+  }
+  const cursor = els.editor.selectionStart;
+  if (cursor !== els.editor.selectionEnd) return;
+  const token = completionPrefixAt(els.editor.value, cursor);
+  if (!manual && !token.memberAccess && token.prefix.length < 1) {
+    els.codeCompleter.hidden = true;
+    state.completer.visible = false;
+    return;
+  }
+  state.completer.prefixStart = token.start;
+  const requestToken = ++state.completer.requestToken;
+  const position = lspPositionAt(els.editor.value, cursor);
+  try {
+    const response = await invoke('rust_completions', {
+      projectPath: state.projectPath,
+      path: state.currentFile,
+      content: els.editor.value,
+      line: position.line,
+      character: position.character,
+    });
+    if (requestToken !== state.completer.requestToken) return;
+    const current = completionPrefixAt(els.editor.value, els.editor.selectionStart);
+    const needle = current.prefix.toLowerCase();
+    const ranked = (response || [])
+      .map((item) => {
+        const key = String(item.filterText || item.label || '').toLowerCase();
+        const label = String(item.label || '').toLowerCase();
+        let rank = 3;
+        if (!needle) rank = 0;
+        else if (label.startsWith(needle)) rank = 0;
+        else if (key.startsWith(needle)) rank = 1;
+        else if (label.includes(needle) || key.includes(needle)) rank = 2;
+        return { item, rank };
+      })
+      .filter(({ rank }) => rank < 3)
+      .sort((a, b) => a.rank - b.rank || String(a.item.sortText || a.item.label).localeCompare(String(b.item.sortText || b.item.label)))
+      .slice(0, 60)
+      .map(({ item }) => item);
+    state.completer.selected = 0;
+    state.completer.prefixStart = current.start;
+    renderCompletionItems(ranked);
+  } catch (error) {
+    if (requestToken !== state.completer.requestToken) return;
+    els.analyzerStatus.textContent = 'ANALYZER: RETRY';
+    els.analyzerStatus.title = String(error);
+    closeCompletionUi();
+  }
+}
+
+function scheduleCodeCompletion(event) {
+  state.completer.requestToken += 1;
+  if (state.completer.timer) clearTimeout(state.completer.timer);
+  if (!isRustEditorContext() || !state.completer.enabled || !state.completer.available) return;
+  const data = event?.data || '';
+  if (data === ')' || data === ';' || data === '\n' || data === ' ') {
+    els.codeCompleter.hidden = true;
+    state.completer.visible = false;
+  }
+  if (data === '(' || data === ',') {
+    requestSignatureHelp();
+  } else if (data === ')') {
+    els.signatureHelp.hidden = true;
+    state.completer.signatureVisible = false;
+  }
+  state.completer.timer = setTimeout(() => requestCodeCompletion(), 90);
+}
+
+async function requestSignatureHelp() {
+  if (!state.completer.enabled || !state.completer.available || !isRustEditorContext()) return;
+  const position = lspPositionAt(els.editor.value, els.editor.selectionStart);
+  try {
+    const help = await invoke('rust_signature_help', {
+      projectPath: state.projectPath,
+      path: state.currentFile,
+      content: els.editor.value,
+      line: position.line,
+      character: position.character,
+    });
+    if (!help?.label) {
+      els.signatureHelp.hidden = true;
+      state.completer.signatureVisible = false;
+      return;
+    }
+    const active = help.parameters?.[help.activeParameter] || '';
+    els.signatureHelpLabel.innerHTML = active
+      ? `${escapeHtml(help.label)}<span class="signature-active-parameter">ACTIVE: ${escapeHtml(active)}</span>`
+      : escapeHtml(help.label);
+    els.signatureHelpDocs.textContent = help.documentation || '';
+    els.signatureHelp.hidden = false;
+    state.completer.signatureVisible = true;
+    positionCompletionUi();
+  } catch {
+    els.signatureHelp.hidden = true;
+    state.completer.signatureVisible = false;
+  }
+}
+
 function markEditorChanged() {
   const tab = activeTab();
   if (!tab) return;
@@ -2034,7 +2444,7 @@ function resetUpdateDialog() {
 function showUpdatePrompt(update) {
   state.updater.pending = update;
   resetUpdateDialog();
-  els.updateCurrentVersion.textContent = 'CURRENT B1.3.2';
+  els.updateCurrentVersion.textContent = 'CURRENT B1.3.3';
   els.updateNewVersion.textContent = update.displayVersion || `B${update.version}`;
   els.updateReleaseDate.textContent = update.date ? `Published ${update.date}` : 'A newer Oxide package is available.';
   els.updateNotes.textContent = update.body?.trim() || 'This release does not include update notes.';
@@ -2147,11 +2557,11 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.2</span><p>A cross-platform Rust-first workbench for Windows and Linux, with Cargo project management, compiler diagnostics, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
+  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.3</span><p>A cross-platform Rust-first workbench for Windows and Linux, with Cargo project management, compiler diagnostics, Rust Code Analyzer/Completer powered by rust-analyzer, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
 }
 
 function showShortcuts() {
-  showInfo('KEYBOARD SHORTCUTS', `<div class="shortcut-grid"><span>New Project</span><kbd>Ctrl+N</kbd><span>Open Project</span><kbd>Ctrl+O</kbd><span>Save File</span><kbd>Ctrl+S</kbd><span>Close File</span><kbd>Ctrl+W</kbd><span>Switch Tab</span><kbd>Ctrl+Tab</kbd><span>Save Project As</span><kbd>Ctrl+Shift+S</kbd><span>Run</span><kbd>F5</kbd><span>Check</span><kbd>F6</kbd><span>Build</span><kbd>F7</kbd><span>Test</span><kbd>F8</kbd><span>Analyze Now</span><kbd>Ctrl+F6</kbd><span>Interactive Tutorial</span><kbd>Ctrl+Alt+T</kbd><span>Toggle Build Bay</span><kbd>Ctrl+&#96;</kbd></div>`);
+  showInfo('KEYBOARD SHORTCUTS', `<div class="shortcut-grid"><span>New Project</span><kbd>Ctrl+N</kbd><span>Open Project</span><kbd>Ctrl+O</kbd><span>Save File</span><kbd>Ctrl+S</kbd><span>Close File</span><kbd>Ctrl+W</kbd><span>Switch Tab</span><kbd>Ctrl+Tab</kbd><span>Save Project As</span><kbd>Ctrl+Shift+S</kbd><span>Run</span><kbd>F5</kbd><span>Check</span><kbd>F6</kbd><span>Build</span><kbd>F7</kbd><span>Test</span><kbd>F8</kbd><span>Analyze Now</span><kbd>Ctrl+F6</kbd><span>Code Completion</span><kbd>Ctrl+Space</kbd><span>Interactive Tutorial</span><kbd>Ctrl+Alt+T</kbd><span>Toggle Build Bay</span><kbd>Ctrl+&#96;</kbd></div>`);
 }
 
 let messageResolver = null;
@@ -2187,7 +2597,7 @@ async function handleMenuAction(action) {
   else if (action === 'close-project') await closeProject();
   else if (action === 'exit') await invoke('quit_app');
   else if (action === 'add-dependency') openDependencyDialog();
-  else if (action === 'refresh-toolchain') await detectToolchain();
+  else if (action === 'refresh-toolchain') { await detectToolchain(); if (state.projectPath) warmRustAnalyzer(); }
   else if (action === 'toggle-live-check') {
     state.liveCheck = !state.liveCheck;
     updateMenuAvailability();
@@ -2195,6 +2605,12 @@ async function handleMenuAction(action) {
     if (state.liveCheck) scheduleAnalysis(100);
   }
   else if (action === 'analyze-now') await runDiagnostics({ silent: false, force: true });
+  else if (action === 'toggle-completer') {
+    state.completer.enabled = !state.completer.enabled;
+    if (!state.completer.enabled) closeCompletionUi();
+    updateMenuAvailability();
+  }
+  else if (action === 'trigger-completion') await requestCodeCompletion({ manual: true });
   else if (action === 'tutorial') await openTutorialHome();
   else if (action === 'toggle-project') setViewPanel('project', !state.view.project);
   else if (action === 'toggle-cargo') setViewPanel('cargo', !state.view.cargo);
@@ -2244,8 +2660,8 @@ els.tutorialLearnMore.addEventListener('click', () => {
   els.tutorialLearnMore.textContent = willShow ? 'HIDE DETAILS' : 'LEARN MORE';
 });
 els.save.addEventListener('click', () => saveCurrentFile());
-els.editor.addEventListener('input', markEditorChanged);
-els.editor.addEventListener('scroll', () => { els.lines.scrollTop = els.editor.scrollTop; });
+els.editor.addEventListener('input', (event) => { markEditorChanged(); scheduleCodeCompletion(event); });
+els.editor.addEventListener('scroll', () => { els.lines.scrollTop = els.editor.scrollTop; if (state.completer.visible || state.completer.signatureVisible) positionCompletionUi(); });
 const OXIDE_INDENT = '    ';
 
 function currentLineContext(text, position) {
@@ -2304,6 +2720,7 @@ function handleClosingBraceIndent(event) {
 }
 
 els.editor.addEventListener('keydown', (event) => {
+  if (handleCompleterKey(event)) return;
   if (handleSmartEnter(event)) return;
   if (handleClosingBraceIndent(event)) return;
 

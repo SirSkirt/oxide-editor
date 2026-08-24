@@ -1,3 +1,5 @@
+mod analyzer;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::{
@@ -3211,6 +3213,65 @@ async fn oxide_update_prepare(app: AppHandle, version: String) -> Result<OxideUp
 }
 
 #[tauri::command]
+fn rust_analyzer_status() -> analyzer::AnalyzerStatus {
+    analyzer::status()
+}
+
+#[tauri::command]
+async fn rust_analyzer_warmup(
+    runtime: State<'_, analyzer::RustAnalyzerRuntime>,
+    project_path: String,
+) -> Result<(), String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || analyzer::warmup(&runtime, project_path))
+        .await
+        .map_err(|error| format!("Rust Code Analyzer/Completer warmup could not be joined: {error}"))?
+}
+
+#[tauri::command]
+async fn rust_completions(
+    runtime: State<'_, analyzer::RustAnalyzerRuntime>,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+) -> Result<Vec<analyzer::CompletionItemView>, String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        analyzer::completions(&runtime, project_path, path, content, line, character)
+    })
+    .await
+    .map_err(|error| format!("Rust Code Analyzer/Completer request could not be joined: {error}"))?
+}
+
+#[tauri::command]
+async fn rust_signature_help(
+    runtime: State<'_, analyzer::RustAnalyzerRuntime>,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+) -> Result<Option<analyzer::SignatureHelpView>, String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        analyzer::signature_help(&runtime, project_path, path, content, line, character)
+    })
+    .await
+    .map_err(|error| format!("Rust signature-help request could not be joined: {error}"))?
+}
+
+#[tauri::command]
+async fn rust_analyzer_stop(runtime: State<'_, analyzer::RustAnalyzerRuntime>) -> Result<(), String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || runtime.stop())
+        .await
+        .map_err(|error| format!("Rust Code Analyzer/Completer shutdown could not be joined: {error}"))?;
+    Ok(())
+}
+
+#[tauri::command]
 fn quit_app(app: AppHandle) {
     app.exit(0);
 }
@@ -3243,6 +3304,7 @@ pub fn run() {
             Ok(())
         })
         .manage(TerminalRuntime::default())
+        .manage(analyzer::RustAnalyzerRuntime::default())
         .invoke_handler(tauri::generate_handler![
             platform_info,
             toolchain_info,
@@ -3268,6 +3330,11 @@ pub fn run() {
             tutorial_set_progress,
             tutorial_prepare_lesson,
             tutorial_evaluate,
+            rust_analyzer_status,
+            rust_analyzer_warmup,
+            rust_completions,
+            rust_signature_help,
+            rust_analyzer_stop,
             oxide_update_check,
             oxide_update_prepare,
             quit_app,

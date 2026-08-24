@@ -187,11 +187,98 @@ button:disabled { cursor: not-allowed; }
 .file-tab:focus-visible, .tab-close:focus-visible { outline: 1px solid var(--rust-hot); outline-offset: -2px; }
 .save-button { flex: 0 0 62px; margin-left: 0; width: 62px; border-width: 0 0 0 1px; font: 700 9px Consolas, monospace; }
 .save-button:disabled { opacity: .35; }
-.editor-wrap { min-height: 0; display: grid; grid-template-columns: 48px 1fr; overflow: hidden; }
+.editor-wrap { min-height: 0; display: grid; grid-template-columns: 48px 1fr; overflow: hidden; position: relative; }
 .line-numbers, .code-editor { margin: 0; padding: 12px 0; border: 0; font: 13px/1.55 "Cascadia Code", "JetBrains Mono", Consolas, monospace; tab-size: 4; }
 .line-numbers { overflow: hidden; padding-right: 10px; color: #545852; background: #0e0f0e; border-right: 1px solid #242623; text-align: right; user-select: none; }
 .code-editor { width: 100%; height: 100%; resize: none; padding-left: 14px; padding-right: 14px; color: #d7d1c8; background: #121312; outline: none; white-space: pre; overflow: auto; caret-color: #e5a073; }
 .code-editor::selection { background: #60321f; }
+
+
+/* Rust Code Analyzer/Completer ------------------------------------------------ */
+.code-completer {
+  position: absolute;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: minmax(210px, .82fr) minmax(250px, 1.18fr);
+  height: 250px;
+  min-width: 470px;
+  border: 1px solid #4b3428;
+  background: #111310;
+  box-shadow: 0 14px 34px #000a, inset 0 1px 0 #3a3d37;
+  overflow: hidden;
+  font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+}
+.code-completer[hidden] { display: none; }
+.completion-list {
+  min-width: 0;
+  overflow: auto;
+  border-right: 1px solid #32342f;
+  background: #151714;
+}
+.completion-item {
+  width: 100%;
+  min-height: 31px;
+  display: grid;
+  grid-template-columns: 24px minmax(0,1fr) auto;
+  gap: 7px;
+  align-items: center;
+  padding: 4px 8px;
+  border: 0;
+  border-bottom: 1px solid #20221f;
+  color: #d1cbc2;
+  background: transparent;
+  text-align: left;
+  cursor: default;
+  font: 11px/1.25 "Cascadia Code", Consolas, monospace;
+}
+.completion-item:hover,
+.completion-item.selected {
+  background: linear-gradient(90deg, #4e281b, #2b201a 66%, #20211e);
+  color: #f1e4d8;
+}
+.completion-kind {
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #6a3a27;
+  color: #e89b68;
+  background: #251812;
+  font-size: 9px;
+  font-weight: 900;
+}
+.completion-kind-function, .completion-kind-method { color: #d5a574; border-color: #765534; }
+.completion-kind-variable, .completion-kind-field { color: #9cb8a0; border-color: #435d48; }
+.completion-kind-struct, .completion-kind-enum, .completion-kind-type-parameter { color: #a8a7c9; border-color: #545374; }
+.completion-kind-keyword { color: #c6b66d; border-color: #665d2f; }
+.completion-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.completion-type { color: #73766f; font-size: 8px; text-transform: uppercase; }
+.completion-detail {
+  min-width: 0;
+  overflow: auto;
+  padding: 10px 12px;
+  color: #aaa69d;
+  background: #0f110f;
+}
+.completion-detail-head { display: flex; align-items: baseline; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid #2b2d29; }
+.completion-detail-head span { color: #c77146; font-size: 8px; font-weight: 900; letter-spacing: .08em; }
+.completion-detail-head strong { min-width: 0; overflow-wrap: anywhere; color: #e5ded4; font-size: 12px; }
+.completion-detail > code { display: block; margin: 9px 0; padding: 6px 7px; color: #d1a37d; background: #171915; border: 1px solid #2b2d28; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 10px; }
+.completion-detail-docs { color: #96978f; white-space: pre-wrap; overflow-wrap: anywhere; font: 10px/1.48 "Cascadia Code", Consolas, monospace; }
+.signature-help {
+  position: absolute;
+  z-index: 39;
+  padding: 8px 10px;
+  border: 1px solid #4b3428;
+  background: #111310;
+  box-shadow: 0 8px 22px #0009;
+  color: #d7d1c8;
+  font: 10px/1.4 "Cascadia Code", Consolas, monospace;
+}
+.signature-help[hidden] { display: none; }
+.signature-help-label { color: #e1c5af; font-weight: 700; white-space: pre-wrap; }
+.signature-active-parameter { display: inline-block; margin-left: 10px; padding: 2px 5px; color: #f1b184; background: #3c2118; border: 1px solid #673923; font-size: 8px; }
+.signature-help-docs { margin-top: 5px; color: #858981; white-space: pre-wrap; }
 
 .cargo-panel { border-left: 1px solid #080908; border-right: 0; }
 .cargo-inspector { height: calc(100% - 30px); overflow: auto; padding: 10px; }

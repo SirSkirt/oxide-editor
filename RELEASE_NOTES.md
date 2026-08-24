@@ -1,19 +1,29 @@
-# Oxide Editor B1.3.2 — The Compatibility Update
+# Oxide Editor B1.3.3
 
-B1.3.2 expands Oxide beyond Windows and starts its cross-platform native package updater.
+B1.3.3 adds Oxide's first language-intelligence system and refreshes the release toolchain.
 
-- Added Linux x86_64 support with Pop!_OS / Ubuntu / Debian-family systems as the first target.
-- GitHub Actions now verifies and releases both Windows and Linux builds.
-- Linux releases include both `.deb` and AppImage packages.
-- AppImage builds use Oxide's own signed package updater and rollback-aware Linux update helper.
-- `.deb` builds are supported for package-manager installation; automatic self-update currently targets the AppImage distribution so Oxide does not overwrite root-owned package files.
-- Oxide now finds rustup's `~/.cargo/bin` toolchain when launched from a Linux desktop environment that does not inherit shell PATH configuration.
-- Linux file paths are treated as case-sensitive.
-- Update feeds are platform-specific: `oxide-latest-windows-x86_64.json` and `oxide-latest-linux-x86_64.json`.
-- Windows keeps the B1.3.1 legacy `latest.json` bridge and the no-background-console release behavior.
+## Rust Code Analyzer/Completer
 
-## Updater dialog reliability
+- Added **Rust Code Analyzer/Completer**, Oxide's rust-analyzer-backed completion system.
+- Suggestions are requested from the real Cargo project through rust-analyzer/LSP; there is no hardcoded tutorial-only completion list.
+- Completion automatically filters and ranks as you type.
+- `.` and `::` contexts can surface relevant methods, fields, associated items, modules, types, variables, functions, macros, and keywords.
+- The popup includes a Visual Studio-style details pane for symbol kind, signature/detail text, and rust-analyzer documentation when available.
+- Arrow keys move through suggestions, Enter/Tab accepts, Escape dismisses, and Ctrl+Space manually requests completion.
+- rust-analyzer text edits and additional import edits are applied when provided.
+- Basic function signature/parameter help appears while entering call arguments.
+- Oxide warms the analyzer when a Cargo project opens and reports analyzer state in the status rail.
+- If rust-analyzer is missing, Oxide explains how to install it with `rustup component add rust-analyzer`.
 
-- Fixed a B1.3.1-era UI wiring bug where **Later** and **Download & Update** could render without active click handlers.
-- Update dialog controls are now bound once at application startup and work from the welcome screen, normal projects, and tutorial projects.
-- Unexpected frontend update errors are shown in the update dialog instead of failing silently.
+## Tooling maintenance
+
+- Removed the unused `Read` import from the Windows Oxide Update Service.
+- GitHub Actions now uses **Node.js 24** for Windows and Linux verification/release jobs.
+- `package.json` now declares Node 24+ as the development tooling baseline.
+
+## Carried forward from B1.3.2
+
+- Windows + Linux support, including Pop!_OS/Ubuntu `.deb` and AppImage builds.
+- Oxide-native signed package updates with platform-specific feeds.
+- B1.3.1 legacy updater bridge for Windows installs.
+- 26-lesson hands-on Rust tutorial, floating interactive Run Terminal, live rustc diagnostics, Cargo GUI, and multi-file editor tabs.

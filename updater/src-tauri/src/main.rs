@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     env,
     fs::{self, File},
-    io::{self, Read, Write},
+    io::{self, Write},
     path::{Path, PathBuf},
     process::Command,
     thread,

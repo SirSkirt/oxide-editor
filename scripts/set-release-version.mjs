@@ -2,11 +2,11 @@ import fs from 'node:fs';
 
 const [internalVersion, displayVersion] = process.argv.slice(2);
 if (!/^\d+\.\d+\.\d+$/.test(internalVersion || '')) {
-  console.error('Usage: npm run release:version -- 1.3.2 B1.3.2');
+  console.error('Usage: npm run release:version -- 1.3.4 B1.3.4');
   process.exit(1);
 }
 if (!displayVersion) {
-  console.error('A user-facing display version is required, for example B1.3.2.');
+  console.error('A user-facing display version is required, for example B1.3.4.');
   process.exit(1);
 }
 
