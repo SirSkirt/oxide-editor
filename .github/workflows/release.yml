@@ -277,7 +277,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build -- --bundles deb,appimage --config src-tauri/tauri.release.conf.json
 
-      - name: Create signed Linux AppImage update package
+      - name: Create signed Linux update package
         id: package
         shell: bash
         env:
@@ -299,13 +299,14 @@ jobs:
 
           cp "$appimage" "$stage_dir/oxide-editor.AppImage"
           chmod +x "$stage_dir/oxide-editor.AppImage"
+          cp "$deb" "$stage_dir/oxide-editor.deb"
           cat > "$stage_dir/update-package.json" <<JSON
           {
             "format": 1,
             "version": "$OXIDE_VERSION",
             "display_version": "$OXIDE_DISPLAY_VERSION",
-            "platform": "linux-x86_64-appimage",
-            "files": ["oxide-editor.AppImage"]
+            "platform": "linux-x86_64",
+            "files": ["oxide-editor.AppImage", "oxide-editor.deb"]
           }
           JSON
 
