@@ -20,7 +20,7 @@ function Invoke-NativeChecked {
 }
 
 Write-Host ''
-Write-Host 'OXIDE UPDATER SETUP' -ForegroundColor DarkYellow
+Write-Host 'OXIDE PACKAGE UPDATER SETUP' -ForegroundColor DarkYellow
 Write-Host '--------------------'
 Write-Host "Key location: $KeyPath"
 Write-Host ''
@@ -55,10 +55,12 @@ if (-not (Test-Path $PublicKeyPath)) {
 $PublicKey = (Get-Content $PublicKeyPath -Raw).TrimEnd()
 $Config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 $Config.plugins.updater.pubkey = $PublicKey
-$Config | ConvertTo-Json -Depth 30 | Set-Content -Path $ConfigPath -Encoding UTF8
+$Json = $Config | ConvertTo-Json -Depth 30
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($ConfigPath, $Json, $Utf8NoBom)
 
 Write-Host ''
-Write-Host 'Updater public key written to src-tauri\tauri.conf.json.' -ForegroundColor Green
+Write-Host 'Package-signing public key written to src-tauri\tauri.conf.json.' -ForegroundColor Green
 Write-Host 'The public key is safe to commit.'
 Write-Host ''
 Write-Host 'NEXT: add the PRIVATE key to GitHub:' -ForegroundColor DarkYellow

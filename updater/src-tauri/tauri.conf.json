@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Oxide Update Service",
+  "version": "1.3.2",
+  "identifier": "com.oxide.editor.updater",
+  "build": {
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Oxide Update Service",
+        "width": 560,
+        "height": 330,
+        "minWidth": 560,
+        "minHeight": 330,
+        "maxWidth": 560,
+        "maxHeight": 330,
+        "resizable": false,
+        "center": true,
+        "decorations": false,
+        "alwaysOnTop": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.ico"
+    ]
+  }
+}

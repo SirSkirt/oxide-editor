@@ -1,7 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { check as checkForTauriUpdate } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
 import './styles.css';
 
 const app = document.querySelector('#app');
@@ -160,7 +158,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.1</div>
+        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.2</div>
         <h1>Welcome to the Oxide Editor</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -260,7 +258,7 @@ app.innerHTML = `
       <span id="file-status">NO FILE</span>
       <span id="analysis-status">RUST CHECK: IDLE</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>OXIDE B1.3.1</span>
+      <span>OXIDE B1.3.2</span>
     </footer>
   </main>
 
@@ -362,7 +360,7 @@ app.innerHTML = `
   </dialog>
 
   <dialog id="update-dialog" class="oxide-dialog update-dialog">
-    <div class="dialog-head"><div><span>OXIDE UPDATE</span><small>AUTOMATIC UPDATE SERVICE</small></div><button type="button" id="update-close" class="dialog-close" aria-label="Close">×</button></div>
+    <div class="dialog-head"><div><span>OXIDE UPDATE</span><small>OXIDE PACKAGE UPDATE SERVICE</small></div><button type="button" id="update-close" class="dialog-close" aria-label="Close">×</button></div>
     <div class="update-body">
       <div class="update-version-row"><span id="update-current-version">CURRENT 1.3.0</span><b>→</b><strong id="update-new-version">NEW VERSION</strong></div>
       <div id="update-release-date" class="update-release-date"></div>
@@ -376,7 +374,7 @@ app.innerHTML = `
     </div>
     <div class="dialog-actions update-actions">
       <button type="button" id="update-later" class="metal-button">LATER</button>
-      <button type="button" id="update-install" class="metal-button primary">DOWNLOAD & INSTALL</button>
+      <button type="button" id="update-install" class="metal-button primary">DOWNLOAD & UPDATE</button>
     </div>
   </dialog>
 
@@ -2025,15 +2023,15 @@ function resetUpdateDialog() {
   els.updateError.textContent = '';
   els.updateLater.disabled = false;
   els.updateInstall.disabled = false;
-  els.updateInstall.textContent = 'DOWNLOAD & INSTALL';
+  els.updateInstall.textContent = 'DOWNLOAD & UPDATE';
 }
 
 function showUpdatePrompt(update) {
   state.updater.pending = update;
   resetUpdateDialog();
-  els.updateCurrentVersion.textContent = `CURRENT ${escapeHtml(update.currentVersion || '1.3.1')}`;
-  els.updateNewVersion.textContent = `VERSION ${update.version}`;
-  els.updateReleaseDate.textContent = update.date ? `Published ${update.date}` : 'A newer Oxide build is available.';
+  els.updateCurrentVersion.textContent = 'CURRENT B1.3.2';
+  els.updateNewVersion.textContent = update.displayVersion || `B${update.version}`;
+  els.updateReleaseDate.textContent = update.date ? `Published ${update.date}` : 'A newer Oxide package is available.';
   els.updateNotes.textContent = update.body?.trim() || 'This release does not include update notes.';
   if (!els.updateDialog.open) els.updateDialog.showModal();
 }
@@ -2046,23 +2044,44 @@ async function checkForOxideUpdates({ manual = false } = {}) {
   }
   state.updater.checking = true;
   try {
-    const update = await checkForTauriUpdate({ timeout: 15000 });
+    const update = await invoke('oxide_update_check');
     if (update) {
       showUpdatePrompt(update);
     } else if (manual) {
-      showInfo('OXIDE UPDATE', '<div class="update-status-message"><strong>Oxide is up to date.</strong><p>No newer signed release is available for this installation.</p></div>');
+      showInfo('OXIDE UPDATE', '<div class="update-status-message"><strong>Oxide is up to date.</strong><p>No newer signed Oxide package is available for this installation.</p></div>');
     }
   } catch (error) {
     const message = String(error);
-    console.warn('Oxide updater check failed:', message);
+    console.warn('Oxide package update check failed:', message);
     if (manual) {
       const setupHint = /pubkey|public key|signature|not configured/i.test(message)
-        ? '<p>The updater signing key has not been configured for this build yet. Run <code>scripts/setup-updater.ps1</code> once before publishing the first updater-enabled release.</p>'
-        : '<p>Oxide could not reach or validate the GitHub release feed. Your editor can continue normally.</p>';
+        ? '<p>The updater signing key has not been configured for this build yet. Run <code>scripts/setup-updater.ps1</code> once before publishing package updates.</p>'
+        : '<p>Oxide could not reach or validate the GitHub package feed. Your editor can continue normally.</p>';
       showInfo('UPDATE CHECK FAILED', `<div class="update-status-message"><strong>Could not check for updates.</strong>${setupHint}<p class="update-error-detail">${escapeHtml(message)}</p></div>`);
     }
   } finally {
     state.updater.checking = false;
+  }
+}
+
+function updateDownloadProgress(payload = {}) {
+  if (!state.updater.installing) return;
+  if (payload.event === 'progress') {
+    state.updater.downloaded = Number(payload.downloaded || 0);
+    state.updater.contentLength = Number(payload.contentLength || 0);
+    if (state.updater.contentLength > 0) {
+      const percent = Math.min(100, (state.updater.downloaded / state.updater.contentLength) * 100);
+      els.updateProgressBar.classList.remove('indeterminate');
+      els.updateProgressBar.style.width = `${percent.toFixed(1)}%`;
+      els.updateProgressText.textContent = `Downloading signed package ${formatBytes(state.updater.downloaded)} / ${formatBytes(state.updater.contentLength)} · ${Math.floor(percent)}%`;
+    } else {
+      els.updateProgressBar.classList.add('indeterminate');
+      els.updateProgressText.textContent = `Downloading signed package · ${formatBytes(state.updater.downloaded)}`;
+    }
+  } else if (payload.event === 'finished') {
+    els.updateProgressBar.classList.remove('indeterminate');
+    els.updateProgressBar.style.width = '100%';
+    els.updateProgressText.textContent = 'Download complete. Verifying package signature…';
   }
 }
 
@@ -2073,45 +2092,29 @@ async function installPendingUpdate() {
   state.updater.installing = true;
   els.updateLater.disabled = true;
   els.updateInstall.disabled = true;
-  els.updateInstall.textContent = 'INSTALLING…';
+  els.updateInstall.textContent = 'DOWNLOADING…';
   els.updateProgressWrap.hidden = false;
   els.updateError.hidden = true;
+  els.updateProgressBar.classList.add('indeterminate');
   state.updater.downloaded = 0;
   state.updater.contentLength = 0;
+  els.updateProgressText.textContent = 'Contacting the Oxide package feed…';
 
   try {
-    await update.downloadAndInstall((event) => {
-      if (event.event === 'Started') {
-        state.updater.contentLength = Number(event.data?.contentLength || 0);
-        els.updateProgressText.textContent = state.updater.contentLength
-          ? `Downloading 0 / ${formatBytes(state.updater.contentLength)}`
-          : 'Downloading update…';
-        if (!state.updater.contentLength) els.updateProgressBar.classList.add('indeterminate');
-      } else if (event.event === 'Progress') {
-        state.updater.downloaded += Number(event.data?.chunkLength || 0);
-        if (state.updater.contentLength > 0) {
-          const percent = Math.min(100, (state.updater.downloaded / state.updater.contentLength) * 100);
-          els.updateProgressBar.classList.remove('indeterminate');
-          els.updateProgressBar.style.width = `${percent.toFixed(1)}%`;
-          els.updateProgressText.textContent = `Downloading ${formatBytes(state.updater.downloaded)} / ${formatBytes(state.updater.contentLength)} · ${Math.floor(percent)}%`;
-        } else {
-          els.updateProgressText.textContent = `Downloaded ${formatBytes(state.updater.downloaded)}`;
-        }
-      } else if (event.event === 'Finished') {
-        els.updateProgressBar.classList.remove('indeterminate');
-        els.updateProgressBar.style.width = '100%';
-        els.updateProgressText.textContent = 'Download verified. Installing update…';
-      }
-    });
-
-    // Windows normally exits Oxide during installation. On platforms where it
-    // remains alive, relaunch into the newly installed build.
-    await relaunch();
+    const result = await invoke('oxide_update_prepare', { version: update.version });
+    if (!result?.helperStarted) throw new Error('Oxide Update Service did not start.');
+    els.updateProgressBar.classList.remove('indeterminate');
+    els.updateProgressBar.style.width = '100%';
+    els.updateProgressText.textContent = 'Package signature verified. Oxide will close and apply the update…';
+    els.updateInstall.textContent = 'STARTING UPDATER…';
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    await invoke('quit_app');
   } catch (error) {
     state.updater.installing = false;
     els.updateLater.disabled = false;
     els.updateInstall.disabled = false;
     els.updateInstall.textContent = 'TRY AGAIN';
+    els.updateProgressBar.classList.remove('indeterminate');
     els.updateError.hidden = false;
     els.updateError.textContent = `Update failed: ${error}`;
   }
@@ -2131,7 +2134,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.1</span><p>A Rust-first workbench with Cargo project management, compiler diagnostics, automatic signed updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
+  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.2</span><p>A Rust-first workbench with Cargo project management, compiler diagnostics, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
 }
 
 function showShortcuts() {
@@ -2434,6 +2437,10 @@ document.addEventListener('keydown', async (event) => {
     event.preventDefault();
     await cargoAction('test');
   }
+});
+
+listen('oxide-update-download', (event) => {
+  updateDownloadProgress(event.payload);
 });
 
 listen('cargo-output', (event) => {

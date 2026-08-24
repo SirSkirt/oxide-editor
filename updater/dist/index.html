@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Oxide Update Service</title>
+  <style>
+    :root { color-scheme: dark; font-family: Consolas, "Cascadia Mono", monospace; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #111311; color: #d8d1c8; }
+    body { border: 1px solid #594739; overflow: hidden; }
+    .titlebar { height: 48px; display:flex; align-items:center; gap:12px; padding:0 16px; background:linear-gradient(#26241f,#191a17); border-bottom:1px solid #594739; user-select:none; }
+    .mark { width:30px; height:30px; display:grid; place-items:center; border:1px solid #b56532; color:#e58a4d; font-weight:900; background:#171512; box-shadow: inset 0 0 0 2px #2b211b; }
+    .brand strong { display:block; color:#eee4d7; letter-spacing:.12em; font-size:14px; }
+    .brand span { color:#8f8479; font-size:10px; letter-spacing:.08em; }
+    .body { padding:26px 28px; }
+    .eyebrow { color:#b56532; font-size:11px; letter-spacing:.14em; font-weight:800; }
+    h1 { margin:8px 0 7px; font-size:23px; color:#f1e8dd; letter-spacing:.04em; }
+    #detail { min-height:42px; margin:0; color:#aaa097; font-size:13px; line-height:1.5; }
+    .track { height:16px; margin-top:25px; border:1px solid #54463a; background:#0c0e0c; padding:2px; }
+    #bar { height:100%; width:0%; background:linear-gradient(90deg,#824623,#c06d36,#e18a4e); transition:width .18s linear; }
+    .readout { display:flex; justify-content:space-between; margin-top:8px; color:#776f67; font-size:10px; letter-spacing:.08em; }
+    .footer { display:flex; align-items:center; justify-content:space-between; padding:0 28px; height:49px; border-top:1px solid #302a25; background:#0e100e; }
+    .lamp { width:8px; height:8px; border-radius:50%; background:#c06d36; box-shadow:0 0 8px rgba(192,109,54,.4); margin-right:8px; display:inline-block; }
+    .status { color:#928980; font-size:10px; letter-spacing:.08em; }
+    button { display:none; min-height:29px; padding:0 14px; color:#d9cec2; background:#28241f; border:1px solid #6c5544; font:700 10px Consolas,monospace; letter-spacing:.08em; cursor:pointer; }
+    body.failed #bar { background:#9a3f31; }
+    body.failed .lamp { background:#b64b3c; }
+    body.failed button { display:block; }
+  </style>
+</head>
+<body>
+  <div class="titlebar" data-tauri-drag-region>
+    <div class="mark">OX</div>
+    <div class="brand"><strong>OXIDE UPDATE SERVICE</strong><span>NATIVE PACKAGE UPDATER</span></div>
+  </div>
+  <main class="body">
+    <div class="eyebrow" id="stage">PREPARING UPDATE</div>
+    <h1>Forging the next Oxide build.</h1>
+    <p id="detail">Preparing the signed update package…</p>
+    <div class="track"><div id="bar"></div></div>
+    <div class="readout"><span>OXIDE PACKAGE SYSTEM</span><span id="percent">0%</span></div>
+  </main>
+  <footer class="footer">
+    <div class="status"><span class="lamp"></span><span id="footer-text">DO NOT CLOSE OXIDE WHILE FILES ARE BEING REPLACED</span></div>
+    <button id="close">CLOSE</button>
+  </footer>
+  <script>
+    const stage = document.querySelector('#stage');
+    const detail = document.querySelector('#detail');
+    const bar = document.querySelector('#bar');
+    const percent = document.querySelector('#percent');
+    const footer = document.querySelector('#footer-text');
+    const close = document.querySelector('#close');
+
+    close.addEventListener('click', () => window.__TAURI__?.core?.invoke('updater_close'));
+
+    const listen = window.__TAURI__?.event?.listen;
+    if (listen) {
+      listen('oxide-updater-progress', (event) => {
+        const data = event.payload || {};
+        stage.textContent = data.stage || 'UPDATING';
+        detail.textContent = data.detail || '';
+        const value = Math.max(0, Math.min(100, Number(data.percent) || 0));
+        bar.style.width = `${value}%`;
+        percent.textContent = `${Math.round(value)}%`;
+        if (data.failed) {
+          document.body.classList.add('failed');
+          footer.textContent = 'THE PREVIOUS BUILD WAS KEPT OR RESTORED';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

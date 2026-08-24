@@ -9,9 +9,10 @@ use std::{
     sync::{Arc, Mutex, mpsc},
     collections::HashMap,
     thread,
-    time::Duration,
+    time::{Duration, SystemTime},
 };
 use tauri::{AppHandle, Emitter, State};
+use tauri_plugin_updater::UpdaterExt;
 use toml_edit::{Array, DocumentMut, InlineTable, Item, Value};
 
 #[derive(Serialize)]
@@ -20,6 +21,32 @@ struct ToolchainInfo {
     rustc_found: bool,
     cargo: String,
     rustc: String,
+}
+
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OxideUpdateInfo {
+    version: String,
+    display_version: String,
+    current_version: String,
+    body: Option<String>,
+    date: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OxideUpdateDownloadEvent {
+    event: String,
+    downloaded: usize,
+    content_length: Option<u64>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OxideUpdateStageResult {
+    version: String,
+    helper_started: bool,
 }
 
 #[derive(Serialize)]
@@ -2896,6 +2923,160 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
 }
 
 
+fn updater_display_version(update: &tauri_plugin_updater::Update) -> String {
+    update
+        .raw_json
+        .get("display_version")
+        .or_else(|| update.raw_json.get("displayVersion"))
+        .and_then(|value| value.as_str())
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("B{}", update.version))
+}
+
+#[tauri::command]
+async fn oxide_update_check(app: AppHandle) -> Result<Option<OxideUpdateInfo>, String> {
+    let updater = app
+        .updater()
+        .map_err(|error| format!("Could not initialize the Oxide update service: {error}"))?;
+    let update = updater
+        .check()
+        .await
+        .map_err(|error| format!("Could not check the Oxide release feed: {error}"))?;
+
+    Ok(update.map(|update| OxideUpdateInfo {
+        version: update.version.to_string(),
+        display_version: updater_display_version(&update),
+        current_version: update.current_version.clone(),
+        body: update.body.clone(),
+        date: update.date.map(|date| date.to_string()),
+    }))
+}
+
+fn installed_updater_helper(install_dir: &Path) -> Result<PathBuf, String> {
+    let direct = install_dir.join(if cfg!(windows) { "oxide-updater.exe" } else { "oxide-updater" });
+    if direct.is_file() {
+        return Ok(direct);
+    }
+
+    let mut candidates = fs::read_dir(install_dir)
+        .map_err(|error| format!("Could not inspect the Oxide install directory: {error}"))?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .map(|name| name.starts_with("oxide-updater") && path.is_file())
+                .unwrap_or(false)
+        })
+        .collect::<Vec<_>>();
+    candidates.sort();
+    candidates
+        .into_iter()
+        .next()
+        .ok_or_else(|| "Oxide Update Service was not found beside the installed editor. Install B1.3.2 once with the normal installer before package updates can take over.".to_string())
+}
+
+#[tauri::command]
+async fn oxide_update_prepare(app: AppHandle, version: String) -> Result<OxideUpdateStageResult, String> {
+    let updater = app
+        .updater()
+        .map_err(|error| format!("Could not initialize the Oxide update service: {error}"))?;
+    let update = updater
+        .check()
+        .await
+        .map_err(|error| format!("Could not refresh the Oxide release feed: {error}"))?
+        .ok_or_else(|| "The selected update is no longer available.".to_string())?;
+
+    if update.version.to_string() != version {
+        return Err(format!(
+            "The available update changed from {version} to {}. Check for updates again before installing.",
+            update.version
+        ));
+    }
+
+    let progress_app = app.clone();
+    let mut downloaded = 0usize;
+    let bytes = update
+        .download(
+            move |chunk_length, content_length| {
+                downloaded = downloaded.saturating_add(chunk_length);
+                let _ = progress_app.emit(
+                    "oxide-update-download",
+                    OxideUpdateDownloadEvent {
+                        event: "progress".into(),
+                        downloaded,
+                        content_length,
+                    },
+                );
+            },
+            {
+                let finished_app = app.clone();
+                move || {
+                    let _ = finished_app.emit(
+                        "oxide-update-download",
+                        OxideUpdateDownloadEvent {
+                            event: "finished".into(),
+                            downloaded: 0,
+                            content_length: None,
+                        },
+                    );
+                }
+            },
+        )
+        .await
+        .map_err(|error| format!("The update package could not be downloaded or its signature was rejected: {error}"))?;
+
+    let current_exe = env::current_exe()
+        .map_err(|error| format!("Could not locate the running Oxide executable: {error}"))?;
+    let install_dir = current_exe
+        .parent()
+        .ok_or_else(|| "Could not determine the Oxide install directory.".to_string())?
+        .to_path_buf();
+    let helper = installed_updater_helper(&install_dir)?;
+
+    let work_dir = env::temp_dir()
+        .join("OxideEditor")
+        .join(format!("update-{}-{}", version, std::process::id()));
+    if work_dir.exists() {
+        fs::remove_dir_all(&work_dir)
+            .map_err(|error| format!("Could not clear the previous update staging directory: {error}"))?;
+    }
+    fs::create_dir_all(&work_dir)
+        .map_err(|error| format!("Could not create the update staging directory: {error}"))?;
+
+    let package_path = work_dir.join("oxide-update.zip");
+    fs::write(&package_path, bytes)
+        .map_err(|error| format!("Could not stage the verified update package: {error}"))?;
+
+    let helper_name = if cfg!(windows) { "oxide-updater.exe" } else { "oxide-updater" };
+    let temp_helper = work_dir.join(helper_name);
+    fs::copy(&helper, &temp_helper)
+        .map_err(|error| format!("Could not prepare the Oxide Update Service: {error}"))?;
+
+    let app_exe_name = current_exe
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| "Could not determine the Oxide executable name.".to_string())?
+        .to_string();
+
+    Command::new(&temp_helper)
+        .arg("--package")
+        .arg(&package_path)
+        .arg("--install-dir")
+        .arg(&install_dir)
+        .arg("--app-exe")
+        .arg(&app_exe_name)
+        .arg("--version")
+        .arg(&version)
+        .spawn()
+        .map_err(|error| format!("Could not launch the Oxide Update Service: {error}"))?;
+
+    Ok(OxideUpdateStageResult {
+        version,
+        helper_started: true,
+    })
+}
+
 #[tauri::command]
 fn quit_app(app: AppHandle) {
     app.exit(0);
@@ -2904,8 +3085,30 @@ fn quit_app(app: AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .setup(|_| {
+            thread::spawn(|| {
+                thread::sleep(Duration::from_secs(5));
+                let update_root = env::temp_dir().join("OxideEditor");
+                if let Ok(entries) = fs::read_dir(&update_root) {
+                    for entry in entries.filter_map(Result::ok) {
+                        let path = entry.path();
+                        if path.is_dir() && entry.file_name().to_string_lossy().starts_with("update-") {
+                            let old_enough = fs::metadata(&path)
+                                .and_then(|meta| meta.modified())
+                                .ok()
+                                .and_then(|modified| SystemTime::now().duration_since(modified).ok())
+                                .map(|age| age > Duration::from_secs(600))
+                                .unwrap_or(false);
+                            if old_enough {
+                                let _ = fs::remove_dir_all(path);
+                            }
+                        }
+                    }
+                }
+            });
+            Ok(())
+        })
         .manage(TerminalRuntime::default())
         .invoke_handler(tauri::generate_handler![
             toolchain_info,
@@ -2931,6 +3134,8 @@ pub fn run() {
             tutorial_set_progress,
             tutorial_prepare_lesson,
             tutorial_evaluate,
+            oxide_update_check,
+            oxide_update_prepare,
             quit_app,
         ])
         .run(tauri::generate_context!())
