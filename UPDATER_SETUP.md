@@ -1,6 +1,6 @@
 # Oxide Package Updater Setup
 
-B1.3.3 continues the platform-specific Oxide package feeds introduced by B1.3.2 **The Compatibility Update**, while retaining the old Windows installer feed as a migration bridge.
+B1.3.4 continues the platform-specific Oxide package feeds introduced by B1.3.2 **The Compatibility Update**, while retaining the old Windows installer feed as a migration bridge.
 
 ## Signing key
 
@@ -106,8 +106,8 @@ Then use:
 or push a matching SemVer tag:
 
 ```powershell
-git tag v1.3.3
-git push origin v1.3.3
+git tag v1.3.4
+git push origin v1.3.4
 ```
 
 The release pipeline runs separate Windows and Linux jobs after creating the shared GitHub Release.

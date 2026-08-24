@@ -258,6 +258,14 @@ fn resolve_program(program: &str) -> PathBuf {
         }
     }
 
+    #[cfg(target_os = "linux")]
+    for directory in ["/usr/local/bin", "/usr/bin", "/bin"] {
+        let candidate = Path::new(directory).join(&executable_name);
+        if candidate.is_file() {
+            return candidate;
+        }
+    }
+
     // Linux desktop launchers do not necessarily inherit ~/.cargo/bin from shell dotfiles.
     if let Some(home) = env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }) {
         let candidate = PathBuf::from(home).join(".cargo").join("bin").join(&executable_name);
@@ -282,17 +290,66 @@ fn command_version(program: &str) -> Option<String> {
         .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
+#[cfg(target_os = "linux")]
+fn linux_is_appimage() -> bool {
+    env::var_os("APPIMAGE")
+        .map(PathBuf::from)
+        .map(|path| path.is_file())
+        .unwrap_or(false)
+}
+
+#[cfg(target_os = "linux")]
+fn linux_is_deb_install() -> bool {
+    if cfg!(debug_assertions) {
+        return false;
+    }
+    let Ok(current_exe) = env::current_exe() else {
+        return false;
+    };
+    program_command("dpkg-query")
+        .arg("-S")
+        .arg(&current_exe)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+#[cfg(target_os = "linux")]
+fn linux_deb_update_tools_available() -> bool {
+    resolve_program("pkexec").is_file() && resolve_program("dpkg").is_file()
+}
+
+#[cfg(target_os = "linux")]
+fn linux_update_capability() -> (bool, String, Option<String>) {
+    if linux_is_appimage() {
+        return (true, "appimage-package".to_string(), None);
+    }
+    if linux_is_deb_install() {
+        if linux_deb_update_tools_available() {
+            return (true, "deb-package".to_string(), None);
+        }
+        return (
+            false,
+            "deb-package".to_string(),
+            Some("This .deb installation can update automatically when polkit/pkexec and dpkg are available. Install the missing system tools or update Oxide through your package manager.".to_string()),
+        );
+    }
+    (
+        false,
+        "linux-development".to_string(),
+        Some("Automatic installation is disabled for unpackaged Linux development builds. Use the AppImage or .deb release build to test Oxide updates.".to_string()),
+    )
+}
+
 #[tauri::command]
 fn platform_info() -> PlatformInfo {
     #[cfg(target_os = "windows")]
     let (automatic_updates, update_mode) = (true, "native-package".to_string());
 
     #[cfg(target_os = "linux")]
-    let (automatic_updates, update_mode) = if env::var_os("APPIMAGE").is_some() {
-        (true, "appimage-package".to_string())
-    } else {
-        (false, "linux-package-manager".to_string())
-    };
+    let (automatic_updates, update_mode, _) = linux_update_capability();
 
     #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     let (automatic_updates, update_mode) = (false, "unsupported".to_string());
@@ -3024,15 +3081,7 @@ async fn oxide_update_check(app: AppHandle) -> Result<Option<OxideUpdateInfo>, S
         let (install_supported, install_hint, update_mode) = (true, None, "native-package".to_string());
 
         #[cfg(target_os = "linux")]
-        let (install_supported, install_hint, update_mode) = if env::var_os("APPIMAGE").is_some() {
-            (true, None, "appimage-package".to_string())
-        } else {
-            (
-                false,
-                Some("Automatic Oxide package updates currently use the AppImage build on Linux. If you installed the .deb package, install the newer .deb from GitHub Releases or switch to the AppImage build for automatic updates.".to_string()),
-                "linux-package-manager".to_string(),
-            )
-        };
+        let (install_supported, update_mode, install_hint) = linux_update_capability();
 
         #[cfg(not(any(target_os = "windows", target_os = "linux")))]
         let (install_supported, install_hint, update_mode) = (false, Some("Automatic package updates are not implemented for this platform yet.".to_string()), "unsupported".to_string());
@@ -3185,22 +3234,46 @@ async fn oxide_update_prepare(app: AppHandle, version: String) -> Result<OxideUp
 
     #[cfg(target_os = "linux")]
     {
-        let appimage = env::var_os("APPIMAGE")
-            .map(PathBuf::from)
-            .filter(|path| path.is_file())
-            .ok_or_else(|| "Automatic Oxide package updates on Linux currently require the AppImage build. Install the newer .deb manually, or use Oxide's AppImage build for automatic updates.".to_string())?;
+        if linux_is_appimage() {
+            let appimage = env::var_os("APPIMAGE")
+                .map(PathBuf::from)
+                .filter(|path| path.is_file())
+                .ok_or_else(|| "The running Oxide AppImage could not be located.".to_string())?;
 
-        Command::new(&temp_helper)
-            .arg("--package")
-            .arg(&package_path)
-            .arg("--appimage")
-            .arg(&appimage)
-            .arg("--version")
-            .arg(&version)
-            .arg("--pid")
-            .arg(std::process::id().to_string())
-            .spawn()
-            .map_err(|error| format!("Could not launch the Linux Oxide Update Service: {error}"))?;
+            Command::new(&temp_helper)
+                .arg("--mode")
+                .arg("appimage")
+                .arg("--package")
+                .arg(&package_path)
+                .arg("--appimage")
+                .arg(&appimage)
+                .arg("--version")
+                .arg(&version)
+                .arg("--pid")
+                .arg(std::process::id().to_string())
+                .spawn()
+                .map_err(|error| format!("Could not launch the Linux Oxide Update Service: {error}"))?;
+        } else if linux_is_deb_install() {
+            if !linux_deb_update_tools_available() {
+                return Err("This .deb installation needs polkit/pkexec and dpkg for automatic updates.".into());
+            }
+
+            Command::new(&temp_helper)
+                .arg("--mode")
+                .arg("deb")
+                .arg("--package")
+                .arg(&package_path)
+                .arg("--app-exe")
+                .arg(&current_exe)
+                .arg("--version")
+                .arg(&version)
+                .arg("--pid")
+                .arg(std::process::id().to_string())
+                .spawn()
+                .map_err(|error| format!("Could not launch the Linux Oxide Update Service: {error}"))?;
+        } else {
+            return Err("Automatic Linux installation is available for Oxide AppImage and .deb release builds. This appears to be an unpackaged/development build.".into());
+        }
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "linux")))]

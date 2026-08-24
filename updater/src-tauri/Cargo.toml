@@ -1,6 +1,6 @@
 [package]
 name = "oxide-updater"
-version = "1.3.3"
+version = "1.3.4"
 description = "Oxide Editor native update service"
 edition = "2021"
 

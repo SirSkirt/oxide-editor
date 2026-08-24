@@ -1,16 +1,16 @@
-# Oxide Editor B1.3.3
+# Oxide Editor B1.3.4
 
 Oxide is a Rust-first desktop editor built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, and update orchestration are handled by Rust.
 
-B1.3.3 builds on B1.3.2 **The Compatibility Update** and adds Oxide's first rust-analyzer-backed language intelligence: **Rust Code Analyzer/Completer**. Windows and **Pop!_OS / Ubuntu / Debian-family x86_64** remain the current desktop targets.
+B1.3.4 continues **The Compatibility Update** work: Linux `.deb` installations can now update through the system's own Polkit authorization flow, while AppImage updates remain user-space replacements. It also repairs the main workspace for shorter laptop displays so the editor, Build Bay, and Tutorial panel stay inside the available window height. Rust Code Analyzer/Completer and the B1.3.3 editor-intelligence work are retained.
 
 ## Windows + Linux
 
-Supported release targets in B1.3.3:
+Supported release targets in B1.3.4:
 
 - **Windows x86_64** — NSIS installer plus Oxide's signed native ZIP update packages
 - **Linux x86_64 AppImage** — portable build with Oxide automatic package updates
-- **Linux x86_64 .deb** — native Debian/Ubuntu/Pop!_OS package
+- **Linux x86_64 .deb** — native Debian/Ubuntu/Pop!_OS package with Polkit-authorized automatic updates
 
 The Linux CI build runs on Ubuntu 22.04 so the produced binaries target a reasonably old WebKitGTK/glibc baseline instead of accidentally requiring the newest Ubuntu release.
 
@@ -31,7 +31,7 @@ Oxide now treats Linux paths as case-sensitive. Files such as `Thing.rs` and `th
 
 ## Oxide Package Update System
 
-B1.3.3 continues to use the platform-specific signed update packages introduced in B1.3.2.
+B1.3.4 continues to use the platform-specific signed update packages introduced in B1.3.2.
 
 Oxide checks:
 
@@ -51,7 +51,7 @@ The downloaded package is still cryptographically verified with Oxide's existing
 ### Windows update package
 
 ```text
-oxide-update-windows-x86_64-1.3.3.zip
+oxide-update-windows-x86_64-1.3.4.zip
 ├── oxide-editor.exe
 ├── oxide-updater.exe
 └── update-package.json
@@ -59,25 +59,30 @@ oxide-update-windows-x86_64-1.3.3.zip
 
 The temporary Oxide Update Service backs up the installed runtime, replaces it, rolls back on failure, and restarts Oxide.
 
-### Linux AppImage update package
+### Linux update package
 
 ```text
-oxide-update-linux-x86_64-1.3.3.zip
+oxide-update-linux-x86_64-1.3.4.zip
 ├── oxide-editor.AppImage
+├── oxide-editor.deb
 └── update-package.json
 ```
 
-For AppImage installs, Oxide downloads and verifies the package, launches a small Linux update helper, exits, replaces the original AppImage with rollback protection, restores executable permissions, and relaunches Oxide.
+For AppImage installs, Oxide downloads and verifies the package, launches the Linux update helper, exits, replaces the original AppImage with rollback protection, restores executable permissions, and relaunches Oxide.
 
-### Linux .deb updates
+For `.deb` installs, Oxide first verifies the same signed package as the normal user. After Oxide exits, the Linux helper invokes `pkexec` to ask the desktop's registered Polkit authentication agent for permission, then runs `dpkg --install` on the staged `.deb`. Oxide never receives or stores the user's password. After the package manager succeeds, the helper relaunches Oxide.
 
-The `.deb` build is supported for normal installation on Pop!_OS/Ubuntu, but B1.3.2 does **not** silently overwrite root-owned package-manager files. If Oxide is running from a `.deb` installation, it can still detect new releases but tells the user to install the newer `.deb` package.
-
-Use the AppImage build if you want Oxide's automatic self-update path on Linux.
+Unpackaged development builds deliberately do not self-install system packages.
 
 ### Compatibility bridge
 
 `latest.json` is still published for B1.3.1 and older updater-enabled **Windows** builds. It points to the signed NSIS installer so older installations can cross the bridge into B1.3.2. B1.3.2 and newer use the platform-specific Oxide package feeds above.
+
+## Compact-screen / laptop layout
+
+B1.3.4 treats the window height as a hard layout constraint. The workspace uses a zero-minimum grid row, the Build Bay owns its own non-overlapping row, and the Project/Cargo/Tutorial panels all use independently scrollable bodies. The Tutorial action controls are sticky at the bottom of the lesson scroller so **Next Step**, **Complete Lesson**, and navigation controls remain reachable on shorter displays.
+
+The Build Bay also scales down on short windows instead of pushing the editor outside the application frame.
 
 ## GitHub Actions
 
@@ -90,21 +95,21 @@ Linux x64 verification (Ubuntu 22.04 / Pop!_OS baseline)
 
 A release produces both Windows and Linux assets in the same GitHub Release.
 
-Typical B1.3.3 assets:
+Typical B1.3.4 assets:
 
 ```text
 Windows
 ├── Oxide Editor ... setup.exe
-├── oxide-update-windows-x86_64-1.3.3.zip
-├── oxide-update-windows-x86_64-1.3.3.zip.sig
+├── oxide-update-windows-x86_64-1.3.4.zip
+├── oxide-update-windows-x86_64-1.3.4.zip.sig
 ├── oxide-latest-windows-x86_64.json
 └── latest.json
 
 Linux
 ├── Oxide Editor ... amd64.deb
 ├── Oxide Editor ... amd64.AppImage
-├── oxide-update-linux-x86_64-1.3.3.zip
-├── oxide-update-linux-x86_64-1.3.3.zip.sig
+├── oxide-update-linux-x86_64-1.3.4.zip
+├── oxide-update-linux-x86_64-1.3.4.zip.sig
 └── oxide-latest-linux-x86_64.json
 ```
 
@@ -152,7 +157,7 @@ Windows release builds use the GUI subsystem, so Oxide does not leave a backgrou
 
 ## Rust Code Analyzer/Completer
 
-B1.3.3 adds Oxide's own Visual Studio-style Rust completion experience, backed by the real **rust-analyzer** language server.
+Oxide includes its own Visual Studio-style Rust completion experience, backed by the real **rust-analyzer** language server.
 
 As you type Rust, Oxide requests context-aware suggestions from rust-analyzer and filters/ranks them against the current prefix. The popup can include local variables, functions, methods, fields, modules, structs, enums, traits, associated items, macros, and Rust keywords. A detail pane shows the symbol kind, signature/detail text, and documentation when rust-analyzer provides it.
 
@@ -215,8 +220,8 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 
 ## Versioning
 
-- Package/build version: `1.3.3`
-- User-facing version: **B1.3.3**
+- Package/build version: `1.3.4`
+- User-facing version: **B1.3.4**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:

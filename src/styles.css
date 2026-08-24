@@ -1205,3 +1205,155 @@ html, body, #app {
 .update-status-message p { margin: 10px 0 0; color: #9a968f; font: 10px/1.55 Consolas, monospace; }
 .update-status-message code { color: #dd8b5d; font-family: Consolas, monospace; }
 .update-error-detail { padding-top: 8px; border-top: 1px solid #33342f; color: #b77e6e !important; word-break: break-word; }
+
+/* ================================================================
+   Oxide B1.3.4 — Compatibility Update: compact-screen layout repair
+   Keep every workspace region inside the shell's real viewport height.
+   ================================================================ */
+
+.oxide-shell {
+  --build-height: clamp(130px, 23vh, 210px);
+  grid-template-rows: 54px 36px 52px minmax(0, 1fr) var(--build-height) 28px;
+  overflow: hidden;
+}
+
+.workspace {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.workspace > .project-panel,
+.workspace > .editor-stack,
+.workspace > .tutorial-panel,
+.workspace > .cargo-panel {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.project-panel,
+.cargo-panel,
+.tutorial-panel {
+  display: grid;
+  grid-template-rows: 30px minmax(0, 1fr);
+}
+
+.project-tree,
+.cargo-inspector,
+.tutorial-panel-body {
+  height: auto;
+  min-height: 0;
+}
+
+.project-tree,
+.cargo-inspector {
+  overflow: auto;
+}
+
+.tutorial-panel-body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-bottom: 12px;
+}
+
+/* Keep lesson navigation reachable even when the explanation above is taller
+   than the available laptop screen. */
+.tutorial-panel-actions {
+  position: sticky;
+  z-index: 3;
+  bottom: -12px;
+  margin: 14px -12px -12px;
+  padding: 10px 12px 12px;
+  background: linear-gradient(rgba(23,25,23,.96), #171917 45%);
+  box-shadow: 0 -10px 18px rgba(0,0,0,.24);
+}
+
+.editor-stack,
+.editor-wrap,
+.code-editor,
+.line-numbers {
+  min-height: 0;
+}
+
+.editor-stack {
+  grid-template-rows: 31px minmax(0, 1fr);
+}
+
+.editor-wrap {
+  height: 100%;
+}
+
+.code-editor {
+  max-height: 100%;
+}
+
+.build-console {
+  position: relative;
+  z-index: 4;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.build-output {
+  min-height: 0;
+}
+
+/* The tutorial width now scales with the window instead of consuming a fixed
+   390px on every laptop. */
+.oxide-shell.tutorial-active {
+  --tutorial-width: clamp(310px, 24vw, 390px);
+}
+
+@media (max-width: 1400px) {
+  .oxide-shell {
+    --project-width: 190px;
+    --cargo-width: 230px;
+  }
+  .oxide-shell.tutorial-active { --tutorial-width: clamp(300px, 25vw, 350px); }
+}
+
+@media (max-width: 1180px) {
+  .oxide-shell.tutorial-active { --tutorial-width: 300px; }
+  .workspace {
+    grid-template-columns: var(--project-width) minmax(340px, 1fr) var(--tutorial-width) var(--cargo-width);
+  }
+}
+
+/* Short laptop screens: preserve the editor first, then reduce chrome and the
+   Build Bay before allowing any overlap. */
+@media (max-height: 820px) {
+  .oxide-shell {
+    --build-height: 155px;
+    grid-template-rows: 48px 34px 46px minmax(0, 1fr) var(--build-height) 24px;
+  }
+  .brand-mark { width: 30px; height: 30px; }
+  .brandbar { padding-inline: 10px; }
+  .command-deck { padding-block: 5px; }
+  .command-button { height: 32px; }
+  .panel-head, .console-head { height: 28px; }
+  .project-panel,
+  .cargo-panel,
+  .tutorial-panel { grid-template-rows: 28px minmax(0, 1fr); }
+  .editor-stack { grid-template-rows: 29px minmax(0, 1fr); }
+  .file-tab { height: 28px; }
+  .build-output { height: calc(100% - 28px); }
+  .tutorial-panel-body { padding: 10px; padding-bottom: 10px; }
+  .tutorial-panel-actions {
+    bottom: -10px;
+    margin: 12px -10px -10px;
+    padding: 9px 10px 10px;
+  }
+}
+
+@media (max-height: 700px) {
+  .oxide-shell {
+    --build-height: 120px;
+    grid-template-rows: 44px 32px 42px minmax(0, 1fr) var(--build-height) 22px;
+  }
+  .brand-copy span { display: none; }
+  .command-button { height: 30px; }
+  .tutorial-step-title { margin-top: 10px; font-size: 15px; }
+  .tutorial-explanation { margin-block: 6px 9px; }
+  .tutorial-example { margin-block: 7px 9px; }
+}

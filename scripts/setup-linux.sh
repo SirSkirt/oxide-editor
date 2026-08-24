@@ -22,7 +22,8 @@ sudo apt-get install -y \
   libayatana-appindicator3-dev \
   librsvg2-dev \
   patchelf \
-  xdg-utils
+  xdg-utils \
+  pkexec
 
 if ! command -v cargo >/dev/null 2>&1; then
   echo
