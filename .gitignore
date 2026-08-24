@@ -1,6 +1,9 @@
 node_modules/
 dist/
 src-tauri/target/
+updater/src-tauri/target/
+src-tauri/binaries/*.exe
+release-assets/
 *.log
 .DS_Store
 Thumbs.db
