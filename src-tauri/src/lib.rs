@@ -41,7 +41,9 @@ struct PlatformInfo {
 struct OxideUpdateInfo {
     version: String,
     display_version: String,
+    build_number: u64,
     current_version: String,
+    current_build_number: u64,
     body: Option<String>,
     date: Option<String>,
     install_supported: bool,
@@ -61,6 +63,7 @@ struct OxideUpdateDownloadEvent {
 #[serde(rename_all = "camelCase")]
 struct OxideUpdateStageResult {
     version: String,
+    build_number: u64,
     helper_started: bool,
 }
 
@@ -3056,6 +3059,12 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
 }
 
 
+fn current_oxide_build_number() -> u64 {
+    option_env!("OXIDE_BUILD_NUMBER")
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(1)
+}
+
 fn updater_display_version(update: &tauri_plugin_updater::Update) -> String {
     update
         .raw_json
@@ -3063,18 +3072,72 @@ fn updater_display_version(update: &tauri_plugin_updater::Update) -> String {
         .or_else(|| update.raw_json.get("displayVersion"))
         .and_then(|value| value.as_str())
         .map(str::to_string)
-        .unwrap_or_else(|| format!("B{}", update.version))
+        .unwrap_or_else(|| format!("B{}", updater_release_version(update)))
+}
+
+fn updater_release_version(update: &tauri_plugin_updater::Update) -> String {
+    update
+        .raw_json
+        .get("release_version")
+        .or_else(|| update.raw_json.get("releaseVersion"))
+        .and_then(|value| value.as_str())
+        .map(str::to_string)
+        .unwrap_or_else(|| update.version.to_string())
+}
+
+fn updater_build_number(update: &tauri_plugin_updater::Update) -> u64 {
+    update
+        .raw_json
+        .get("build")
+        .or_else(|| update.raw_json.get("build_number"))
+        .or_else(|| update.raw_json.get("buildNumber"))
+        .and_then(|value| value.as_u64())
+        .unwrap_or(1)
+}
+
+fn remote_oxide_is_newer(update: &tauri_plugin_updater::Update) -> Result<bool, String> {
+    let current = semver::Version::parse(env!("CARGO_PKG_VERSION"))
+        .map_err(|error| format!("Oxide's installed version is invalid: {error}"))?;
+    let remote_text = updater_release_version(update);
+    let remote = semver::Version::parse(remote_text.trim_start_matches('v'))
+        .map_err(|error| format!("The Oxide release feed has an invalid release_version '{remote_text}': {error}"))?;
+    let remote_build = updater_build_number(update);
+    let current_build = current_oxide_build_number();
+
+    Ok(remote > current || (remote == current && remote_build > current_build))
+}
+
+async fn raw_oxide_update(app: &AppHandle) -> Result<Option<tauri_plugin_updater::Update>, String> {
+    // Tauri normally filters equal SemVer releases before returning them.
+    // Oxide has its own public-version + build-number comparison, so request
+    // the signed remote release unconditionally and decide locally.
+    let updater = app
+        .updater_builder()
+        .version_comparator(|_, _| true)
+        .build()
+        .map_err(|error| format!("Could not initialize the Oxide update service: {error}"))?;
+
+    updater
+        .check()
+        .await
+        .map_err(|error| format!("Could not check the Oxide release feed: {error}"))
+}
+
+async fn available_oxide_update(app: &AppHandle) -> Result<Option<tauri_plugin_updater::Update>, String> {
+    let Some(update) = raw_oxide_update(app).await? else {
+        return Ok(None);
+    };
+
+    if remote_oxide_is_newer(&update)? {
+        Ok(Some(update))
+    } else {
+        Ok(None)
+    }
 }
 
 #[tauri::command]
 async fn oxide_update_check(app: AppHandle) -> Result<Option<OxideUpdateInfo>, String> {
-    let updater = app
-        .updater()
-        .map_err(|error| format!("Could not initialize the Oxide update service: {error}"))?;
-    let update = updater
-        .check()
-        .await
-        .map_err(|error| format!("Could not check the Oxide release feed: {error}"))?;
+    let update = available_oxide_update(&app).await?;
 
     Ok(update.map(|update| {
         #[cfg(target_os = "windows")]
@@ -3087,9 +3150,11 @@ async fn oxide_update_check(app: AppHandle) -> Result<Option<OxideUpdateInfo>, S
         let (install_supported, install_hint, update_mode) = (false, Some("Automatic package updates are not implemented for this platform yet.".to_string()), "unsupported".to_string());
 
         OxideUpdateInfo {
-            version: update.version.to_string(),
+            version: updater_release_version(&update),
             display_version: updater_display_version(&update),
-            current_version: update.current_version.clone(),
+            build_number: updater_build_number(&update),
+            current_version: env!("CARGO_PKG_VERSION").to_string(),
+            current_build_number: current_oxide_build_number(),
             body: update.body.clone(),
             date: update.date.map(|date| date.to_string()),
             install_supported,
@@ -3124,20 +3189,16 @@ fn installed_updater_helper(install_dir: &Path) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-async fn oxide_update_prepare(app: AppHandle, version: String) -> Result<OxideUpdateStageResult, String> {
-    let updater = app
-        .updater()
-        .map_err(|error| format!("Could not initialize the Oxide update service: {error}"))?;
-    let update = updater
-        .check()
-        .await
-        .map_err(|error| format!("Could not refresh the Oxide release feed: {error}"))?
+async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64) -> Result<OxideUpdateStageResult, String> {
+    let update = available_oxide_update(&app)
+        .await?
         .ok_or_else(|| "The selected update is no longer available.".to_string())?;
 
-    if update.version.to_string() != version {
+    let available_version = updater_release_version(&update);
+    let available_build = updater_build_number(&update);
+    if available_version != version || available_build != build_number {
         return Err(format!(
-            "The available update changed from {version} to {}. Check for updates again before installing.",
-            update.version
+            "The available update changed from {version} Build {build_number} to {available_version} Build {available_build}. Check for updates again before installing."
         ));
     }
 
@@ -3183,7 +3244,7 @@ async fn oxide_update_prepare(app: AppHandle, version: String) -> Result<OxideUp
 
     let work_dir = env::temp_dir()
         .join("OxideEditor")
-        .join(format!("update-{}-{}", version, std::process::id()));
+        .join(format!("update-{}-b{}-{}", version, build_number, std::process::id()));
     if work_dir.exists() {
         fs::remove_dir_all(&work_dir)
             .map_err(|error| format!("Could not clear the previous update staging directory: {error}"))?;
@@ -3228,6 +3289,8 @@ async fn oxide_update_prepare(app: AppHandle, version: String) -> Result<OxideUp
             .arg(&app_exe_name)
             .arg("--version")
             .arg(&version)
+            .arg("--build")
+            .arg(build_number.to_string())
             .spawn()
             .map_err(|error| format!("Could not launch the Oxide Update Service: {error}"))?;
     }
@@ -3249,6 +3312,8 @@ async fn oxide_update_prepare(app: AppHandle, version: String) -> Result<OxideUp
                 .arg(&appimage)
                 .arg("--version")
                 .arg(&version)
+                .arg("--build")
+                .arg(build_number.to_string())
                 .arg("--pid")
                 .arg(std::process::id().to_string())
                 .spawn()
@@ -3267,6 +3332,8 @@ async fn oxide_update_prepare(app: AppHandle, version: String) -> Result<OxideUp
                 .arg(&current_exe)
                 .arg("--version")
                 .arg(&version)
+                .arg("--build")
+                .arg(build_number.to_string())
                 .arg("--pid")
                 .arg(std::process::id().to_string())
                 .spawn()
@@ -3281,6 +3348,7 @@ async fn oxide_update_prepare(app: AppHandle, version: String) -> Result<OxideUp
 
     Ok(OxideUpdateStageResult {
         version,
+        build_number,
         helper_started: true,
     })
 }

@@ -172,7 +172,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.4</div>
+        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.4 · BUILD 2</div>
         <h1>Welcome to the Oxide Editor</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -286,7 +286,7 @@ app.innerHTML = `
       <span id="analysis-status">RUST CHECK: IDLE</span>
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>OXIDE B1.3.4</span>
+      <span>OXIDE B1.3.4 · BUILD 2</span>
     </footer>
   </main>
 
@@ -2636,8 +2636,8 @@ function resetUpdateDialog() {
 function showUpdatePrompt(update) {
   state.updater.pending = update;
   resetUpdateDialog();
-  els.updateCurrentVersion.textContent = 'CURRENT B1.3.4';
-  els.updateNewVersion.textContent = update.displayVersion || `B${update.version}`;
+  els.updateCurrentVersion.textContent = `CURRENT B1.3.4 · BUILD ${update.currentBuildNumber || 1}`;
+  els.updateNewVersion.textContent = `${update.displayVersion || `B${update.version}`} · BUILD ${update.buildNumber || 1}`;
   els.updateReleaseDate.textContent = update.date ? `Published ${update.date}` : 'A newer Oxide package is available.';
   els.updateNotes.textContent = update.body?.trim() || 'This release does not include update notes.';
 
@@ -2716,7 +2716,7 @@ async function installPendingUpdate() {
   els.updateProgressText.textContent = 'Contacting the Oxide package feed…';
 
   try {
-    const result = await invoke('oxide_update_prepare', { version: update.version });
+    const result = await invoke('oxide_update_prepare', { version: update.version, buildNumber: update.buildNumber || 1 });
     if (!result?.helperStarted) throw new Error('Oxide Update Service did not start.');
     els.updateProgressBar.classList.remove('indeterminate');
     els.updateProgressBar.style.width = '100%';
@@ -2749,7 +2749,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.4</span><p>A cross-platform Rust-first workbench for Windows and Linux, with Cargo project management, compiler diagnostics, Rust Code Analyzer/Completer powered by rust-analyzer, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
+  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.4 · Build 2</span><p>A cross-platform Rust-first workbench for Windows and Linux, with Cargo project management, compiler diagnostics, Rust Code Analyzer/Completer powered by rust-analyzer, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
 }
 
 function showShortcuts() {

@@ -1,8 +1,8 @@
-# Oxide Editor B1.3.4
+# Oxide Editor B1.3.4 · Build 2
 
 Oxide is a Rust-first desktop editor built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, and update orchestration are handled by Rust.
 
-B1.3.4 continues **The Compatibility Update** work: Linux `.deb` installations can now update through the system's own Polkit authorization flow, while AppImage updates remain user-space replacements. It also repairs the main workspace for shorter laptop displays so the editor, Build Bay, and Tutorial panel stay inside the available window height. Rust Code Analyzer/Completer and the B1.3.3 editor-intelligence work are retained.
+B1.3.4 Build 2 continues **The Compatibility Update** work: Linux `.deb` installations can now update through the system's own Polkit authorization flow, while AppImage updates remain user-space replacements. It also repairs the main workspace for shorter laptop displays so the editor, Build Bay, and Tutorial panel stay inside the available window height. Rust Code Analyzer/Completer and the B1.3.3 editor-intelligence work are retained.
 - Oxide-native Rust syntax highlighting with an industrial, readable palette.
 
 ## Windows + Linux
@@ -52,7 +52,7 @@ The downloaded package is still cryptographically verified with Oxide's existing
 ### Windows update package
 
 ```text
-oxide-update-windows-x86_64-1.3.4.zip
+oxide-update-windows-x86_64-1.3.4-b2.zip
 ├── oxide-editor.exe
 ├── oxide-updater.exe
 └── update-package.json
@@ -63,7 +63,7 @@ The temporary Oxide Update Service backs up the installed runtime, replaces it, 
 ### Linux update package
 
 ```text
-oxide-update-linux-x86_64-1.3.4.zip
+oxide-update-linux-x86_64-1.3.4-b2.zip
 ├── oxide-editor.AppImage
 ├── oxide-editor.deb
 └── update-package.json
@@ -101,16 +101,16 @@ Typical B1.3.4 assets:
 ```text
 Windows
 ├── Oxide Editor ... setup.exe
-├── oxide-update-windows-x86_64-1.3.4.zip
-├── oxide-update-windows-x86_64-1.3.4.zip.sig
+├── oxide-update-windows-x86_64-1.3.4-b2.zip
+├── oxide-update-windows-x86_64-1.3.4-b2.zip.sig
 ├── oxide-latest-windows-x86_64.json
 └── latest.json
 
 Linux
 ├── Oxide Editor ... amd64.deb
 ├── Oxide Editor ... amd64.AppImage
-├── oxide-update-linux-x86_64-1.3.4.zip
-├── oxide-update-linux-x86_64-1.3.4.zip.sig
+├── oxide-update-linux-x86_64-1.3.4-b2.zip
+├── oxide-update-linux-x86_64-1.3.4-b2.zip.sig
 └── oxide-latest-linux-x86_64.json
 ```
 
@@ -221,17 +221,46 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 
 ## Versioning
 
-- Package/build version: `1.3.4`
+- Release version: `1.3.4`
 - User-facing version: **B1.3.4**
+- Current internal build number: **2**
+- Full installed identity: **B1.3.4 · Build 2**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:
 
 ```powershell
-npm run release:version -- 1.3.4 B1.3.4
+npm run release:version -- 1.3.5 B1.3.5 1
 ```
 
 The version helper updates the main editor, Windows Update Service, and Linux Update Service together.
+
+
+### Build numbers
+
+Oxide keeps the public release version and the internal build number separate. This lets a rebuilt release update an existing installation without forcing a public version bump.
+
+For example:
+
+```text
+B1.3.4 · Build 1
+        ↓
+B1.3.4 · Build 2
+```
+
+The signed update feed carries `release_version` plus `build`, and Oxide compares both. GitHub update packages include the build in their filename. For compatibility with older updater-enabled Oxide builds, the feed's required SemVer `version` is a monotonic updater sequence while `release_version` remains the actual Oxide release version.
+
+To increment only the build number:
+
+```powershell
+npm run release:build
+```
+
+To begin a new public version, reset the build to 1:
+
+```powershell
+npm run release:version -- 1.3.5 B1.3.5 1
+```
 
 ## Release
 

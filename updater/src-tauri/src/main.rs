@@ -25,7 +25,9 @@ struct UpdateProgress {
 struct PackageManifest {
     format: u32,
     version: String,
+    release_version: Option<String>,
     display_version: String,
+    build: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -34,6 +36,7 @@ struct UpdateArgs {
     install_dir: PathBuf,
     app_exe: String,
     requested_version: String,
+    requested_build: u64,
 }
 
 fn emit(app: &AppHandle, stage: &str, detail: impl Into<String>, percent: u8) {
@@ -77,6 +80,9 @@ fn parse_args() -> Result<UpdateArgs, String> {
         install_dir: PathBuf::from(value("--install-dir")?),
         app_exe: value("--app-exe")?,
         requested_version: value("--version")?,
+        requested_build: value("--build")?
+            .parse::<u64>()
+            .map_err(|_| "--build must be a positive integer.".to_string())?,
     })
 }
 
@@ -238,17 +244,21 @@ fn perform_update(app: AppHandle, args: UpdateArgs) -> Result<(), String> {
 
     emit(&app, "VERIFYING PACKAGE", "Opening the signed Oxide package…", 8);
     let manifest = extract_package(&args.package, &staging)?;
-    if manifest.version != args.requested_version {
+    let package_release_version = manifest
+        .release_version
+        .as_deref()
+        .unwrap_or(&manifest.version);
+    if package_release_version != args.requested_version || manifest.build != args.requested_build {
         return Err(format!(
-            "Package version {} does not match the requested update {}.",
-            manifest.version, args.requested_version
+            "Package {} Build {} does not match the requested update {} Build {}.",
+            package_release_version, manifest.build, args.requested_version, args.requested_build
         ));
     }
 
     emit(
         &app,
         "PACKAGE READY",
-        format!("{} has been unpacked safely.", manifest.display_version),
+        format!("{} Build {} has been unpacked safely.", manifest.display_version, manifest.build),
         25,
     );
 
@@ -281,7 +291,7 @@ fn perform_update(app: AppHandle, args: UpdateArgs) -> Result<(), String> {
         return Err(format!("Updated Oxide executable was not found at {}.", app_path.display()));
     }
 
-    emit(&app, "UPDATE COMPLETE", format!("{} is installed. Restarting Oxide…", manifest.display_version), 100);
+    emit(&app, "UPDATE COMPLETE", format!("{} Build {} is installed. Restarting Oxide…", manifest.display_version, manifest.build), 100);
     thread::sleep(Duration::from_millis(650));
     Command::new(&app_path)
         .spawn()

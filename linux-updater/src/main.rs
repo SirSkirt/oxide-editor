@@ -15,7 +15,9 @@ use zip::ZipArchive;
 struct PackageManifest {
     format: u32,
     version: String,
+    release_version: Option<String>,
     display_version: String,
+    build: u64,
     platform: String,
 }
 
@@ -29,6 +31,7 @@ enum InstallMode {
 struct Args {
     package: PathBuf,
     version: String,
+    build: u64,
     pid: u32,
     mode: InstallMode,
 }
@@ -75,6 +78,9 @@ fn parse_args() -> Result<Args, String> {
     Ok(Args {
         package: PathBuf::from(arg_value(&args, "--package")?),
         version: arg_value(&args, "--version")?,
+        build: arg_value(&args, "--build")?
+            .parse::<u64>()
+            .map_err(|_| "--build must be a positive integer.".to_string())?,
         pid,
         mode,
     })
@@ -260,14 +266,18 @@ fn install(args: Args) -> Result<(), String> {
 
     log("Verifying Linux package layout...");
     let manifest = extract_package(&args.package, &staging)?;
-    if manifest.version != args.version {
+    let package_release_version = manifest
+        .release_version
+        .as_deref()
+        .unwrap_or(&manifest.version);
+    if package_release_version != args.version || manifest.build != args.build {
         return Err(format!(
-            "Package version {} does not match requested version {}.",
-            manifest.version, args.version
+            "Package {} Build {} does not match requested version {} Build {}.",
+            package_release_version, manifest.build, args.version, args.build
         ));
     }
 
-    log(format!("{} verified. Waiting for Oxide to close...", manifest.display_version));
+    log(format!("{} Build {} verified. Waiting for Oxide to close...", manifest.display_version, manifest.build));
     wait_for_process(args.pid)?;
 
     match &args.mode {

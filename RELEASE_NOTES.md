@@ -1,4 +1,4 @@
-# Oxide Editor B1.3.4
+# Oxide Editor B1.3.4 · Build 2
 
 B1.3.4 continues **The Compatibility Update** with a proper automatic updater for Linux `.deb` installations and responsive fixes for shorter laptop displays.
 
@@ -38,3 +38,12 @@ B1.3.4 continues **The Compatibility Update** with a proper automatic updater fo
 - Fixed compact-screen editor layout where the inline Rust diagnostic banner could expand over most of the editor and push the code area toward the Build Bay.
 - Rust Code Analyzer/Completer popups now clamp themselves to the available editor area and switch to a compact suggestions-only layout when space is tight.
 - GitHub Actions maintained JavaScript actions now use Node.js 24-native major versions (`checkout@v7`, `setup-node@v7`, `upload-artifact@v7`).
+
+## Internal build-number updates
+
+- Added an internal build number separate from the public Oxide version.
+- B1.3.4 Build 2 can be detected as newer than B1.3.4 Build 1.
+- Update feeds now publish both `release_version` and `build`.
+- Signed update package filenames include the build number.
+- The update dialog and About/status UI show build identity where useful.
+- Added `npm run release:build` to increment a rebuild without changing the public version.
