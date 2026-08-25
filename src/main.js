@@ -214,6 +214,7 @@ app.innerHTML = `
         </button>
         <div class="editor-wrap">
           <div id="line-numbers" class="line-numbers" aria-hidden="true"><span class="line-number">1</span></div>
+          <pre id="syntax-layer" class="syntax-layer" aria-hidden="true"><code id="syntax-code"></code></pre>
           <textarea id="editor" class="code-editor" spellcheck="false" aria-label="Code editor" placeholder="Open a .rs, .toml, or text file from the project tree."></textarea>
           <div id="code-completer" class="code-completer" hidden role="listbox" aria-label="Rust Code Analyzer/Completer suggestions">
             <div id="completion-list" class="completion-list"></div>
@@ -420,6 +421,8 @@ const els = {
   tree: $('#project-tree'),
   projectName: $('#project-name'),
   editor: $('#editor'),
+  syntaxLayer: $('#syntax-layer'),
+  syntaxCode: $('#syntax-code'),
   lines: $('#line-numbers'),
   fileTabs: $('#file-tabs'),
   save: $('#save-file'),
@@ -854,6 +857,7 @@ function setEditorFromTab(tab) {
     state.currentFile = '';
     state.dirty = false;
     els.editor.value = '';
+    updateSyntaxHighlight();
     els.editor.readOnly = true;
     els.editor.placeholder = 'Open a .rs, .toml, or text file from the project tree.';
     els.fileStatus.textContent = state.projectPath ? 'NO FILE OPEN' : 'NO FILE';
@@ -870,6 +874,7 @@ function setEditorFromTab(tab) {
   state.dirty = tab.dirty;
   els.editor.readOnly = false;
   els.editor.value = tab.content;
+  updateSyntaxHighlight();
   els.fileStatus.textContent = tab.path;
   els.save.disabled = false;
   renderTabs();
@@ -1033,6 +1038,177 @@ async function closeProject() {
 function diagnosticsForFile(path) {
   const normalized = normalizePath(path);
   return state.diagnostics.filter((diagnostic) => normalizePath(diagnostic.file_path) === normalized);
+}
+
+const RUST_KEYWORDS = new Set([
+  'as', 'async', 'await', 'break', 'const', 'continue', 'crate', 'dyn', 'else', 'enum',
+  'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod',
+  'move', 'mut', 'pub', 'ref', 'return', 'self', 'Self', 'static', 'struct', 'super',
+  'trait', 'true', 'type', 'unsafe', 'use', 'where', 'while', 'yield', 'abstract',
+  'become', 'box', 'do', 'final', 'macro', 'override', 'priv', 'typeof', 'unsized', 'virtual', 'try'
+]);
+
+const RUST_PRIMITIVE_TYPES = new Set([
+  'bool', 'char', 'str', 'i8', 'i16', 'i32', 'i64', 'i128', 'isize',
+  'u8', 'u16', 'u32', 'u64', 'u128', 'usize', 'f32', 'f64'
+]);
+
+function rustDeclaredIdentifiers(source) {
+  const names = new Set();
+  const add = (name) => { if (name && name !== '_') names.add(name); };
+
+  for (const match of source.matchAll(/\blet\s+(?:mut\s+)?(?:ref\s+)?([A-Za-z_][A-Za-z0-9_]*)/g)) add(match[1]);
+  for (const match of source.matchAll(/\bfor\s+([A-Za-z_][A-Za-z0-9_]*)\s+in\b/g)) add(match[1]);
+
+  for (const match of source.matchAll(/\bfn\s+[A-Za-z_][A-Za-z0-9_]*\s*\(([^)]*)\)/gs)) {
+    const params = match[1];
+    for (const param of params.split(',')) {
+      const name = param.match(/(?:^|\s)(?:mut\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:/)?.[1];
+      add(name);
+    }
+  }
+  return names;
+}
+
+function syntaxTokenClass(identifier, nextChar, declared) {
+  if (RUST_KEYWORDS.has(identifier)) return 'syntax-keyword';
+  if (RUST_PRIMITIVE_TYPES.has(identifier) || /^[A-Z][A-Za-z0-9_]*$/.test(identifier)) return 'syntax-type';
+  if (nextChar === '!') return 'syntax-macro';
+  if (declared.has(identifier)) return 'syntax-variable';
+  return 'syntax-ident';
+}
+
+function renderRustSyntax(source) {
+  const declared = rustDeclaredIdentifiers(source);
+  let html = '';
+  let i = 0;
+  const push = (text, cls = '') => {
+    const escaped = escapeHtml(text);
+    html += cls ? `<span class="${cls}">${escaped}</span>` : escaped;
+  };
+
+  while (i < source.length) {
+    const ch = source[i];
+    const next = source[i + 1] || '';
+
+    // Line comments.
+    if (ch === '/' && next === '/') {
+      const end = source.indexOf('\n', i);
+      const stop = end === -1 ? source.length : end;
+      push(source.slice(i, stop), 'syntax-comment');
+      i = stop;
+      continue;
+    }
+
+    // Nested Rust block comments.
+    if (ch === '/' && next === '*') {
+      let depth = 1;
+      let j = i + 2;
+      while (j < source.length && depth > 0) {
+        if (source[j] === '/' && source[j + 1] === '*') { depth += 1; j += 2; continue; }
+        if (source[j] === '*' && source[j + 1] === '/') { depth -= 1; j += 2; continue; }
+        j += 1;
+      }
+      push(source.slice(i, j), 'syntax-comment');
+      i = j;
+      continue;
+    }
+
+    // Raw strings: r"...", r#"..."#, r##"..."##, etc.
+    if (ch === 'r') {
+      const raw = source.slice(i).match(/^r(#{0,16})"/);
+      if (raw) {
+        const hashes = raw[1];
+        const opener = raw[0];
+        const closer = `"${hashes}`;
+        const end = source.indexOf(closer, i + opener.length);
+        const stop = end === -1 ? source.length : end + closer.length;
+        push(source.slice(i, stop), 'syntax-string');
+        i = stop;
+        continue;
+      }
+    }
+
+    // Normal strings and byte strings.
+    if (ch === '"' || (ch === 'b' && next === '"')) {
+      const start = i;
+      let j = ch === 'b' ? i + 2 : i + 1;
+      let escaped = false;
+      while (j < source.length) {
+        const current = source[j];
+        if (!escaped && current === '"') { j += 1; break; }
+        if (!escaped && current === '\\') escaped = true;
+        else escaped = false;
+        j += 1;
+      }
+      push(source.slice(start, j), 'syntax-string');
+      i = j;
+      continue;
+    }
+
+    // Character literals. Lifetimes such as 'a stay unstyled.
+    if (ch === "'" && source[i + 1] && source[i + 2] === "'") {
+      push(source.slice(i, i + 3), 'syntax-string');
+      i += 3;
+      continue;
+    }
+    if (ch === "'" && source[i + 1] === '\\') {
+      let j = i + 2;
+      while (j < source.length && source[j] !== "'") j += 1;
+      if (j < source.length) j += 1;
+      push(source.slice(i, j), 'syntax-string');
+      i = j;
+      continue;
+    }
+
+    // Numbers, including common Rust suffixes.
+    if (/\d/.test(ch)) {
+      const number = source.slice(i).match(/^(?:0[xob][0-9A-Fa-f_]+|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d[\d_]*)?)(?:[iu](?:8|16|32|64|128|size)|f(?:32|64))?/i)?.[0];
+      if (number) {
+        push(number, 'syntax-number');
+        i += number.length;
+        continue;
+      }
+    }
+
+    // Identifiers and macros.
+    if (/[A-Za-z_]/.test(ch)) {
+      const ident = source.slice(i).match(/^[A-Za-z_][A-Za-z0-9_]*/)?.[0];
+      if (ident) {
+        const after = source[i + ident.length] || '';
+        push(ident, syntaxTokenClass(ident, after, declared));
+        i += ident.length;
+        continue;
+      }
+    }
+
+    push(ch);
+    i += 1;
+  }
+  return html;
+}
+
+function syntaxHighlightEnabled() {
+  return Boolean(state.currentFile && state.currentFile.toLowerCase().endsWith('.rs'));
+}
+
+function syncSyntaxScroll() {
+  if (!els.syntaxCode) return;
+  els.syntaxCode.style.transform = `translate(${-els.editor.scrollLeft}px, ${-els.editor.scrollTop}px)`;
+}
+
+function updateSyntaxHighlight() {
+  if (!els.syntaxLayer || !els.syntaxCode) return;
+  const enabled = syntaxHighlightEnabled();
+  els.editor.classList.toggle('syntax-active', enabled);
+  els.syntaxLayer.hidden = !enabled;
+  if (!enabled) {
+    els.syntaxCode.textContent = '';
+    return;
+  }
+  // A trailing newline keeps the backdrop's final empty line aligned with textarea rendering.
+  els.syntaxCode.innerHTML = renderRustSyntax(els.editor.value) + (els.editor.value.endsWith('\n') ? '\n' : '');
+  syncSyntaxScroll();
 }
 
 function updateLineNumbers() {
@@ -2136,20 +2312,35 @@ function caretPopupPoint() {
 function positionCompletionUi() {
   const point = caretPopupPoint();
   const wrap = els.editor.parentElement;
-  const popupWidth = Math.min(650, Math.max(470, wrap.clientWidth * 0.52));
-  const popupHeight = 250;
-  let left = point.left;
-  let top = point.top + 4;
-  if (left + popupWidth > wrap.clientWidth - 8) left = Math.max(52, wrap.clientWidth - popupWidth - 8);
-  if (top + popupHeight > wrap.clientHeight - 8) top = Math.max(8, point.top - popupHeight - 24);
-  els.codeCompleter.style.left = `${Math.max(52, left)}px`;
-  els.codeCompleter.style.top = `${Math.max(8, top)}px`;
-  els.codeCompleter.style.width = `${popupWidth}px`;
+  const margin = 8;
+  const gutter = Math.min(52, Math.max(0, wrap.clientWidth - 280));
+  const usableWidth = Math.max(180, wrap.clientWidth - gutter - (margin * 2));
+  const popupWidth = Math.min(650, usableWidth, Math.max(320, wrap.clientWidth * 0.52));
 
-  const signatureTop = Math.max(8, top - 72);
-  els.signatureHelp.style.left = `${Math.max(52, left)}px`;
+  const below = Math.max(0, wrap.clientHeight - point.top - margin);
+  const above = Math.max(0, point.top - margin);
+  const placeAbove = below < 150 && above > below;
+  const availableHeight = Math.max(70, (placeAbove ? above : below) - margin);
+  const popupHeight = Math.min(250, availableHeight, Math.max(70, wrap.clientHeight - (margin * 2)));
+
+  let left = point.left;
+  if (left + popupWidth > wrap.clientWidth - margin) left = wrap.clientWidth - popupWidth - margin;
+  left = Math.max(margin, left);
+
+  let top = placeAbove ? point.top - popupHeight - 8 : point.top + 4;
+  top = Math.max(margin, Math.min(top, wrap.clientHeight - popupHeight - margin));
+
+  els.codeCompleter.classList.toggle('compact', popupWidth < 500);
+  els.codeCompleter.style.left = `${left}px`;
+  els.codeCompleter.style.top = `${top}px`;
+  els.codeCompleter.style.width = `${popupWidth}px`;
+  els.codeCompleter.style.height = `${popupHeight}px`;
+
+  const signatureWidth = Math.max(180, Math.min(720, wrap.clientWidth - left - margin));
+  const signatureTop = Math.max(margin, Math.min(top - 72, wrap.clientHeight - 64));
+  els.signatureHelp.style.left = `${left}px`;
   els.signatureHelp.style.top = `${signatureTop}px`;
-  els.signatureHelp.style.maxWidth = `${Math.min(720, wrap.clientWidth - Math.max(52, left) - 12)}px`;
+  els.signatureHelp.style.maxWidth = `${signatureWidth}px`;
 }
 
 function completionKindGlyph(kind) {
@@ -2409,6 +2600,7 @@ function markEditorChanged() {
   tab.selectionEnd = els.editor.selectionEnd;
   updateDirty();
   updateLineNumbers();
+  updateSyntaxHighlight();
   scheduleAnalysis();
   scheduleTutorialEvaluation();
 }
@@ -2661,7 +2853,7 @@ els.tutorialLearnMore.addEventListener('click', () => {
 });
 els.save.addEventListener('click', () => saveCurrentFile());
 els.editor.addEventListener('input', (event) => { markEditorChanged(); scheduleCodeCompletion(event); });
-els.editor.addEventListener('scroll', () => { els.lines.scrollTop = els.editor.scrollTop; if (state.completer.visible || state.completer.signatureVisible) positionCompletionUi(); });
+els.editor.addEventListener('scroll', () => { els.lines.scrollTop = els.editor.scrollTop; syncSyntaxScroll(); if (state.completer.visible || state.completer.signatureVisible) positionCompletionUi(); });
 const OXIDE_INDENT = '    ';
 
 function currentLineContext(text, position) {

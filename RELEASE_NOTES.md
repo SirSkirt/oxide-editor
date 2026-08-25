@@ -21,6 +21,12 @@ B1.3.4 continues **The Compatibility Update** with a proper automatic updater fo
 - Build Bay height scales down on short laptop displays before sacrificing editor space.
 - Additional width scaling keeps Tutorial Mode usable on narrower laptop windows.
 
+## Rust syntax highlighting
+
+- Added Oxide-native Rust syntax highlighting in the real editor, including tutorial projects.
+- Rust keywords and macros use Oxide rust/orange, strings use green, declared variables use copper-red, types use steel-blue, numbers use amber, and comments use a muted gray.
+- Highlighting is layered behind the existing textarea so editing, selections, diagnostics, indentation, and Rust Code Analyzer/Completer behavior stay on the same editor path.
+
 ## Retained from B1.3.3
 
 - Rust Code Analyzer/Completer powered by rust-analyzer.
@@ -28,3 +34,7 @@ B1.3.4 continues **The Compatibility Update** with a proper automatic updater fo
 - Windows updater warning cleanup.
 - Windows and Linux signed package update feeds.
 - 26-lesson hands-on Rust tutorial.
+
+- Fixed compact-screen editor layout where the inline Rust diagnostic banner could expand over most of the editor and push the code area toward the Build Bay.
+- Rust Code Analyzer/Completer popups now clamp themselves to the available editor area and switch to a compact suggestions-only layout when space is tight.
+- GitHub Actions maintained JavaScript actions now use Node.js 24-native major versions (`checkout@v7`, `setup-node@v7`, `upload-artifact@v7`).

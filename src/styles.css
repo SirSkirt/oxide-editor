@@ -187,11 +187,30 @@ button:disabled { cursor: not-allowed; }
 .file-tab:focus-visible, .tab-close:focus-visible { outline: 1px solid var(--rust-hot); outline-offset: -2px; }
 .save-button { flex: 0 0 62px; margin-left: 0; width: 62px; border-width: 0 0 0 1px; font: 700 9px Consolas, monospace; }
 .save-button:disabled { opacity: .35; }
-.editor-wrap { min-height: 0; display: grid; grid-template-columns: 48px 1fr; overflow: hidden; position: relative; }
-.line-numbers, .code-editor { margin: 0; padding: 12px 0; border: 0; font: 13px/1.55 "Cascadia Code", "JetBrains Mono", Consolas, monospace; tab-size: 4; }
-.line-numbers { overflow: hidden; padding-right: 10px; color: #545852; background: #0e0f0e; border-right: 1px solid #242623; text-align: right; user-select: none; }
-.code-editor { width: 100%; height: 100%; resize: none; padding-left: 14px; padding-right: 14px; color: #d7d1c8; background: #121312; outline: none; white-space: pre; overflow: auto; caret-color: #e5a073; }
+.editor-wrap { min-height: 0; display: grid; grid-template-columns: 48px 1fr; overflow: hidden; position: relative; background: #121312; }
+.line-numbers, .code-editor, .syntax-layer { margin: 0; padding: 12px 0; border: 0; font: 13px/1.55 "Cascadia Code", "JetBrains Mono", Consolas, monospace; tab-size: 4; }
+.line-numbers { position: relative; z-index: 3; overflow: hidden; padding-right: 10px; color: #545852; background: #0e0f0e; border-right: 1px solid #242623; text-align: right; user-select: none; }
+.syntax-layer {
+  position: absolute; z-index: 1; top: 0; right: 0; bottom: 0; left: 48px;
+  overflow: hidden; padding-left: 14px; padding-right: 14px; color: #d7d1c8;
+  background: #121312; white-space: pre; pointer-events: none;
+}
+.syntax-layer[hidden] { display: none; }
+.syntax-layer code { display: block; min-width: max-content; font: inherit; white-space: pre; will-change: transform; }
+.code-editor { position: relative; z-index: 2; width: 100%; height: 100%; resize: none; padding-left: 14px; padding-right: 14px; color: #d7d1c8; background: #121312; outline: none; white-space: pre; overflow: auto; caret-color: #e5a073; }
+.code-editor.syntax-active { color: transparent; background: transparent; -webkit-text-fill-color: transparent; }
+.code-editor.syntax-active::selection { background: rgba(96, 50, 31, .78); -webkit-text-fill-color: transparent; }
 .code-editor::selection { background: #60321f; }
+
+/* Oxide Rust syntax palette: restrained, high-contrast, and deliberately not rainbow soup. */
+.syntax-keyword { color: #df7e46; font-weight: 700; }
+.syntax-string { color: #8fb879; }
+.syntax-variable { color: #cf6f62; }
+.syntax-type { color: #79a8bf; }
+.syntax-number { color: #c9a85d; }
+.syntax-comment { color: #6f756d; font-style: italic; }
+.syntax-macro { color: #e19a61; font-weight: 700; }
+.syntax-ident { color: #d7d1c8; }
 
 
 /* Rust Code Analyzer/Completer ------------------------------------------------ */
@@ -201,7 +220,9 @@ button:disabled { cursor: not-allowed; }
   display: grid;
   grid-template-columns: minmax(210px, .82fr) minmax(250px, 1.18fr);
   height: 250px;
-  min-width: 470px;
+  min-width: 280px;
+  max-width: calc(100% - 60px);
+  max-height: calc(100% - 16px);
   border: 1px solid #4b3428;
   background: #111310;
   box-shadow: 0 14px 34px #000a, inset 0 1px 0 #3a3d37;
@@ -265,6 +286,8 @@ button:disabled { cursor: not-allowed; }
 .completion-detail-head strong { min-width: 0; overflow-wrap: anywhere; color: #e5ded4; font-size: 12px; }
 .completion-detail > code { display: block; margin: 9px 0; padding: 6px 7px; color: #d1a37d; background: #171915; border: 1px solid #2b2d28; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 10px; }
 .completion-detail-docs { color: #96978f; white-space: pre-wrap; overflow-wrap: anywhere; font: 10px/1.48 "Cascadia Code", Consolas, monospace; }
+.code-completer.compact { grid-template-columns: minmax(0, 1fr); }
+.code-completer.compact .completion-detail { display: none; }
 .signature-help {
   position: absolute;
   z-index: 39;
@@ -468,7 +491,10 @@ button:disabled { cursor: not-allowed; }
 
 .editor-stack { grid-template-rows: 31px auto minmax(0, 1fr); }
 .diagnostic-banner {
+  height: 29px;
   min-height: 29px;
+  max-height: 29px;
+  overflow: hidden;
   display: grid;
   grid-template-columns: auto minmax(0,1fr) auto;
   align-items: center;
@@ -1272,16 +1298,19 @@ html, body, #app {
 .editor-stack,
 .editor-wrap,
 .code-editor,
+.syntax-layer,
 .line-numbers {
   min-height: 0;
 }
 
 .editor-stack {
-  grid-template-rows: 31px minmax(0, 1fr);
+  grid-template-rows: 31px auto minmax(0, 1fr);
 }
 
 .editor-wrap {
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .code-editor {
@@ -1323,6 +1352,8 @@ html, body, #app {
 /* Short laptop screens: preserve the editor first, then reduce chrome and the
    Build Bay before allowing any overlap. */
 @media (max-height: 820px) {
+  .diagnostic-banner { height: 27px; min-height: 27px; max-height: 27px; padding-inline: 8px; gap: 7px; }
+  .diagnostic-banner-more { display: none; }
   .oxide-shell {
     --build-height: 155px;
     grid-template-rows: 48px 34px 46px minmax(0, 1fr) var(--build-height) 24px;
@@ -1335,7 +1366,7 @@ html, body, #app {
   .project-panel,
   .cargo-panel,
   .tutorial-panel { grid-template-rows: 28px minmax(0, 1fr); }
-  .editor-stack { grid-template-rows: 29px minmax(0, 1fr); }
+  .editor-stack { grid-template-rows: 29px auto minmax(0, 1fr); }
   .file-tab { height: 28px; }
   .build-output { height: calc(100% - 28px); }
   .tutorial-panel-body { padding: 10px; padding-bottom: 10px; }

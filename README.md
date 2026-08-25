@@ -3,6 +3,7 @@
 Oxide is a Rust-first desktop editor built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, and update orchestration are handled by Rust.
 
 B1.3.4 continues **The Compatibility Update** work: Linux `.deb` installations can now update through the system's own Polkit authorization flow, while AppImage updates remain user-space replacements. It also repairs the main workspace for shorter laptop displays so the editor, Build Bay, and Tutorial panel stay inside the available window height. Rust Code Analyzer/Completer and the B1.3.3 editor-intelligence work are retained.
+- Oxide-native Rust syntax highlighting with an industrial, readable palette.
 
 ## Windows + Linux
 
@@ -239,3 +240,10 @@ See [UPDATER_SETUP.md](UPDATER_SETUP.md) for signing-key and GitHub Actions deta
 ### Updater dialog reliability
 
 B1.3.2 fixes an updater UI wiring bug inherited from B1.3.1: the **Later** and **Download & Update** controls are now application-level controls that are bound once at startup, independent of editor/project state. Unexpected frontend updater failures are also surfaced in the dialog instead of appearing as dead buttons.
+
+
+### B1.3.4 compact-screen/editor fixes
+
+- Inline diagnostics remain a single compact row instead of consuming the editor workspace.
+- Rust Code Analyzer/Completer UI is constrained to the editor viewport on smaller laptop displays.
+- GitHub-maintained JavaScript actions in CI/release workflows use Node.js 24-native current majors.
