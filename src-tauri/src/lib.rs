@@ -3360,14 +3360,22 @@ fn debugger_status() -> debugger::DebuggerStatus {
 }
 
 #[tauri::command]
+async fn debugger_targets(project_path: String) -> Result<Vec<debugger::DebugTarget>, String> {
+    tauri::async_runtime::spawn_blocking(move || debugger::debug_targets(project_path))
+        .await
+        .map_err(|error| format!("Debugger target discovery task could not be joined: {error}"))?
+}
+
+#[tauri::command]
 async fn debugger_start(
     app: AppHandle,
     runtime: State<'_, debugger::DebuggerRuntime>,
     project_path: String,
     breakpoints: Vec<debugger::DebugBreakpointSet>,
+    target: Option<debugger::DebugTarget>,
 ) -> Result<debugger::DebugStartResult, String> {
     let runtime = runtime.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || debugger::start(app, &runtime, project_path, breakpoints))
+    tauri::async_runtime::spawn_blocking(move || debugger::start(app, &runtime, project_path, breakpoints, target))
         .await
         .map_err(|error| format!("Debugger start task could not be joined: {error}"))?
 }
@@ -3406,6 +3414,16 @@ fn debugger_step_out(runtime: State<'_, debugger::DebuggerRuntime>, thread_id: O
 }
 
 #[tauri::command]
+fn debugger_threads(runtime: State<'_, debugger::DebuggerRuntime>) -> Result<Vec<debugger::DebugThread>, String> {
+    debugger::threads(runtime.inner())
+}
+
+#[tauri::command]
+fn debugger_restart(runtime: State<'_, debugger::DebuggerRuntime>) -> Result<(), String> {
+    debugger::restart(runtime.inner())
+}
+
+#[tauri::command]
 fn debugger_stack_trace(runtime: State<'_, debugger::DebuggerRuntime>, thread_id: i64) -> Result<Vec<debugger::DebugStackFrame>, String> {
     debugger::stack_trace(runtime.inner(), thread_id)
 }
@@ -3423,6 +3441,11 @@ fn debugger_variables(runtime: State<'_, debugger::DebuggerRuntime>, variables_r
 #[tauri::command]
 fn debugger_evaluate(runtime: State<'_, debugger::DebuggerRuntime>, expression: String, frame_id: Option<i64>) -> Result<debugger::DebugEvaluateResult, String> {
     debugger::evaluate(runtime.inner(), expression, frame_id)
+}
+
+#[tauri::command]
+fn debugger_repl(runtime: State<'_, debugger::DebuggerRuntime>, expression: String, frame_id: Option<i64>) -> Result<debugger::DebugEvaluateResult, String> {
+    debugger::repl(runtime.inner(), expression, frame_id)
 }
 
 #[tauri::command]
@@ -3461,6 +3484,19 @@ async fn rust_completions(
     })
     .await
     .map_err(|error| format!("Rust Code Analyzer/Completer request could not be joined: {error}"))?
+}
+
+#[tauri::command]
+async fn rust_semantic_tokens(
+    runtime: State<'_, analyzer::RustAnalyzerRuntime>,
+    project_path: String,
+    path: String,
+    content: String,
+) -> Result<Vec<analyzer::SemanticTokenView>, String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || analyzer::semantic_tokens(&runtime, project_path, path, content))
+        .await
+        .map_err(|error| format!("Semantic Readability Colors request could not be joined: {error}"))?
 }
 
 #[tauri::command]
@@ -3552,6 +3588,7 @@ pub fn run() {
             tutorial_evaluate,
             rust_analyzer_status,
             debugger_status,
+            debugger_targets,
             debugger_start,
             debugger_set_breakpoints,
             debugger_continue,
@@ -3559,12 +3596,16 @@ pub fn run() {
             debugger_next,
             debugger_step_in,
             debugger_step_out,
+            debugger_threads,
+            debugger_restart,
             debugger_stack_trace,
             debugger_scopes,
             debugger_variables,
             debugger_evaluate,
+            debugger_repl,
             debugger_stop,
             rust_analyzer_warmup,
+            rust_semantic_tokens,
             rust_completions,
             rust_signature_help,
             rust_analyzer_stop,

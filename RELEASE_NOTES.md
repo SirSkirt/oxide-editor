@@ -1,3 +1,34 @@
+# Oxide Editor B1.3.5 · Build 2
+
+## Semantic Readability Colors
+
+- Added Oxide's internally named **Semantic Readability Colors** system for Rust source readability.
+- rust-analyzer semantic tokens now refine the real editor's color categories when the analyzer is ready.
+- Oxide retains its lexical Rust highlighter as a fallback while rust-analyzer is starting or when semantic data is unavailable.
+- Ordinary variables and identifiers consistently use steel blue (`#83A6B8`) instead of white/purple.
+- Rust keywords use rust orange (`#D87941`).
+- Strings use sage green (`#8FAF72`).
+- Numbers/booleans use amber (`#D3A95F`).
+- Types use brass/gold (`#C4A45F`).
+- Macros use brighter copper/orange (`#E99A62`).
+- Function/method names use warm cream (`#DDD0BF`).
+- Comments use muted gray-green (`#70786E`).
+- Operators and punctuation remain neutral light gray/off-white.
+- Red is deliberately reserved for real compiler/errors/problems rather than normal source categories.
+
+## Debugger expansion
+
+- Added Cargo binary-target discovery and an Oxide target picker for projects with multiple runnable binaries.
+- Expanded Linux LLDB adapter detection to find both modern `lldb-dap` and older/versioned `lldb-vscode` binaries used by Ubuntu/Pop!_OS packages.
+- Added thread discovery and thread selection while paused.
+- Added recursive/nested variable expansion for structured values.
+- Added breakpoint options for conditions, hit conditions, and log messages/logpoints.
+- Added a paused-state Debug Console/REPL backed by LLDB DAP expression evaluation.
+- Added debugger Restart alongside Continue, Pause, Step Over, Step Into, Step Out, and Stop.
+- Added a breakpoint list to the Debug Workbench with navigation and breakpoint editing.
+- Improved stale/finished debugger-session cleanup so a dead LLDB adapter does not block the next run.
+- Breakpoint markers use copper/gold rather than error red.
+
 # Oxide Editor B1.3.5 · Build 1
 
 ## Debugging foundation

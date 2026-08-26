@@ -202,15 +202,18 @@ button:disabled { cursor: not-allowed; }
 .code-editor.syntax-active::selection { background: rgba(96, 50, 31, .78); -webkit-text-fill-color: transparent; }
 .code-editor::selection { background: #60321f; }
 
-/* Oxide Rust syntax palette: restrained, high-contrast, and deliberately not rainbow soup. */
-.syntax-keyword { color: #df7e46; font-weight: 700; }
-.syntax-string { color: #8fb879; }
-.syntax-variable { color: #cf6f62; }
-.syntax-type { color: #79a8bf; }
-.syntax-number { color: #c9a85d; }
-.syntax-comment { color: #6f756d; font-style: italic; }
-.syntax-macro { color: #e19a61; font-weight: 700; }
-.syntax-ident { color: #d7d1c8; }
+/* Semantic Readability Colors — lexical fallback + rust-analyzer semantic overlay.
+   Red is deliberately excluded from source categories so it stays reserved for errors/problems. */
+.syntax-keyword { color: #D87941; font-weight: 700; }
+.syntax-variable, .syntax-ident, .syntax-parameter, .syntax-property { color: #83A6B8; }
+.syntax-string, .syntax-character { color: #8FAF72; }
+.syntax-number, .syntax-boolean { color: #D3A95F; }
+.syntax-type, .syntax-struct, .syntax-enum, .syntax-trait, .syntax-type-alias, .syntax-type-parameter { color: #C4A45F; }
+.syntax-macro, .syntax-derive, .syntax-attribute { color: #E99A62; font-weight: 700; }
+.syntax-function, .syntax-method { color: #DDD0BF; }
+.syntax-comment { color: #70786E; font-style: italic; }
+.syntax-namespace, .syntax-enum-member, .syntax-constant, .syntax-lifetime { color: #83A6B8; }
+.syntax-operator, .syntax-punctuation { color: #d7d1c8; }
 
 
 /* Rust Code Analyzer/Completer ------------------------------------------------ */
@@ -734,6 +737,9 @@ button:disabled { cursor: not-allowed; }
 .run-dialog > .dialog-actions { padding: 0 14px 14px; }
 
 #analysis-status.hot { color: var(--rust-hot); }
+
+
+
 
 @media (max-width: 1180px) {
   .welcome-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1389,7 +1395,7 @@ html, body, #app {
   .tutorial-example { margin-block: 7px 9px; }
 }
 
-/* B1.3.5 Build 1 — debugger workbench */
+/* B1.3.5 Build 2 — debugger workbench */
 .debug-command { border-color: #6d4934; background: linear-gradient(#433127,#261d19); color: #e1a477; }
 .debug-command:hover:not(:disabled) { border-color: #9d6845; background: linear-gradient(#55392b,#2e211b); }
 
@@ -1405,10 +1411,10 @@ html, body, #app {
   border: 1px solid transparent;
 }
 .line-number:hover::after { border-color: #6d4b3a; background: rgba(177,92,50,.12); }
-.line-number.breakpoint::after { border-color: #c86942; background: #a33e2e; box-shadow: 0 0 0 1px #35140f, 0 0 7px rgba(194,77,49,.35); }
+.line-number.breakpoint::after { border-color: #E99A62; background: #B86C3F; box-shadow: 0 0 0 1px #382318, 0 0 7px rgba(216,121,65,.32); }
 .line-number.debug-execution { color: #f0c384; font-weight: 900; background: linear-gradient(90deg, rgba(181,111,48,.17), transparent); }
 .line-number.debug-execution::after { border-radius: 1px; transform: rotate(45deg); border-color: #e3aa56; background: #c77f34; box-shadow: 0 0 0 1px #3b2610; }
-.line-number.breakpoint.debug-execution::after { border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #b74630; border-color: #e3aa56; }
+.line-number.breakpoint.debug-execution::after { border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #B86C3F; border-color: #e3aa56; }
 
 .debug-pane { height: calc(100% - 30px); overflow: hidden; background: #101210; min-height: 0; }
 .debug-pane[hidden] { display: none; }
@@ -1487,3 +1493,46 @@ html, body, #app {
 .code-editor { z-index: 3; }
 .line-numbers { z-index: 4; }
 .code-completer, .signature-help { z-index: 10; }
+
+/* B1.3.5 Build 2 debugger refinements. Keep after the base debugger rules. */
+.debug-thread-picker { margin-left: auto; min-width: 170px; height: 34px; display: grid !important; grid-template-columns: auto minmax(80px,1fr); align-items: center; gap: 6px !important; padding: 0 8px; border-left: 1px solid #34352f; color: #777b72 !important; font: 800 8px sans-serif !important; letter-spacing: .08em !important; }
+.debug-thread-picker select { min-width: 0; height: 24px; border: 1px solid #34352f; background: #111310; color: #c4c8bd; font: 10px "Cascadia Code", Consolas, monospace; outline: none; }
+.debug-thread-picker select:focus { border-color: #8c583e; }
+.debug-thread-picker select:disabled { opacity: .45; }
+.debug-section-head { display: flex; justify-content: space-between; gap: 8px; }
+.debug-section-head small { color: #555a53; font: 700 7.5px/1 sans-serif; letter-spacing: .05em; }
+.debug-navigation-column .debug-breakpoint-list { flex: 0 1 42%; border-bottom: 1px solid #292b27; }
+.debug-navigation-column .debug-stack-list { flex: 1 1 58%; }
+.debug-breakpoint-row { display: grid; grid-template-columns: 14px minmax(0,1fr) auto; gap: 5px; align-items: center; padding: 5px 6px; border-bottom: 1px solid #22241f; font: 10px/1.3 "Cascadia Code", Consolas, monospace; }
+.debug-breakpoint-row:hover { background: #21231f; }
+.debug-breakpoint-dot { width: 8px; height: 8px; border-radius: 50%; background: #B86C3F; border: 1px solid #E99A62; box-shadow: 0 0 4px rgba(216,121,65,.22); }
+.debug-breakpoint-row.logpoint .debug-breakpoint-dot { border-radius: 2px; background: #9D7A46; border-color: #D3A95F; }
+.debug-breakpoint-main { min-width: 0; border: 0; padding: 0; background: transparent; text-align: left; color: #b8bbb2; font: inherit; cursor: pointer; }
+.debug-breakpoint-main b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #83A6B8; font-weight: 600; }
+.debug-breakpoint-main small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #72776f; font-size: 8.5px; }
+.debug-breakpoint-edit { width: 22px; height: 22px; border: 0; background: transparent; color: #99705a; font-weight: 900; cursor: pointer; }
+.debug-breakpoint-edit:hover { color: #E99A62; background: #2d241f; }
+.debug-variable { grid-template-columns: 16px auto minmax(60px,.7fr) minmax(90px,1.3fr) auto; }
+.debug-variable-toggle { width: 16px; padding: 0; border: 0; color: #858a80; background: transparent; font: 10px/1 monospace; cursor: pointer; }
+.debug-variable-toggle:disabled { opacity: .2; cursor: default; }
+.debug-variable-children { grid-column: 1 / -1; margin: 3px -8px -5px 8px; border-left: 1px solid #343830; background: rgba(9,10,9,.45); }
+.debug-variable-child { padding-left: calc(8px + var(--debug-depth, 0) * 12px); }
+.debug-console-form { flex: 0 0 31px; display: grid; grid-template-columns: 20px minmax(0,1fr) 42px; border-top: 1px solid #292b27; background: #0e100e; }
+.debug-console-form span { display: grid; place-items: center; color: #D87941; font: 700 12px Consolas, monospace; }
+.debug-console-form input { min-width: 0; border: 0; padding: 0 6px; outline: none; color: #DDD0BF; background: transparent; font: 10.5px "Cascadia Code", Consolas, monospace; }
+.debug-console-form button { border: 0; border-left: 1px solid #292b27; background: #22251f; color: #E99A62; font: 800 8px sans-serif; }
+.debug-console-form button:disabled, .debug-console-form input:disabled { opacity: .35; }
+.debug-console-command { color: #83A6B8; }
+.debug-console-result { color: #DDD0BF; padding-left: 12px; }
+.debug-target-dialog { width: min(560px, calc(100vw - 48px)); }
+.debug-target-body { padding: 14px; }
+.debug-target-body p { margin: 0 0 10px; color: #8e9288; font-size: 11px; }
+.debug-target-list { display: grid; gap: 5px; max-height: min(420px, 60vh); overflow: auto; }
+.debug-target-choice { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; padding: 9px 10px; border: 1px solid #343630; background: linear-gradient(#242620,#181a17); color: #c9cbc3; text-align: left; cursor: pointer; }
+.debug-target-choice:hover { border-color: #875338; background: linear-gradient(#302820,#1d1b17); }
+.debug-target-choice strong { color: #DDD0BF; font: 700 11px "Cascadia Code", Consolas, monospace; }
+.debug-target-choice small { color: #777c73; font: 9px "Cascadia Code", Consolas, monospace; }
+.breakpoint-dialog { width: min(590px, calc(100vw - 48px)); }
+.breakpoint-form p { margin: 0; color: #72776f; font: 10px/1.45 sans-serif; }
+.breakpoint-actions { margin: 2px -13px -13px !important; }
+.metal-button.danger { color: #c88477; }

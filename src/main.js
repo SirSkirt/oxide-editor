@@ -42,6 +42,12 @@ const state = {
     prefixStart: 0,
     signatureVisible: false,
   },
+  semanticReadability: {
+    tokens: [],
+    timer: null,
+    requestToken: 0,
+    active: false,
+  },
   debugger: {
     available: false,
     adapter: '',
@@ -49,15 +55,20 @@ const state = {
     running: false,
     stopped: false,
     threadId: null,
+    threads: [],
     selectedFrameId: null,
     frames: [],
     variables: [],
+    expandedVariables: new Map(),
     watches: [],
     watchResults: [],
     breakpoints: new Map(),
+    editingBreakpoint: null,
+    selectedTarget: null,
     executionPath: '',
     executionLine: 0,
     output: [],
+    consoleHistory: [],
   },
   terminalRunning: false,
   terminalEnded: false,
@@ -153,6 +164,7 @@ app.innerHTML = `
             <button role="menuitem" data-menu-action="debug-start"><span>Start Debugging</span><kbd>F9</kbd></button>
             <button role="menuitem" data-menu-action="debug-continue"><span>Continue</span><kbd>Ctrl+F10</kbd></button>
             <button role="menuitem" data-menu-action="debug-pause"><span>Pause</span></button>
+            <button role="menuitem" data-menu-action="debug-restart"><span>Restart</span><kbd>Ctrl+Shift+F9</kbd></button>
             <div class="menu-separator"></div>
             <button role="menuitem" data-menu-action="debug-next"><span>Step Over</span><kbd>F10</kbd></button>
             <button role="menuitem" data-menu-action="debug-step-in"><span>Step Into</span><kbd>F11</kbd></button>
@@ -205,7 +217,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.5 · BUILD 1</div>
+        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.5 · BUILD 2</div>
         <h1>Welcome to the Oxide Editor</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -320,16 +332,23 @@ app.innerHTML = `
           <button type="button" class="debug-tool primary" data-debug-action="start">START</button>
           <button type="button" class="debug-tool" data-debug-action="continue" disabled>CONTINUE</button>
           <button type="button" class="debug-tool" data-debug-action="pause" disabled>PAUSE</button>
+          <button type="button" class="debug-tool" data-debug-action="restart" disabled>RESTART</button>
           <button type="button" class="debug-tool" data-debug-action="next" disabled>OVER</button>
           <button type="button" class="debug-tool" data-debug-action="step-in" disabled>INTO</button>
           <button type="button" class="debug-tool" data-debug-action="step-out" disabled>OUT</button>
           <button type="button" class="debug-tool stop" data-debug-action="stop" disabled>STOP</button>
+          <label class="debug-thread-picker" title="Active debugger thread"><span>THREAD</span><select id="debug-thread-select" disabled><option value="">—</option></select></label>
         </div>
         <div class="debug-grid">
-          <section class="debug-column"><div class="debug-section-head">CALL STACK</div><div id="debug-call-stack" class="debug-list"><div class="debug-empty">Start debugging to inspect stack frames.</div></div></section>
-          <section class="debug-column variables-column"><div class="debug-section-head">LOCALS / VARIABLES</div><div id="debug-variables" class="debug-list"><div class="debug-empty">Variables appear when execution is paused.</div></div></section>
+          <section class="debug-column debug-navigation-column">
+            <div class="debug-section-head">BREAKPOINTS <small>RIGHT-CLICK GUTTER TO EDIT</small></div>
+            <div id="debug-breakpoints" class="debug-list debug-breakpoint-list"><div class="debug-empty">Click a Rust line number to add a breakpoint.</div></div>
+            <div class="debug-section-head">CALL STACK</div>
+            <div id="debug-call-stack" class="debug-list debug-stack-list"><div class="debug-empty">Start debugging to inspect stack frames.</div></div>
+          </section>
+          <section class="debug-column variables-column"><div class="debug-section-head">LOCALS / VARIABLES <small>EXPAND VALUES WITH ▸</small></div><div id="debug-variables" class="debug-list"><div class="debug-empty">Variables appear when execution is paused.</div></div></section>
           <section class="debug-column"><div class="debug-section-head">WATCH</div><form id="debug-watch-form" class="debug-watch-form"><input id="debug-watch-input" spellcheck="false" placeholder="Expression, e.g. name"/><button type="submit">ADD</button></form><div id="debug-watch-list" class="debug-list"><div class="debug-empty">Add expressions to watch while paused.</div></div></section>
-          <section class="debug-column output-column"><div class="debug-section-head">DEBUG OUTPUT</div><div id="debug-output" class="debug-output"><div class="debug-empty">Debugger output will appear here.</div></div></section>
+          <section class="debug-column output-column"><div class="debug-section-head">DEBUG CONSOLE <small>EXPRESSIONS + LLDB COMMANDS</small></div><div id="debug-output" class="debug-output"><div class="debug-empty">Debugger output will appear here.</div></div><form id="debug-console-form" class="debug-console-form"><span>›</span><input id="debug-console-input" spellcheck="false" autocomplete="off" placeholder="Expression or LLDB command…" disabled/><button type="submit" disabled>RUN</button></form></section>
         </div>
       </div>
     </section>
@@ -340,7 +359,7 @@ app.innerHTML = `
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>OXIDE B1.3.5 · BUILD 1</span>
+      <span>OXIDE B1.3.5 · BUILD 2</span>
     </footer>
   </main>
 
@@ -419,6 +438,23 @@ app.innerHTML = `
     <div class="dialog-actions tutorial-dialog-actions"><button type="button" id="tutorial-dialog-done" class="metal-button primary">CLOSE</button></div>
   </dialog>
 
+  <dialog id="debug-target-dialog" class="oxide-dialog debug-target-dialog">
+    <div class="dialog-head"><div><span>DEBUG TARGET</span><small>MULTI-BINARY CARGO PROJECT</small></div><button type="button" id="debug-target-close" class="dialog-close">×</button></div>
+    <div class="debug-target-body"><p>Choose the Cargo binary Oxide should debug.</p><div id="debug-target-list" class="debug-target-list"></div></div>
+    <div class="dialog-actions"><button type="button" id="debug-target-cancel" class="metal-button">CANCEL</button></div>
+  </dialog>
+
+  <dialog id="breakpoint-dialog" class="oxide-dialog breakpoint-dialog">
+    <div class="dialog-head"><div><span>BREAKPOINT OPTIONS</span><small id="breakpoint-location">RUST SOURCE</small></div><button type="button" id="breakpoint-close" class="dialog-close">×</button></div>
+    <form id="breakpoint-form" class="breakpoint-form">
+      <label><span>CONDITION</span><input id="breakpoint-condition" spellcheck="false" placeholder="Example: score > 100"/></label>
+      <label><span>HIT CONDITION</span><input id="breakpoint-hit-condition" spellcheck="false" placeholder="Example: 5"/></label>
+      <label><span>LOG MESSAGE</span><input id="breakpoint-log-message" spellcheck="false" placeholder="Example: score = {score}"/></label>
+      <p>A log message makes this breakpoint a logpoint: LLDB prints the message and continues instead of stopping.</p>
+      <div class="dialog-actions breakpoint-actions"><button type="button" id="breakpoint-remove" class="metal-button danger">REMOVE</button><button type="button" id="breakpoint-cancel" class="metal-button">CANCEL</button><button type="submit" class="metal-button primary">SAVE</button></div>
+    </form>
+  </dialog>
+
   <section id="terminal-window" class="terminal-window" hidden aria-label="Oxide Run Terminal">
     <header id="terminal-drag-handle" class="terminal-window-head">
       <div><span>OXIDE RUN TERMINAL</span><small id="terminal-window-project">NO PROJECT</small></div>
@@ -494,11 +530,24 @@ const els = {
   debuggerDetail: $('#debugger-detail'),
   debugPane: $('#debug-pane'),
   debugCallStack: $('#debug-call-stack'),
+  debugBreakpoints: $('#debug-breakpoints'),
   debugVariables: $('#debug-variables'),
+  debugThreadSelect: $('#debug-thread-select'),
   debugWatchForm: $('#debug-watch-form'),
   debugWatchInput: $('#debug-watch-input'),
   debugWatchList: $('#debug-watch-list'),
   debugOutput: $('#debug-output'),
+  debugConsoleForm: $('#debug-console-form'),
+  debugConsoleInput: $('#debug-console-input'),
+  debugTargetDialog: $('#debug-target-dialog'),
+  debugTargetList: $('#debug-target-list'),
+  breakpointDialog: $('#breakpoint-dialog'),
+  breakpointLocation: $('#breakpoint-location'),
+  breakpointForm: $('#breakpoint-form'),
+  breakpointCondition: $('#breakpoint-condition'),
+  breakpointHitCondition: $('#breakpoint-hit-condition'),
+  breakpointLogMessage: $('#breakpoint-log-message'),
+  breakpointRemove: $('#breakpoint-remove'),
   codeCompleter: $('#code-completer'),
   completionList: $('#completion-list'),
   completionDetailKind: $('#completion-detail-kind'),
@@ -702,6 +751,9 @@ function updateMenuAvailability() {
   document.querySelectorAll('[data-menu-action="debug-pause"], [data-debug-action="pause"]').forEach((button) => {
     button.disabled = !state.debugger.running || state.debugger.stopped;
   });
+  document.querySelectorAll('[data-menu-action="debug-restart"], [data-debug-action="restart"]').forEach((button) => {
+    button.disabled = !state.debugger.running;
+  });
   document.querySelectorAll('[data-menu-action="debug-next"], [data-menu-action="debug-step-in"], [data-menu-action="debug-step-out"], [data-debug-action="next"], [data-debug-action="step-in"], [data-debug-action="step-out"]').forEach((button) => {
     button.disabled = !state.debugger.running || !state.debugger.stopped;
   });
@@ -709,6 +761,9 @@ function updateMenuAvailability() {
     button.disabled = !state.debugger.running;
   });
   document.querySelectorAll('[data-menu-action="show-debug"]').forEach((button) => { button.disabled = !projectLoaded; });
+  if (els.debugConsoleInput) els.debugConsoleInput.disabled = !state.debugger.running || !state.debugger.stopped;
+  if (els.debugConsoleForm) els.debugConsoleForm.querySelector('button').disabled = !state.debugger.running || !state.debugger.stopped;
+  renderDebugThreads();
 }
 
 async function detectToolchain() {
@@ -774,7 +829,8 @@ async function warmRustAnalyzer(projectPath = state.projectPath) {
     await invoke('rust_analyzer_warmup', { projectPath });
     if (state.projectPath === projectPath) {
       els.analyzerStatus.textContent = 'ANALYZER: READY';
-      els.analyzerStatus.title = 'Rust Code Analyzer/Completer is connected to this Cargo project.';
+      els.analyzerStatus.title = 'Rust Code Analyzer/Completer is connected. Semantic Readability Colors use rust-analyzer when available.';
+      scheduleSemanticReadability(40);
     }
   } catch (error) {
     els.analyzerStatus.textContent = 'ANALYZER: RETRY';
@@ -833,6 +889,13 @@ async function openProjectPath(projectPath, { keepBrowserOpen = false, created =
     state.projectPath = projectPath;
     state.manifest = manifest;
     state.diagnostics = [];
+    state.debugger.breakpoints.clear();
+    state.debugger.selectedTarget = null;
+    state.debugger.threads = [];
+    state.debugger.expandedVariables.clear();
+    renderBreakpoints();
+    renderDebugThreads();
+    clearSemanticReadability();
     state.analysisGeneration += 1;
     clearTabs();
     renderTree(entries);
@@ -957,6 +1020,7 @@ function setEditorFromTab(tab) {
     state.currentFile = '';
     state.dirty = false;
     els.editor.value = '';
+    clearSemanticReadability();
     updateSyntaxHighlight();
     els.editor.readOnly = true;
     els.editor.placeholder = 'Open a .rs, .toml, or text file from the project tree.';
@@ -974,7 +1038,9 @@ function setEditorFromTab(tab) {
   state.dirty = tab.dirty;
   els.editor.readOnly = false;
   els.editor.value = tab.content;
+  clearSemanticReadability();
   updateSyntaxHighlight();
+  scheduleSemanticReadability(80);
   els.fileStatus.textContent = tab.path;
   els.save.disabled = false;
   renderTabs();
@@ -1130,6 +1196,12 @@ async function closeProject() {
   state.debugger.output = [];
   state.debugger.watches = [];
   state.debugger.watchResults = [];
+  state.debugger.threads = [];
+  state.debugger.selectedTarget = null;
+  state.debugger.expandedVariables.clear();
+  renderBreakpoints();
+  renderDebugThreads();
+  clearSemanticReadability();
   state.analysisGeneration += 1;
   if (state.analysisTimer) clearTimeout(state.analysisTimer);
   clearTabs();
@@ -1161,33 +1233,23 @@ const RUST_PRIMITIVE_TYPES = new Set([
   'u8', 'u16', 'u32', 'u64', 'u128', 'usize', 'f32', 'f64'
 ]);
 
-function rustDeclaredIdentifiers(source) {
-  const names = new Set();
-  const add = (name) => { if (name && name !== '_') names.add(name); };
-
-  for (const match of source.matchAll(/\blet\s+(?:mut\s+)?(?:ref\s+)?([A-Za-z_][A-Za-z0-9_]*)/g)) add(match[1]);
-  for (const match of source.matchAll(/\bfor\s+([A-Za-z_][A-Za-z0-9_]*)\s+in\b/g)) add(match[1]);
-
-  for (const match of source.matchAll(/\bfn\s+[A-Za-z_][A-Za-z0-9_]*\s*\(([^)]*)\)/gs)) {
-    const params = match[1];
-    for (const param of params.split(',')) {
-      const name = param.match(/(?:^|\s)(?:mut\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:/)?.[1];
-      add(name);
-    }
-  }
-  return names;
+function rustDeclaredFunctions(source) {
+  return new Set([...source.matchAll(/\bfn\s+([A-Za-z_][A-Za-z0-9_]*)/g)].map((match) => match[1]));
 }
 
-function syntaxTokenClass(identifier, nextChar, declared) {
+function syntaxTokenClass(identifier, followingText, functions) {
   if (RUST_KEYWORDS.has(identifier)) return 'syntax-keyword';
+  const next = followingText.match(/^\s*([!(])/ )?.[1] || '';
+  if (next === '!') return 'syntax-macro';
   if (RUST_PRIMITIVE_TYPES.has(identifier) || /^[A-Z][A-Za-z0-9_]*$/.test(identifier)) return 'syntax-type';
-  if (nextChar === '!') return 'syntax-macro';
-  if (declared.has(identifier)) return 'syntax-variable';
+  if (functions.has(identifier) || next === '(') return 'syntax-function';
+  // The lexical fallback intentionally makes every ordinary identifier steel blue.
+  // rust-analyzer can then refine variables, parameters, fields, functions, and types semantically.
   return 'syntax-ident';
 }
 
-function renderRustSyntax(source) {
-  const declared = rustDeclaredIdentifiers(source);
+function renderRustSyntaxLexical(source) {
+  const functions = rustDeclaredFunctions(source);
   let html = '';
   let i = 0;
   const push = (text, cls = '') => {
@@ -1254,9 +1316,9 @@ function renderRustSyntax(source) {
       continue;
     }
 
-    // Character literals. Lifetimes such as 'a stay unstyled.
+    // Character literals. Lifetimes such as 'a stay as identifiers unless semantic tokens refine them.
     if (ch === "'" && source[i + 1] && source[i + 2] === "'") {
-      push(source.slice(i, i + 3), 'syntax-string');
+      push(source.slice(i, i + 3), 'syntax-character');
       i += 3;
       continue;
     }
@@ -1264,7 +1326,7 @@ function renderRustSyntax(source) {
       let j = i + 2;
       while (j < source.length && source[j] !== "'") j += 1;
       if (j < source.length) j += 1;
-      push(source.slice(i, j), 'syntax-string');
+      push(source.slice(i, j), 'syntax-character');
       i = j;
       continue;
     }
@@ -1279,12 +1341,11 @@ function renderRustSyntax(source) {
       }
     }
 
-    // Identifiers and macros.
+    // Identifiers, functions, types, and macros.
     if (/[A-Za-z_]/.test(ch)) {
       const ident = source.slice(i).match(/^[A-Za-z_][A-Za-z0-9_]*/)?.[0];
       if (ident) {
-        const after = source[i + ident.length] || '';
-        push(ident, syntaxTokenClass(ident, after, declared));
+        push(ident, syntaxTokenClass(ident, source.slice(i + ident.length, i + ident.length + 24), functions));
         i += ident.length;
         continue;
       }
@@ -1293,6 +1354,55 @@ function renderRustSyntax(source) {
     push(ch);
     i += 1;
   }
+  return html;
+}
+
+function semanticSyntaxClass(token) {
+  const type = String(token?.tokenType || '');
+  const map = {
+    variable: 'syntax-variable', parameter: 'syntax-parameter', property: 'syntax-property', constParameter: 'syntax-parameter',
+    function: 'syntax-function', method: 'syntax-method', macro: 'syntax-macro', derive: 'syntax-derive', attribute: 'syntax-attribute', decorator: 'syntax-attribute', builtinAttribute: 'syntax-attribute', deriveHelper: 'syntax-attribute',
+    type: 'syntax-type', builtinType: 'syntax-type', class: 'syntax-type', interface: 'syntax-trait', struct: 'syntax-struct', enum: 'syntax-enum', trait: 'syntax-trait', typeAlias: 'syntax-type-alias', typeParameter: 'syntax-type-parameter', union: 'syntax-type',
+    string: 'syntax-string', character: 'syntax-character', escapeSequence: 'syntax-string', formatSpecifier: 'syntax-string',
+    number: 'syntax-number', boolean: 'syntax-boolean', comment: 'syntax-comment',
+    keyword: 'syntax-keyword', selfKeyword: 'syntax-keyword', selfTypeKeyword: 'syntax-keyword',
+    namespace: 'syntax-namespace', toolModule: 'syntax-namespace', enumMember: 'syntax-enum-member', constant: 'syntax-constant', lifetime: 'syntax-lifetime', label: 'syntax-lifetime', generic: 'syntax-ident',
+    operator: 'syntax-operator', arithmetic: 'syntax-operator', bitwise: 'syntax-operator', comparison: 'syntax-operator', logical: 'syntax-operator',
+    punctuation: 'syntax-punctuation', attributeBracket: 'syntax-punctuation', angle: 'syntax-punctuation', brace: 'syntax-punctuation', bracket: 'syntax-punctuation', parenthesis: 'syntax-punctuation', colon: 'syntax-punctuation', comma: 'syntax-punctuation', dot: 'syntax-punctuation', semi: 'syntax-punctuation', macroBang: 'syntax-macro',
+    unresolvedReference: 'syntax-ident',
+  };
+  return map[type] || '';
+}
+
+function semanticLineStarts(source) {
+  const starts = [0];
+  for (let index = 0; index < source.length; index += 1) if (source[index] === '\n') starts.push(index + 1);
+  return starts;
+}
+
+function renderRustSyntax(source, semanticTokens = []) {
+  if (!semanticTokens.length) return renderRustSyntaxLexical(source);
+  const starts = semanticLineStarts(source);
+  const ranges = semanticTokens.map((token) => {
+    const cls = semanticSyntaxClass(token);
+    const lineStart = starts[token.line];
+    if (!cls || lineStart == null) return null;
+    const start = Math.min(source.length, lineStart + Number(token.startCharacter || 0));
+    const end = Math.min(source.length, start + Number(token.length || 0));
+    return end > start ? { start, end, cls } : null;
+  }).filter(Boolean).sort((left, right) => left.start - right.start || left.end - right.end);
+
+  if (!ranges.length) return renderRustSyntaxLexical(source);
+  let html = '';
+  let cursor = 0;
+  for (const range of ranges) {
+    if (range.end <= cursor) continue;
+    const start = Math.max(cursor, range.start);
+    if (start > cursor) html += renderRustSyntaxLexical(source.slice(cursor, start));
+    html += `<span class="${range.cls}">${escapeHtml(source.slice(start, range.end))}</span>`;
+    cursor = range.end;
+  }
+  if (cursor < source.length) html += renderRustSyntaxLexical(source.slice(cursor));
   return html;
 }
 
@@ -1314,9 +1424,47 @@ function updateSyntaxHighlight() {
     els.syntaxCode.textContent = '';
     return;
   }
+  const semanticTokens = state.semanticReadability.active ? state.semanticReadability.tokens : [];
   // A trailing newline keeps the backdrop's final empty line aligned with textarea rendering.
-  els.syntaxCode.innerHTML = renderRustSyntax(els.editor.value) + (els.editor.value.endsWith('\n') ? '\n' : '');
+  els.syntaxCode.innerHTML = renderRustSyntax(els.editor.value, semanticTokens) + (els.editor.value.endsWith('\n') ? '\n' : '');
   syncSyntaxScroll();
+}
+
+function clearSemanticReadability() {
+  state.semanticReadability.requestToken += 1;
+  if (state.semanticReadability.timer) clearTimeout(state.semanticReadability.timer);
+  state.semanticReadability.timer = null;
+  state.semanticReadability.tokens = [];
+  state.semanticReadability.active = false;
+}
+
+function scheduleSemanticReadability(delay = 260) {
+  if (!syntaxHighlightEnabled() || !state.projectPath || !state.completer.available) {
+    clearSemanticReadability();
+    updateSyntaxHighlight();
+    return;
+  }
+  if (state.semanticReadability.timer) clearTimeout(state.semanticReadability.timer);
+  const requestToken = ++state.semanticReadability.requestToken;
+  const projectPath = state.projectPath;
+  const path = state.currentFile;
+  const content = els.editor.value;
+  state.semanticReadability.timer = setTimeout(async () => {
+    state.semanticReadability.timer = null;
+    try {
+      const tokens = await invoke('rust_semantic_tokens', { projectPath, path, content });
+      if (requestToken !== state.semanticReadability.requestToken || normalizePath(path) !== normalizePath(state.currentFile) || content !== els.editor.value) return;
+      state.semanticReadability.tokens = Array.isArray(tokens) ? tokens : [];
+      state.semanticReadability.active = state.semanticReadability.tokens.length > 0;
+      updateSyntaxHighlight();
+    } catch {
+      if (requestToken !== state.semanticReadability.requestToken) return;
+      // Lexical colors remain active if rust-analyzer is warming up or unavailable.
+      state.semanticReadability.tokens = [];
+      state.semanticReadability.active = false;
+      updateSyntaxHighlight();
+    }
+  }, delay);
 }
 
 function positionDebugLineHighlight() {
@@ -1683,55 +1831,186 @@ function requestRun() {
 }
 
 
-function breakpointLinesForFile(path) {
-  if (!path) return new Set();
+function breakpointEntryForFile(path, create = false) {
+  if (!path) return null;
   const key = normalizePath(path);
-  if (!state.debugger.breakpoints.has(key)) state.debugger.breakpoints.set(key, { path, lines: new Set() });
-  return state.debugger.breakpoints.get(key).lines;
+  if (!state.debugger.breakpoints.has(key) && create) state.debugger.breakpoints.set(key, { path, points: new Map() });
+  return state.debugger.breakpoints.get(key) || null;
+}
+
+function breakpointLinesForFile(path) {
+  return new Set(breakpointEntryForFile(path)?.points.keys() || []);
 }
 
 function debuggerBreakpointSets() {
   return [...state.debugger.breakpoints.values()]
-    .filter((item) => item.lines.size)
-    .map((item) => ({ path: item.path, lines: [...item.lines].sort((a, b) => a - b) }));
+    .filter((item) => item.points.size)
+    .map((item) => ({
+      path: item.path,
+      breakpoints: [...item.points.values()].sort((left, right) => left.line - right.line),
+      lines: [],
+    }));
+}
+
+async function syncBreakpointSet(path) {
+  if (!state.debugger.running || !path) return;
+  const entry = breakpointEntryForFile(path);
+  try {
+    await invoke('debugger_set_breakpoints', {
+      breakpointSet: {
+        path,
+        breakpoints: entry ? [...entry.points.values()].sort((left, right) => left.line - right.line) : [],
+        lines: [],
+      },
+    });
+  } catch (error) {
+    appendDebugOutput(`Could not update breakpoint: ${error}`, 'error');
+  }
 }
 
 async function toggleBreakpoint(path, line) {
   if (!path || !path.toLowerCase().endsWith('.rs') || !line) return;
   const key = normalizePath(path);
-  if (!state.debugger.breakpoints.has(key)) state.debugger.breakpoints.set(key, { path, lines: new Set() });
-  const entry = state.debugger.breakpoints.get(key);
-  if (entry.lines.has(line)) entry.lines.delete(line);
-  else entry.lines.add(line);
-  if (!entry.lines.size) state.debugger.breakpoints.delete(key);
+  const entry = breakpointEntryForFile(path, true);
+  if (entry.points.has(line)) entry.points.delete(line);
+  else entry.points.set(line, { line, condition: '', hitCondition: '', logMessage: '' });
+  if (!entry.points.size) state.debugger.breakpoints.delete(key);
   updateLineNumbers();
-  if (state.debugger.running) {
-    try {
-      await invoke('debugger_set_breakpoints', { breakpointSet: { path, lines: [...(entry?.lines || [])].sort((a, b) => a - b) } });
-    } catch (error) {
-      appendDebugOutput(`Could not update breakpoint: ${error}`, 'error');
-    }
+  renderBreakpoints();
+  await syncBreakpointSet(path);
+}
+
+async function jumpToBreakpoint(path, line) {
+  try {
+    await loadFile(path);
+    const offset = offsetForLineColumn(els.editor.value, line, 1);
+    els.editor.focus();
+    els.editor.setSelectionRange(offset, offset);
+    els.editor.scrollTop = Math.max(0, (line - 5) * 20.15);
+    els.lines.scrollTop = els.editor.scrollTop;
+  } catch (error) {
+    appendDebugOutput(`Could not open breakpoint source: ${error}`, 'error');
   }
+}
+
+function renderBreakpoints() {
+  const points = [...state.debugger.breakpoints.values()].flatMap((entry) => [...entry.points.values()].map((point) => ({ ...point, path: entry.path })));
+  points.sort((left, right) => normalizePath(left.path).localeCompare(normalizePath(right.path)) || left.line - right.line);
+  if (!points.length) {
+    els.debugBreakpoints.innerHTML = '<div class="debug-empty">Click a Rust line number to add a breakpoint.</div>';
+    return;
+  }
+  els.debugBreakpoints.innerHTML = points.map((point, index) => {
+    const detail = point.logMessage
+      ? `LOG · ${point.logMessage}`
+      : [point.condition ? `IF ${point.condition}` : '', point.hitCondition ? `HIT ${point.hitCondition}` : ''].filter(Boolean).join(' · ') || 'BREAK ALWAYS';
+    return `<div class="debug-breakpoint-row ${point.logMessage ? 'logpoint' : ''}" data-breakpoint-index="${index}"><span class="debug-breakpoint-dot"></span><button type="button" class="debug-breakpoint-main"><b>${escapeHtml(pathBase(point.path))}:${point.line}</b><small>${escapeHtml(detail)}</small></button><button type="button" class="debug-breakpoint-edit" title="Breakpoint options">⋮</button></div>`;
+  }).join('');
+  els.debugBreakpoints.querySelectorAll('.debug-breakpoint-row').forEach((row) => {
+    const point = points[Number(row.dataset.breakpointIndex)];
+    row.querySelector('.debug-breakpoint-main').addEventListener('click', () => jumpToBreakpoint(point.path, point.line));
+    row.querySelector('.debug-breakpoint-edit').addEventListener('click', () => openBreakpointEditor(point.path, point.line));
+  });
+}
+
+function openBreakpointEditor(path, line) {
+  if (!path || !line) return;
+  const entry = breakpointEntryForFile(path, true);
+  const created = !entry.points.has(line);
+  if (created) entry.points.set(line, { line, condition: '', hitCondition: '', logMessage: '' });
+  if (created && state.debugger.running) void syncBreakpointSet(path);
+  const point = entry.points.get(line);
+  state.debugger.editingBreakpoint = { path, line };
+  els.breakpointLocation.textContent = `${pathBase(path)} : LINE ${line}`;
+  els.breakpointCondition.value = point.condition || '';
+  els.breakpointHitCondition.value = point.hitCondition || '';
+  els.breakpointLogMessage.value = point.logMessage || '';
+  if (!els.breakpointDialog.open) els.breakpointDialog.showModal();
+  requestAnimationFrame(() => els.breakpointCondition.focus());
+}
+
+function closeBreakpointEditor() {
+  state.debugger.editingBreakpoint = null;
+  if (els.breakpointDialog.open) els.breakpointDialog.close();
+}
+
+async function saveBreakpointOptions(event) {
+  event.preventDefault();
+  const editing = state.debugger.editingBreakpoint;
+  if (!editing) return;
+  const entry = breakpointEntryForFile(editing.path, true);
+  entry.points.set(editing.line, {
+    line: editing.line,
+    condition: els.breakpointCondition.value.trim(),
+    hitCondition: els.breakpointHitCondition.value.trim(),
+    logMessage: els.breakpointLogMessage.value.trim(),
+  });
+  closeBreakpointEditor();
+  updateLineNumbers();
+  renderBreakpoints();
+  await syncBreakpointSet(editing.path);
+}
+
+async function removeEditedBreakpoint() {
+  const editing = state.debugger.editingBreakpoint;
+  if (!editing) return;
+  const key = normalizePath(editing.path);
+  const entry = breakpointEntryForFile(editing.path);
+  entry?.points.delete(editing.line);
+  if (entry && !entry.points.size) state.debugger.breakpoints.delete(key);
+  closeBreakpointEditor();
+  updateLineNumbers();
+  renderBreakpoints();
+  await syncBreakpointSet(editing.path);
+}
+
+let debugTargetResolver = null;
+function finishDebugTargetChoice(target) {
+  if (els.debugTargetDialog.open) els.debugTargetDialog.close();
+  if (!debugTargetResolver) return;
+  const resolve = debugTargetResolver;
+  debugTargetResolver = null;
+  resolve(target);
+}
+
+function chooseDebugTarget(targets) {
+  if (debugTargetResolver) debugTargetResolver(null);
+  els.debugTargetList.innerHTML = targets.map((target, index) => `<button type="button" class="debug-target-choice" data-target-index="${index}"><strong>${escapeHtml(target.name)}</strong><small>${escapeHtml(target.package)}</small></button>`).join('');
+  els.debugTargetList.querySelectorAll('.debug-target-choice').forEach((button) => button.addEventListener('click', () => {
+    finishDebugTargetChoice(targets[Number(button.dataset.targetIndex)] || null);
+  }));
+  if (!els.debugTargetDialog.open) els.debugTargetDialog.showModal();
+  return new Promise((resolve) => { debugTargetResolver = resolve; });
 }
 
 function appendDebugOutput(text, kind = 'normal') {
   if (!text) return;
   state.debugger.output.push({ text: String(text), kind });
-  if (state.debugger.output.length > 500) state.debugger.output.splice(0, state.debugger.output.length - 500);
+  if (state.debugger.output.length > 700) state.debugger.output.splice(0, state.debugger.output.length - 700);
   els.debugOutput.innerHTML = state.debugger.output.length
     ? state.debugger.output.map((item) => `<div class="debug-output-line ${item.kind}">${escapeHtml(item.text)}</div>`).join('')
     : '<div class="debug-empty">Debugger output will appear here.</div>';
   els.debugOutput.scrollTop = els.debugOutput.scrollHeight;
 }
 
+function renderDebugThreads() {
+  const threads = state.debugger.threads || [];
+  els.debugThreadSelect.innerHTML = threads.length
+    ? threads.map((thread) => `<option value="${thread.id}" ${thread.id === state.debugger.threadId ? 'selected' : ''}>${escapeHtml(thread.name || `Thread ${thread.id}`)}</option>`).join('')
+    : '<option value="">—</option>';
+  els.debugThreadSelect.disabled = !state.debugger.stopped || !threads.length;
+}
+
 function resetDebugInspection() {
   state.debugger.frames = [];
   state.debugger.variables = [];
+  state.debugger.expandedVariables.clear();
   state.debugger.selectedFrameId = null;
   state.debugger.executionPath = '';
   state.debugger.executionLine = 0;
   els.debugCallStack.innerHTML = '<div class="debug-empty">Execution is running.</div>';
   els.debugVariables.innerHTML = '<div class="debug-empty">Pause at a breakpoint to inspect variables.</div>';
+  renderDebugThreads();
   renderWatches();
   updateLineNumbers();
 }
@@ -1746,10 +2025,43 @@ function renderDebugStack() {
   }));
 }
 
+function debugVariableHtml(item, depth = 0) {
+  const reference = Number(item.variablesReference || 0);
+  const expansion = reference > 0 ? state.debugger.expandedVariables.get(reference) : null;
+  const open = Boolean(expansion?.expanded);
+  const children = expansion?.children || [];
+  const toggle = reference > 0 ? `<button type="button" class="debug-variable-toggle" data-variable-reference="${reference}" title="${open ? 'Collapse' : 'Expand'}">${open ? '▾' : '▸'}</button>` : '<button type="button" class="debug-variable-toggle" disabled>·</button>';
+  const row = `<div class="debug-variable debug-variable-child" style="--debug-depth:${depth}">${toggle}<span class="debug-variable-scope">${escapeHtml(item.scope || '')}</span><b>${escapeHtml(item.name)}</b><code>${escapeHtml(item.value)}</code><small>${escapeHtml(item.typeName || '')}</small>${open ? `<div class="debug-variable-children">${children.length ? children.map((child) => debugVariableHtml(child, depth + 1)).join('') : '<div class="debug-empty">No child values.</div>'}</div>` : ''}</div>`;
+  return row;
+}
+
 function renderDebugVariables() {
   els.debugVariables.innerHTML = state.debugger.variables.length
-    ? state.debugger.variables.map((item) => `<div class="debug-variable"><span class="debug-variable-scope">${escapeHtml(item.scope)}</span><b>${escapeHtml(item.name)}</b><code>${escapeHtml(item.value)}</code><small>${escapeHtml(item.typeName || '')}</small></div>`).join('')
+    ? state.debugger.variables.map((item) => debugVariableHtml(item)).join('')
     : '<div class="debug-empty">No local variables reported for this frame.</div>';
+  els.debugVariables.querySelectorAll('.debug-variable-toggle:not(:disabled)').forEach((button) => button.addEventListener('click', async () => {
+    const reference = Number(button.dataset.variableReference);
+    let expansion = state.debugger.expandedVariables.get(reference);
+    if (!expansion) {
+      expansion = { expanded: false, children: null };
+      state.debugger.expandedVariables.set(reference, expansion);
+    }
+    if (expansion.expanded) {
+      expansion.expanded = false;
+      renderDebugVariables();
+      return;
+    }
+    if (!expansion.children) {
+      try {
+        expansion.children = await invoke('debugger_variables', { variablesReference: reference });
+      } catch (error) {
+        appendDebugOutput(`Could not expand variable: ${error}`, 'error');
+        expansion.children = [];
+      }
+    }
+    expansion.expanded = true;
+    renderDebugVariables();
+  }));
 }
 
 function renderWatches() {
@@ -1786,6 +2098,7 @@ async function selectDebugFrame(frame) {
   state.debugger.selectedFrameId = frame.id;
   state.debugger.executionPath = frame.path || '';
   state.debugger.executionLine = frame.line || 0;
+  state.debugger.expandedVariables.clear();
   renderDebugStack();
   const projectRoot = normalizePath(state.projectPath);
   const framePath = normalizePath(frame.path || '');
@@ -1830,32 +2143,62 @@ async function refreshDebugInspection(threadId) {
   }
 }
 
+async function refreshDebugThreads(preferredThreadId = null) {
+  try {
+    state.debugger.threads = await invoke('debugger_threads');
+    const preferred = Number(preferredThreadId || state.debugger.threadId || 0);
+    const selected = state.debugger.threads.find((thread) => thread.id === preferred) || state.debugger.threads[0] || null;
+    state.debugger.threadId = selected?.id ?? null;
+    renderDebugThreads();
+    if (state.debugger.threadId) await refreshDebugInspection(state.debugger.threadId);
+  } catch (error) {
+    state.debugger.threads = [];
+    renderDebugThreads();
+    appendDebugOutput(`Could not read debugger threads: ${error}`, 'error');
+  }
+}
+
 async function startDebugging() {
   if (!state.projectPath || state.debugger.running || state.buildRunning || state.terminalRunning) return;
   if (!state.debugger.available) {
-    showInfo('DEBUGGER NOT FOUND', `<p>${escapeHtml(state.debugger.message || 'Oxide could not find lldb-dap.')}</p><p>Build 1 uses LLDB's Debug Adapter Protocol for structured Rust debugging.</p>`);
+    showInfo('DEBUGGER NOT FOUND', `<p>${escapeHtml(state.debugger.message || 'Oxide could not find lldb-dap.')}</p><p>Oxide uses LLDB's Debug Adapter Protocol for structured Rust debugging.</p>`);
     return;
   }
   if (!await saveAllDirtyTabs()) return;
+  const targets = await invoke('debugger_targets', { projectPath: state.projectPath }).catch((error) => {
+    appendDebugOutput(`Could not inspect debug targets: ${error}`, 'error');
+    return [];
+  });
+  let target = null;
+  if (Array.isArray(targets) && targets.length > 1) {
+    target = await chooseDebugTarget(targets);
+    if (!target) return;
+  } else if (Array.isArray(targets) && targets.length === 1) {
+    target = targets[0];
+  }
+  state.debugger.selectedTarget = target;
   setViewPanel('build', true);
   setConsoleView('debug');
   state.debugger.output = [];
-  appendDebugOutput('Building project with debug information…', 'stage');
+  appendDebugOutput(`Building ${target ? `${target.package} :: ${target.name}` : 'project'} with debug information…`, 'stage');
   state.debugger.running = true;
   state.debugger.stopped = false;
   state.debugger.threadId = null;
+  state.debugger.threads = [];
   resetDebugInspection();
   els.debuggerStatus.textContent = 'DEBUGGER: STARTING';
   els.debuggerDetail.textContent = 'BUILDING DEBUG TARGET';
   els.commandReadout.textContent = 'DEBUG · BUILDING';
   updateMenuAvailability();
   try {
-    const result = await invoke('debugger_start', { projectPath: state.projectPath, breakpoints: debuggerBreakpointSets() });
+    const result = await invoke('debugger_start', { projectPath: state.projectPath, breakpoints: debuggerBreakpointSets(), target });
     appendDebugOutput(`Debugger attached to ${result.executable}`, 'success');
     appendDebugOutput(`Adapter: ${result.adapter}`, 'muted');
   } catch (error) {
     state.debugger.running = false;
     state.debugger.stopped = false;
+    state.debugger.threads = [];
+    renderDebugThreads();
     els.debuggerStatus.textContent = 'DEBUGGER: READY';
     els.debuggerDetail.textContent = 'START FAILED';
     els.commandReadout.textContent = 'DEBUG START FAILED';
@@ -1883,12 +2226,47 @@ async function debuggerCommand(action) {
   }
 }
 
+async function restartDebugging() {
+  if (!state.debugger.running) return;
+  try {
+    appendDebugOutput('Restarting debuggee…', 'stage');
+    await invoke('debugger_restart');
+    state.debugger.stopped = false;
+    state.debugger.threadId = null;
+    state.debugger.threads = [];
+    resetDebugInspection();
+    els.debuggerStatus.textContent = 'DEBUGGER: RUNNING';
+    els.debuggerDetail.textContent = 'RESTARTING PROGRAM';
+    els.commandReadout.textContent = 'DEBUG · RESTARTING';
+    updateMenuAvailability();
+  } catch (error) {
+    appendDebugOutput(`Restart failed: ${error}`, 'error');
+  }
+}
+
+async function runDebugConsole(event) {
+  event.preventDefault();
+  const expression = els.debugConsoleInput.value.trim();
+  if (!expression || !state.debugger.running || !state.debugger.stopped) return;
+  els.debugConsoleInput.value = '';
+  state.debugger.consoleHistory.push(expression);
+  appendDebugOutput(`› ${expression}`, 'debug-console-command');
+  try {
+    const result = await invoke('debugger_repl', { expression, frameId: state.debugger.selectedFrameId });
+    appendDebugOutput(result.typeName ? `${result.result}  ·  ${result.typeName}` : result.result, 'debug-console-result');
+    await refreshWatches();
+  } catch (error) {
+    appendDebugOutput(String(error), 'error');
+  }
+}
+
 async function stopDebugging() {
   if (!state.debugger.running) return;
   try { await invoke('debugger_stop'); } catch (error) { appendDebugOutput(`Stop debugger: ${error}`, 'error'); }
   state.debugger.running = false;
   state.debugger.stopped = false;
   state.debugger.threadId = null;
+  state.debugger.threads = [];
   resetDebugInspection();
   els.debuggerStatus.textContent = state.debugger.available ? 'DEBUGGER: READY' : 'DEBUGGER: NOT FOUND';
   els.debuggerDetail.textContent = state.debugger.available ? `${state.debugger.adapter} READY` : 'LLDB DAP NOT FOUND';
@@ -1899,6 +2277,7 @@ async function stopDebugging() {
 async function handleDebugAction(action) {
   if (action === 'start') return startDebugging();
   if (action === 'stop') return stopDebugging();
+  if (action === 'restart') return restartDebugging();
   return debuggerCommand(action);
 }
 
@@ -2945,6 +3324,7 @@ function markEditorChanged() {
   updateDirty();
   updateLineNumbers();
   updateSyntaxHighlight();
+  scheduleSemanticReadability();
   scheduleAnalysis();
   scheduleTutorialEvaluation();
 }
@@ -3093,7 +3473,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.5 · Build 1</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
+  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.5 · Build 2</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence with Semantic Readability Colors, LLDB/DAP debugging, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
 }
 
 function showShortcuts() {
@@ -3128,6 +3508,7 @@ async function handleMenuAction(action) {
   if (action === 'debug-start') await startDebugging();
   else if (action === 'debug-continue') await debuggerCommand('continue');
   else if (action === 'debug-pause') await debuggerCommand('pause');
+  else if (action === 'debug-restart') await restartDebugging();
   else if (action === 'debug-next') await debuggerCommand('next');
   else if (action === 'debug-step-in') await debuggerCommand('step-in');
   else if (action === 'debug-step-out') await debuggerCommand('step-out');
@@ -3281,6 +3662,15 @@ els.lines.addEventListener('click', async (event) => {
   await toggleBreakpoint(state.currentFile, Number(lineElement.dataset.line));
 });
 
+els.lines.addEventListener('contextmenu', (event) => {
+  const lineElement = event.target.closest('.line-number');
+  if (!lineElement || !state.currentFile?.toLowerCase().endsWith('.rs')) return;
+  event.preventDefault();
+  openBreakpointEditor(state.currentFile, Number(lineElement.dataset.line));
+  updateLineNumbers();
+  renderBreakpoints();
+});
+
 els.debugWatchForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const expression = els.debugWatchInput.value.trim();
@@ -3290,6 +3680,21 @@ els.debugWatchForm.addEventListener('submit', async (event) => {
   renderWatches();
   if (state.debugger.stopped) await refreshWatches();
 });
+
+els.debugThreadSelect.addEventListener('change', async () => {
+  const threadId = Number(els.debugThreadSelect.value || 0);
+  if (!threadId || !state.debugger.stopped) return;
+  state.debugger.threadId = threadId;
+  await refreshDebugInspection(threadId);
+});
+
+els.debugConsoleForm.addEventListener('submit', runDebugConsole);
+els.breakpointForm.addEventListener('submit', saveBreakpointOptions);
+$('#breakpoint-remove').addEventListener('click', removeEditedBreakpoint);
+$('#breakpoint-cancel').addEventListener('click', closeBreakpointEditor);
+$('#breakpoint-close').addEventListener('click', closeBreakpointEditor);
+$('#debug-target-cancel').addEventListener('click', () => finishDebugTargetChoice(null));
+$('#debug-target-close').addEventListener('click', () => finishDebugTargetChoice(null));
 
 els.diagnosticBanner.addEventListener('click', () => {
   setViewPanel('build', true);
@@ -3447,6 +3852,9 @@ document.addEventListener('keydown', async (event) => {
   } else if (ctrl && event.key === 'F6') {
     event.preventDefault();
     await runDiagnostics({ silent: false, force: true });
+  } else if (event.ctrlKey && event.shiftKey && event.key === 'F9') {
+    event.preventDefault();
+    await restartDebugging();
   } else if (event.ctrlKey && event.key === 'F9') {
     event.preventDefault();
     await stopDebugging();
@@ -3498,7 +3906,7 @@ listen('debugger-output', (event) => {
   appendDebugOutput(output || '', category === 'stderr' ? 'error' : category === 'adapter' ? 'muted' : 'normal');
 });
 
-listen('debugger-state', (event) => {
+listen('debugger-state', async (event) => {
   const { state: debuggerState, detail } = event.payload || {};
   if (detail) appendDebugOutput(detail, debuggerState === 'adapter-exited' ? 'error' : 'stage');
   if (debuggerState === 'building') {
@@ -3513,8 +3921,12 @@ listen('debugger-state', (event) => {
     els.debuggerDetail.textContent = 'PROGRAM RUNNING';
     els.commandReadout.textContent = 'DEBUG · PROGRAM ACTIVE';
   } else if (debuggerState === 'adapter-exited' && state.debugger.running) {
+    try { await invoke('debugger_stop'); } catch { /* adapter already exited */ }
     state.debugger.running = false;
     state.debugger.stopped = false;
+    state.debugger.threadId = null;
+    state.debugger.threads = [];
+    resetDebugInspection();
     els.debuggerStatus.textContent = state.debugger.available ? 'DEBUGGER: READY' : 'DEBUGGER: NOT FOUND';
     els.debuggerDetail.textContent = 'SESSION ENDED';
   }
@@ -3540,15 +3952,20 @@ listen('debugger-event', async (event) => {
     setConsoleView('debug');
     appendDebugOutput(`Paused: ${body.description || body.reason || 'debugger stop'}`, 'stage');
     updateMenuAvailability();
-    await refreshDebugInspection(state.debugger.threadId);
+    await refreshDebugThreads(state.debugger.threadId);
     return;
   }
   if (kind === 'continued') {
     state.debugger.stopped = false;
+    state.debugger.threads = [];
     resetDebugInspection();
     els.debuggerStatus.textContent = 'DEBUGGER: RUNNING';
     els.debuggerDetail.textContent = 'PROGRAM RUNNING';
     updateMenuAvailability();
+    return;
+  }
+  if (kind === 'thread' && state.debugger.stopped) {
+    await refreshDebugThreads(state.debugger.threadId);
     return;
   }
   if (kind === 'exited') {
@@ -3560,6 +3977,7 @@ listen('debugger-event', async (event) => {
     state.debugger.running = false;
     state.debugger.stopped = false;
     state.debugger.threadId = null;
+    state.debugger.threads = [];
     resetDebugInspection();
     els.debuggerStatus.textContent = state.debugger.available ? 'DEBUGGER: READY' : 'DEBUGGER: NOT FOUND';
     els.debuggerDetail.textContent = 'SESSION COMPLETE';

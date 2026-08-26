@@ -31,6 +31,8 @@ struct AnalyzerSession {
     open_documents: HashSet<PathBuf>,
     document_versions: HashMap<PathBuf, i32>,
     document_contents: HashMap<PathBuf, String>,
+    semantic_token_types: Vec<String>,
+    semantic_token_modifiers: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -83,6 +85,16 @@ pub struct SignatureHelpView {
     pub documentation: String,
     pub active_parameter: usize,
     pub parameters: Vec<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SemanticTokenView {
+    pub line: u32,
+    pub start_character: u32,
+    pub length: u32,
+    pub token_type: String,
+    pub modifiers: Vec<String>,
 }
 
 fn executable_name(program: &str) -> String {
@@ -247,6 +259,8 @@ impl AnalyzerSession {
             open_documents: HashSet::new(),
             document_versions: HashMap::new(),
             document_contents: HashMap::new(),
+            semantic_token_types: Vec::new(),
+            semantic_token_modifiers: Vec::new(),
         };
 
         let root_uri = Url::from_directory_path(project_path)
@@ -270,6 +284,29 @@ impl AnalyzerSession {
                             "documentationFormat": ["markdown", "plaintext"],
                             "parameterInformation": { "labelOffsetSupport": true }
                         }
+                    },
+                    "semanticTokens": {
+                        "requests": { "full": true },
+                        "tokenTypes": [
+                            "namespace", "type", "class", "enum", "interface", "struct", "typeParameter",
+                            "parameter", "variable", "property", "enumMember", "event", "function", "method",
+                            "macro", "keyword", "modifier", "comment", "string", "number", "regexp", "operator",
+                            "decorator", "attribute", "derive", "trait", "typeAlias", "union", "boolean",
+                            "character", "escapeSequence", "formatSpecifier", "lifetime", "selfKeyword",
+                            "selfTypeKeyword", "punctuation", "unresolvedReference", "builtinAttribute", "builtinType",
+                            "constParameter", "deriveHelper", "generic", "label", "toolModule", "constant",
+                            "arithmetic", "bitwise", "comparison", "logical", "attributeBracket", "angle", "brace",
+                            "bracket", "parenthesis", "colon", "comma", "dot", "semi", "macroBang"
+                        ],
+                        "tokenModifiers": [
+                            "declaration", "definition", "readonly", "static", "deprecated", "abstract", "async",
+                            "modification", "documentation", "defaultLibrary", "mutable", "consuming", "controlFlow",
+                            "crateRoot", "library", "public", "reference", "trait", "unsafe", "callable", "injected",
+                            "intraDocLink", "macro", "attribute"
+                        ],
+                        "formats": ["relative"],
+                        "overlappingTokenSupport": false,
+                        "multilineTokenSupport": false
                     }
                 },
                 "workspace": { "workspaceFolders": true }
@@ -278,7 +315,23 @@ impl AnalyzerSession {
             "clientInfo": { "name": "Oxide Editor", "version": env!("CARGO_PKG_VERSION") }
         });
 
-        session.request("initialize", initialize, Duration::from_secs(12))?;
+        let initialize_result = session.request("initialize", initialize, Duration::from_secs(12))?;
+        if let Some(legend) = initialize_result
+            .get("capabilities")
+            .and_then(|capabilities| capabilities.get("semanticTokensProvider"))
+            .and_then(|provider| provider.get("legend"))
+        {
+            session.semantic_token_types = legend
+                .get("tokenTypes")
+                .and_then(Value::as_array)
+                .map(|items| items.iter().filter_map(Value::as_str).map(str::to_string).collect())
+                .unwrap_or_default();
+            session.semantic_token_modifiers = legend
+                .get("tokenModifiers")
+                .and_then(Value::as_array)
+                .map(|items| items.iter().filter_map(Value::as_str).map(str::to_string).collect())
+                .unwrap_or_default();
+        }
         session.notify("initialized", json!({}))?;
         Ok(session)
     }
@@ -536,6 +589,57 @@ pub fn completions(
             Duration::from_secs(5),
         )?;
         Ok(completion_items(result))
+    })
+}
+
+pub fn semantic_tokens(
+    runtime: &RustAnalyzerRuntime,
+    project_path: String,
+    path: String,
+    content: String,
+) -> Result<Vec<SemanticTokenView>, String> {
+    let project = PathBuf::from(project_path);
+    let document = PathBuf::from(path);
+    runtime.with_session(&project, |session| {
+        let uri = session.sync_document(&document, &content)?;
+        if session.semantic_token_types.is_empty() {
+            return Ok(Vec::new());
+        }
+        let result = session.request(
+            "textDocument/semanticTokens/full",
+            json!({ "textDocument": { "uri": uri } }),
+            Duration::from_secs(5),
+        )?;
+        let data = result.get("data").and_then(Value::as_array).cloned().unwrap_or_default();
+        let mut output = Vec::with_capacity(data.len() / 5);
+        let mut line = 0u32;
+        let mut start_character = 0u32;
+
+        for chunk in data.chunks_exact(5) {
+            let delta_line = chunk[0].as_u64().unwrap_or(0) as u32;
+            let delta_start = chunk[1].as_u64().unwrap_or(0) as u32;
+            let length = chunk[2].as_u64().unwrap_or(0) as u32;
+            let token_type_index = chunk[3].as_u64().unwrap_or(u64::MAX) as usize;
+            let modifier_bits = chunk[4].as_u64().unwrap_or(0);
+
+            if delta_line == 0 {
+                start_character = start_character.saturating_add(delta_start);
+            } else {
+                line = line.saturating_add(delta_line);
+                start_character = delta_start;
+            }
+            let Some(token_type) = session.semantic_token_types.get(token_type_index).cloned() else { continue; };
+            let modifiers = session
+                .semantic_token_modifiers
+                .iter()
+                .enumerate()
+                .filter_map(|(index, modifier)| {
+                    if index < 64 && (modifier_bits & (1u64 << index)) != 0 { Some(modifier.clone()) } else { None }
+                })
+                .collect();
+            output.push(SemanticTokenView { line, start_character, length, token_type, modifiers });
+        }
+        Ok(output)
     })
 }
 

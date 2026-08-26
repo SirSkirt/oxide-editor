@@ -39,11 +39,41 @@ pub struct DebuggerStatus {
     pub message: String,
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DebugBreakpoint {
+    pub line: u32,
+    #[serde(default)]
+    pub condition: String,
+    #[serde(default)]
+    pub hit_condition: String,
+    #[serde(default)]
+    pub log_message: String,
+}
+
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DebugBreakpointSet {
     pub path: String,
+    #[serde(default)]
+    pub breakpoints: Vec<DebugBreakpoint>,
+    // Compatibility with B1.3.5 Build 1 callers while the frontend migrates.
+    #[serde(default)]
     pub lines: Vec<u32>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DebugTarget {
+    pub package: String,
+    pub name: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DebugThread {
+    pub id: i64,
+    pub name: String,
 }
 
 #[derive(Clone, Serialize)]
@@ -135,9 +165,13 @@ fn adapter_candidates() -> Vec<PathBuf> {
             candidates.push(path);
         }
     }
-    for version in (14..=22).rev() {
-        if let Some(path) = find_on_path(&format!("lldb-dap-{version}")) {
-            candidates.push(path);
+    // LLVM renamed the adapter from lldb-vscode to lldb-dap. Ubuntu 22.04's
+    // default LLDB 14 package still exposes the older, versioned name.
+    for version in (11..=22).rev() {
+        for name in [format!("lldb-dap-{version}"), format!("lldb-vscode-{version}")] {
+            if let Some(path) = find_on_path(&name) {
+                candidates.push(path);
+            }
         }
     }
 
@@ -161,6 +195,14 @@ fn adapter_candidates() -> Vec<PathBuf> {
             let candidate = PathBuf::from(raw);
             if candidate.is_file() {
                 candidates.push(candidate);
+            }
+        }
+        for version in (11..=22).rev() {
+            for name in ["lldb-dap", "lldb-vscode"] {
+                let candidate = PathBuf::from(format!("/usr/lib/llvm-{version}/bin/{name}"));
+                if candidate.is_file() {
+                    candidates.push(candidate);
+                }
             }
         }
     }
@@ -335,13 +377,52 @@ fn cargo_program() -> PathBuf {
     PathBuf::from(executable_name("cargo"))
 }
 
-fn build_debug_binary(app: &AppHandle, project_path: &Path) -> Result<PathBuf, String> {
-    let _ = app.emit("debugger-state", DebuggerStateEvent { state: "building".into(), detail: "Building debug target before debugger launch.".into() });
+pub fn debug_targets(project_path: String) -> Result<Vec<DebugTarget>, String> {
+    let output = Command::new(cargo_program())
+        .arg("metadata")
+        .arg("--format-version")
+        .arg("1")
+        .arg("--no-deps")
+        .current_dir(&project_path)
+        .output()
+        .map_err(|error| format!("Could not inspect Cargo debug targets: {error}"))?;
+    if !output.status.success() {
+        let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if detail.is_empty() { "Cargo metadata failed while finding debug targets.".into() } else { detail });
+    }
+    let metadata: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("Cargo returned invalid metadata while finding debug targets: {error}"))?;
+    let mut targets = Vec::new();
+    for package in metadata.get("packages").and_then(Value::as_array).into_iter().flatten() {
+        let package_name = package.get("name").and_then(Value::as_str).unwrap_or_default();
+        for target in package.get("targets").and_then(Value::as_array).into_iter().flatten() {
+            let is_bin = target.get("kind").and_then(Value::as_array)
+                .map(|kinds| kinds.iter().any(|kind| kind.as_str() == Some("bin")))
+                .unwrap_or(false);
+            if !is_bin { continue; }
+            let name = target.get("name").and_then(Value::as_str).unwrap_or_default();
+            if package_name.is_empty() || name.is_empty() { continue; }
+            let item = DebugTarget { package: package_name.to_string(), name: name.to_string() };
+            if !targets.iter().any(|existing: &DebugTarget| existing.package == item.package && existing.name == item.name) {
+                targets.push(item);
+            }
+        }
+    }
+    targets.sort_by(|left, right| left.package.cmp(&right.package).then(left.name.cmp(&right.name)));
+    Ok(targets)
+}
+
+fn build_debug_binary(app: &AppHandle, project_path: &Path, target: Option<&DebugTarget>) -> Result<PathBuf, String> {
+    let target_detail = target.map(|target| format!("{} :: {}", target.package, target.name)).unwrap_or_else(|| "default binary".into());
+    let _ = app.emit("debugger-state", DebuggerStateEvent { state: "building".into(), detail: format!("Building debug target: {target_detail}.") });
     let _ = app.emit("cargo-state", CargoStateEvent { state: "started".into(), detail: "cargo build --message-format=json".into() });
 
     let mut command = Command::new(cargo_program());
+    command.arg("build");
+    if let Some(target) = target {
+        command.arg("-p").arg(&target.package).arg("--bin").arg(&target.name);
+    }
     command
-        .arg("build")
         .arg("--message-format=json")
         .current_dir(project_path)
         .stdout(Stdio::piped())
@@ -378,7 +459,10 @@ fn build_debug_binary(app: &AppHandle, project_path: &Path) -> Result<PathBuf, S
                 Some("compiler-artifact") => {
                     let is_bin = message.get("target").and_then(|t| t.get("kind")).and_then(Value::as_array)
                         .map(|kinds| kinds.iter().any(|kind| kind.as_str() == Some("bin"))).unwrap_or(false);
-                    if is_bin {
+                    let target_matches = target.map(|selected| {
+                        message.get("target").and_then(|value| value.get("name")).and_then(Value::as_str) == Some(selected.name.as_str())
+                    }).unwrap_or(true);
+                    if is_bin && target_matches {
                         if let Some(executable) = message.get("executable").and_then(Value::as_str) {
                             let path = PathBuf::from(executable);
                             if !executables.iter().any(|existing| existing == &path) {
@@ -408,12 +492,35 @@ fn build_debug_binary(app: &AppHandle, project_path: &Path) -> Result<PathBuf, S
     match executables.len() {
         0 => Err("Cargo built successfully, but no runnable binary target was produced.".into()),
         1 => Ok(executables.remove(0)),
-        _ => Err("This project has multiple binary targets. Debug target selection is not implemented in Build 1 yet.".into()),
+        _ => Err("This project has multiple runnable binaries. Choose a target in Oxide's Debug Target picker.".into()),
     }
 }
 
 fn set_breakpoints_internal(runtime: &DebuggerRuntime, set: &DebugBreakpointSet) -> Result<(), String> {
-    let breakpoints = set.lines.iter().copied().map(|line| json!({ "line": line })).collect::<Vec<_>>();
+    let source_breakpoints: Vec<DebugBreakpoint> = if set.breakpoints.is_empty() {
+        set.lines.iter().copied().map(|line| DebugBreakpoint {
+            line,
+            condition: String::new(),
+            hit_condition: String::new(),
+            log_message: String::new(),
+        }).collect()
+    } else {
+        set.breakpoints.clone()
+    };
+    let breakpoints = source_breakpoints.iter().map(|breakpoint| {
+        let mut value = serde_json::Map::new();
+        value.insert("line".into(), json!(breakpoint.line));
+        if !breakpoint.condition.trim().is_empty() {
+            value.insert("condition".into(), json!(breakpoint.condition.trim()));
+        }
+        if !breakpoint.hit_condition.trim().is_empty() {
+            value.insert("hitCondition".into(), json!(breakpoint.hit_condition.trim()));
+        }
+        if !breakpoint.log_message.trim().is_empty() {
+            value.insert("logMessage".into(), json!(breakpoint.log_message.trim()));
+        }
+        Value::Object(value)
+    }).collect::<Vec<_>>();
     request(runtime, "setBreakpoints", json!({
         "source": { "path": set.path.clone() },
         "breakpoints": breakpoints,
@@ -426,16 +533,19 @@ pub fn start(
     runtime: &DebuggerRuntime,
     project_path: String,
     breakpoints: Vec<DebugBreakpointSet>,
+    target: Option<DebugTarget>,
 ) -> Result<DebugStartResult, String> {
     {
-        let guard = runtime.inner.session.lock().map_err(|_| "Debugger state is unavailable.".to_string())?;
+        let mut guard = runtime.inner.session.lock().map_err(|_| "Debugger state is unavailable.".to_string())?;
+        let stale = guard.as_mut().map(|session| session.child.try_wait().ok().flatten().is_some()).unwrap_or(false);
+        if stale { guard.take(); }
         if guard.is_some() {
             return Err("A debugger session is already active.".into());
         }
     }
 
     let adapter = resolve_adapter().ok_or_else(|| status().message)?;
-    let executable = build_debug_binary(&app, Path::new(&project_path))?;
+    let executable = build_debug_binary(&app, Path::new(&project_path), target.as_ref())?;
     let executable_string = executable.to_string_lossy().to_string();
     let _ = app.emit("debugger-state", DebuggerStateEvent { state: "starting".into(), detail: format!("Starting {}.", adapter.display()) });
 
@@ -551,17 +661,31 @@ pub fn pause(runtime: &DebuggerRuntime, thread_id: Option<i64>) -> Result<(), St
 
 pub fn next(runtime: &DebuggerRuntime, thread_id: Option<i64>) -> Result<(), String> {
     let id = choose_thread(runtime, thread_id)?;
-    request(runtime, "next", json!({ "threadId": id, "singleThread": false }), Duration::from_secs(3)).map(|_| ())
+    request(runtime, "next", json!({ "threadId": id }), Duration::from_secs(3)).map(|_| ())
 }
 
 pub fn step_in(runtime: &DebuggerRuntime, thread_id: Option<i64>) -> Result<(), String> {
     let id = choose_thread(runtime, thread_id)?;
-    request(runtime, "stepIn", json!({ "threadId": id, "singleThread": false }), Duration::from_secs(3)).map(|_| ())
+    request(runtime, "stepIn", json!({ "threadId": id }), Duration::from_secs(3)).map(|_| ())
 }
 
 pub fn step_out(runtime: &DebuggerRuntime, thread_id: Option<i64>) -> Result<(), String> {
     let id = choose_thread(runtime, thread_id)?;
-    request(runtime, "stepOut", json!({ "threadId": id, "singleThread": false }), Duration::from_secs(3)).map(|_| ())
+    request(runtime, "stepOut", json!({ "threadId": id }), Duration::from_secs(3)).map(|_| ())
+}
+
+pub fn threads(runtime: &DebuggerRuntime) -> Result<Vec<DebugThread>, String> {
+    let body = request(runtime, "threads", json!({}), Duration::from_secs(3))?;
+    Ok(body.get("threads").and_then(Value::as_array).map(|threads| threads.iter().filter_map(|thread| {
+        Some(DebugThread {
+            id: thread.get("id")?.as_i64()?,
+            name: thread.get("name").and_then(Value::as_str).unwrap_or("thread").to_string(),
+        })
+    }).collect()).unwrap_or_default())
+}
+
+pub fn restart(runtime: &DebuggerRuntime) -> Result<(), String> {
+    request(runtime, "restart", json!({}), Duration::from_secs(5)).map(|_| ())
 }
 
 pub fn stack_trace(runtime: &DebuggerRuntime, thread_id: i64) -> Result<Vec<DebugStackFrame>, String> {
@@ -600,12 +724,12 @@ pub fn variables(runtime: &DebuggerRuntime, variables_reference: i64) -> Result<
     }).collect()).unwrap_or_default())
 }
 
-pub fn evaluate(runtime: &DebuggerRuntime, expression: String, frame_id: Option<i64>) -> Result<DebugEvaluateResult, String> {
-    let mut arguments = json!({ "expression": expression, "context": "watch" });
+fn evaluate_with_context(runtime: &DebuggerRuntime, expression: String, frame_id: Option<i64>, context: &str) -> Result<DebugEvaluateResult, String> {
+    let mut arguments = json!({ "expression": expression, "context": context });
     if let Some(frame_id) = frame_id {
         arguments["frameId"] = json!(frame_id);
     }
-    let body = request(runtime, "evaluate", arguments, Duration::from_secs(4))?;
+    let body = request(runtime, "evaluate", arguments, Duration::from_secs(5))?;
     Ok(DebugEvaluateResult {
         result: body.get("result").and_then(Value::as_str).unwrap_or("").to_string(),
         type_name: body.get("type").and_then(Value::as_str).unwrap_or("").to_string(),
@@ -613,12 +737,23 @@ pub fn evaluate(runtime: &DebuggerRuntime, expression: String, frame_id: Option<
     })
 }
 
+pub fn evaluate(runtime: &DebuggerRuntime, expression: String, frame_id: Option<i64>) -> Result<DebugEvaluateResult, String> {
+    evaluate_with_context(runtime, expression, frame_id, "watch")
+}
+
+pub fn repl(runtime: &DebuggerRuntime, expression: String, frame_id: Option<i64>) -> Result<DebugEvaluateResult, String> {
+    evaluate_with_context(runtime, expression, frame_id, "repl")
+}
+
 pub fn stop(runtime: &DebuggerRuntime) -> Result<(), String> {
-    {
-        let guard = runtime.inner.session.lock().map_err(|_| "Debugger state is unavailable.".to_string())?;
-        if guard.is_none() { return Ok(()); }
+    let adapter_alive = {
+        let mut guard = runtime.inner.session.lock().map_err(|_| "Debugger state is unavailable.".to_string())?;
+        let Some(session) = guard.as_mut() else { return Ok(()); };
+        session.child.try_wait().map_err(|error| format!("Could not inspect debugger process: {error}"))?.is_none()
+    };
+    if adapter_alive {
+        let _ = request(runtime, "disconnect", json!({ "restart": false, "terminateDebuggee": true }), Duration::from_secs(2));
     }
-    let _ = request(runtime, "disconnect", json!({ "restart": false, "terminateDebuggee": true }), Duration::from_secs(2));
     let mut guard = runtime.inner.session.lock().map_err(|_| "Debugger state is unavailable.".to_string())?;
     if let Some(mut session) = guard.take() {
         let _ = session.child.kill();

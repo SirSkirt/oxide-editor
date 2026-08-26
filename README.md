@@ -1,8 +1,10 @@
-# Oxide Editor B1.3.5 · Build 1
+# Oxide Editor B1.3.5 · Build 2
 
 Oxide is a Rust-first desktop IDE built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, language intelligence, debugging, and update orchestration are handled by Rust.
 
-B1.3.5 Build 1 begins Oxide's **proper IDE debugging** work. It adds an LLDB Debug Adapter Protocol backend, clickable Rust gutter breakpoints, start/continue/pause/step/stop controls, current-line execution highlighting, call-stack inspection, locals/variables, watch expressions, and debugger output. The debugger still launches a normal Cargo-built Rust executable; projects remain standard Cargo projects.
+B1.3.5 Build 2 expands Oxide's **proper IDE debugging** work and introduces **Semantic Readability Colors**. The LLDB/DAP debugger now supports Cargo binary-target selection, thread switching, nested variable expansion, conditional/hit-count breakpoints, logpoints, restart, watch expressions, and a paused-state Debug Console/REPL in addition to the Build 1 stepping/call-stack foundation. The debugger still launches normal Cargo-built Rust executables; projects remain standard Cargo projects.
+
+Semantic Readability Colors use rust-analyzer semantic tokens when available and keep Oxide's lexical highlighter as a fallback. Rust keywords are rust orange, ordinary variables/identifiers are steel blue, strings sage green, numbers amber, types brass/gold, macros bright copper, functions warm cream, comments muted gray-green, and punctuation/operators remain neutral off-white. Red is reserved for actual errors/problems.
 
 The B1.3.4 compatibility, Linux updater, responsive-layout, syntax-highlighting, tutorial, and Rust Code Analyzer/Completer work is retained.
 
@@ -53,7 +55,7 @@ The downloaded package is still cryptographically verified with Oxide's existing
 ### Windows update package
 
 ```text
-oxide-update-windows-x86_64-1.3.5-b1.zip
+oxide-update-windows-x86_64-1.3.5-b2.zip
 ├── oxide-editor.exe
 ├── oxide-updater.exe
 └── update-package.json
@@ -64,7 +66,7 @@ The temporary Oxide Update Service backs up the installed runtime, replaces it, 
 ### Linux update package
 
 ```text
-oxide-update-linux-x86_64-1.3.5-b1.zip
+oxide-update-linux-x86_64-1.3.5-b2.zip
 ├── oxide-editor.AppImage
 ├── oxide-editor.deb
 └── update-package.json
@@ -102,16 +104,16 @@ Typical B1.3.5 assets:
 ```text
 Windows
 ├── Oxide Editor ... setup.exe
-├── oxide-update-windows-x86_64-1.3.5-b1.zip
-├── oxide-update-windows-x86_64-1.3.5-b1.zip.sig
+├── oxide-update-windows-x86_64-1.3.5-b2.zip
+├── oxide-update-windows-x86_64-1.3.5-b2.zip.sig
 ├── oxide-latest-windows-x86_64.json
 └── latest.json
 
 Linux
 ├── Oxide Editor ... amd64.deb
 ├── Oxide Editor ... amd64.AppImage
-├── oxide-update-linux-x86_64-1.3.5-b1.zip
-├── oxide-update-linux-x86_64-1.3.5-b1.zip.sig
+├── oxide-update-linux-x86_64-1.3.5-b2.zip
+├── oxide-update-linux-x86_64-1.3.5-b2.zip.sig
 └── oxide-latest-linux-x86_64.json
 ```
 
@@ -182,7 +184,23 @@ rustup component add rust-analyzer
 rust-analyzer --version
 ```
 
-Oxide starts one persistent rust-analyzer session per active Cargo project instead of spawning a new process for every keystroke. The status rail reports **ANALYZER: READY**, **NOT FOUND**, or **ERROR**.
+Oxide starts one persistent rust-analyzer session per active Cargo project instead of spawning a new process for every keystroke. The same session now supplies semantic tokens for **Semantic Readability Colors**, while Oxide keeps its lexical Rust highlighter as a fallback during analyzer startup. The status rail reports **ANALYZER: READY**, **NOT FOUND**, or **ERROR**.
+
+### Semantic Readability Colors
+
+```text
+Rust keywords          #D87941  rust orange
+Variables/identifiers  #83A6B8  steel blue
+Strings                #8FAF72  sage green
+Numbers/booleans       #D3A95F  amber/gold
+Types                  #C4A45F  brass/gold
+Macros                 #E99A62  bright copper/orange
+Functions/methods      #DDD0BF  warm cream
+Comments               #70786E  muted gray-green
+Operators/punctuation  neutral light gray/off-white
+```
+
+Red is not used as an ordinary source-code category; Oxide keeps it reserved for actual errors/problems.
 
 ## Interactive Rust Tutorial
 
@@ -210,7 +228,8 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 - multi-file tabs with independent dirty/cursor/scroll state
 - automatic brace-aware indentation
 - **Rust Code Analyzer/Completer** powered by rust-analyzer/LSP
-- **Oxide Debugger** powered by LLDB/DAP with breakpoints, stepping, stack/locals, and watches
+- **Oxide Debugger** powered by LLDB/DAP with target/thread selection, conditional/log breakpoints, stepping/restart, expandable stack/locals, watches, and Debug Console
+- **Semantic Readability Colors** backed by rust-analyzer semantic tokens with a lexical fallback
 - context-aware completion popup with details and signature help
 - Cargo Check / Build / Run / Test / Clean
 - Cargo.toml package/dependency GUI
@@ -225,8 +244,8 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 
 - Release version: `1.3.5`
 - User-facing version: **B1.3.5**
-- Current internal build number: **1**
-- Full installed identity: **B1.3.5 · Build 1**
+- Current internal build number: **2**
+- Full installed identity: **B1.3.5 · Build 2**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:

@@ -14,3 +14,6 @@ Thumbs.db
 .oxide-secrets/
 linux-updater/target/
 src-tauri/binaries/oxide-updater-*
+
+# Local staging folder used by the GitHub Actions ZIP-update workflow.
+incoming/
