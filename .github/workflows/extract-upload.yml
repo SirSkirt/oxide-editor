@@ -1,6 +1,10 @@
 name: Extract Uploaded ZIP
 
 on:
+  # Allows you to press "Run workflow" manually
+  workflow_dispatch:
+
+  # Also automatically runs when a ZIP is uploaded
   push:
     paths:
       - "incoming/**/*.zip"
@@ -50,5 +54,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Extract uploaded ZIP [skip ci]"
+          git commit -m "Extract uploaded ZIP"
           git push
