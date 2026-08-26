@@ -1,4 +1,5 @@
 mod analyzer;
+mod debugger;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -3354,6 +3355,82 @@ async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64
 }
 
 #[tauri::command]
+fn debugger_status() -> debugger::DebuggerStatus {
+    debugger::status()
+}
+
+#[tauri::command]
+async fn debugger_start(
+    app: AppHandle,
+    runtime: State<'_, debugger::DebuggerRuntime>,
+    project_path: String,
+    breakpoints: Vec<debugger::DebugBreakpointSet>,
+) -> Result<debugger::DebugStartResult, String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || debugger::start(app, &runtime, project_path, breakpoints))
+        .await
+        .map_err(|error| format!("Debugger start task could not be joined: {error}"))?
+}
+
+#[tauri::command]
+fn debugger_set_breakpoints(
+    runtime: State<'_, debugger::DebuggerRuntime>,
+    breakpoint_set: debugger::DebugBreakpointSet,
+) -> Result<(), String> {
+    debugger::set_breakpoints(runtime.inner(), breakpoint_set)
+}
+
+#[tauri::command]
+fn debugger_continue(runtime: State<'_, debugger::DebuggerRuntime>, thread_id: Option<i64>) -> Result<(), String> {
+    debugger::continue_execution(runtime.inner(), thread_id)
+}
+
+#[tauri::command]
+fn debugger_pause(runtime: State<'_, debugger::DebuggerRuntime>, thread_id: Option<i64>) -> Result<(), String> {
+    debugger::pause(runtime.inner(), thread_id)
+}
+
+#[tauri::command]
+fn debugger_next(runtime: State<'_, debugger::DebuggerRuntime>, thread_id: Option<i64>) -> Result<(), String> {
+    debugger::next(runtime.inner(), thread_id)
+}
+
+#[tauri::command]
+fn debugger_step_in(runtime: State<'_, debugger::DebuggerRuntime>, thread_id: Option<i64>) -> Result<(), String> {
+    debugger::step_in(runtime.inner(), thread_id)
+}
+
+#[tauri::command]
+fn debugger_step_out(runtime: State<'_, debugger::DebuggerRuntime>, thread_id: Option<i64>) -> Result<(), String> {
+    debugger::step_out(runtime.inner(), thread_id)
+}
+
+#[tauri::command]
+fn debugger_stack_trace(runtime: State<'_, debugger::DebuggerRuntime>, thread_id: i64) -> Result<Vec<debugger::DebugStackFrame>, String> {
+    debugger::stack_trace(runtime.inner(), thread_id)
+}
+
+#[tauri::command]
+fn debugger_scopes(runtime: State<'_, debugger::DebuggerRuntime>, frame_id: i64) -> Result<Vec<debugger::DebugScope>, String> {
+    debugger::scopes(runtime.inner(), frame_id)
+}
+
+#[tauri::command]
+fn debugger_variables(runtime: State<'_, debugger::DebuggerRuntime>, variables_reference: i64) -> Result<Vec<debugger::DebugVariable>, String> {
+    debugger::variables(runtime.inner(), variables_reference)
+}
+
+#[tauri::command]
+fn debugger_evaluate(runtime: State<'_, debugger::DebuggerRuntime>, expression: String, frame_id: Option<i64>) -> Result<debugger::DebugEvaluateResult, String> {
+    debugger::evaluate(runtime.inner(), expression, frame_id)
+}
+
+#[tauri::command]
+fn debugger_stop(runtime: State<'_, debugger::DebuggerRuntime>) -> Result<(), String> {
+    debugger::stop(runtime.inner())
+}
+
+#[tauri::command]
 fn rust_analyzer_status() -> analyzer::AnalyzerStatus {
     analyzer::status()
 }
@@ -3413,7 +3490,8 @@ async fn rust_analyzer_stop(runtime: State<'_, analyzer::RustAnalyzerRuntime>) -
 }
 
 #[tauri::command]
-fn quit_app(app: AppHandle) {
+fn quit_app(app: AppHandle, debugger_runtime: State<'_, debugger::DebuggerRuntime>) {
+    let _ = debugger::stop(debugger_runtime.inner());
     app.exit(0);
 }
 
@@ -3446,6 +3524,7 @@ pub fn run() {
         })
         .manage(TerminalRuntime::default())
         .manage(analyzer::RustAnalyzerRuntime::default())
+        .manage(debugger::DebuggerRuntime::default())
         .invoke_handler(tauri::generate_handler![
             platform_info,
             toolchain_info,
@@ -3472,6 +3551,19 @@ pub fn run() {
             tutorial_prepare_lesson,
             tutorial_evaluate,
             rust_analyzer_status,
+            debugger_status,
+            debugger_start,
+            debugger_set_breakpoints,
+            debugger_continue,
+            debugger_pause,
+            debugger_next,
+            debugger_step_in,
+            debugger_step_out,
+            debugger_stack_trace,
+            debugger_scopes,
+            debugger_variables,
+            debugger_evaluate,
+            debugger_stop,
             rust_analyzer_warmup,
             rust_completions,
             rust_signature_help,

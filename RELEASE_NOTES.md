@@ -1,3 +1,16 @@
+# Oxide Editor B1.3.5 · Build 1
+
+## Debugging foundation
+
+- Added Oxide's first proper IDE debugger subsystem using LLDB's Debug Adapter Protocol (DAP).
+- Added LLDB/lldb-dap detection with Windows and Pop!_OS/Ubuntu-oriented installation guidance when unavailable.
+- Added clickable Rust editor gutter breakpoints and live breakpoint synchronization during an active debug session.
+- Added Start, Continue, Pause, Step Over, Step Into, Step Out, and Stop debugger controls.
+- Added current execution-line highlighting.
+- Added a Debug Workbench in the bottom panel with call stack, locals/variables, watch expressions, and debugger output.
+- Debug launches build the normal Cargo binary in debug profile and attach LLDB to that executable; Oxide does not introduce a custom project/build format.
+- Build 1 supports one runnable binary target. Multi-target debug selection is intentionally deferred to a later B1.3.5 build.
+
 # Oxide Editor B1.3.4 · Build 2
 
 B1.3.4 continues **The Compatibility Update** with a proper automatic updater for Linux `.deb` installations and responsive fixes for shorter laptop displays.

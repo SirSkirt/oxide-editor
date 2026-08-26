@@ -4,7 +4,6 @@ src-tauri/target/
 updater/src-tauri/target/
 src-tauri/binaries/*.exe
 release-assets/
-incoming/
 *.log
 .DS_Store
 Thumbs.db

@@ -1,13 +1,14 @@
-# Oxide Editor B1.3.4 · Build 2
+# Oxide Editor B1.3.5 · Build 1
 
-Oxide is a Rust-first desktop editor built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, and update orchestration are handled by Rust.
+Oxide is a Rust-first desktop IDE built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, language intelligence, debugging, and update orchestration are handled by Rust.
 
-B1.3.4 Build 2 continues **The Compatibility Update** work: Linux `.deb` installations can now update through the system's own Polkit authorization flow, while AppImage updates remain user-space replacements. It also repairs the main workspace for shorter laptop displays so the editor, Build Bay, and Tutorial panel stay inside the available window height. Rust Code Analyzer/Completer and the B1.3.3 editor-intelligence work are retained.
-- Oxide-native Rust syntax highlighting with an industrial, readable palette.
+B1.3.5 Build 1 begins Oxide's **proper IDE debugging** work. It adds an LLDB Debug Adapter Protocol backend, clickable Rust gutter breakpoints, start/continue/pause/step/stop controls, current-line execution highlighting, call-stack inspection, locals/variables, watch expressions, and debugger output. The debugger still launches a normal Cargo-built Rust executable; projects remain standard Cargo projects.
+
+The B1.3.4 compatibility, Linux updater, responsive-layout, syntax-highlighting, tutorial, and Rust Code Analyzer/Completer work is retained.
 
 ## Windows + Linux
 
-Supported release targets in B1.3.4:
+Supported release targets in B1.3.5:
 
 - **Windows x86_64** — NSIS installer plus Oxide's signed native ZIP update packages
 - **Linux x86_64 AppImage** — portable build with Oxide automatic package updates
@@ -32,7 +33,7 @@ Oxide now treats Linux paths as case-sensitive. Files such as `Thing.rs` and `th
 
 ## Oxide Package Update System
 
-B1.3.4 continues to use the platform-specific signed update packages introduced in B1.3.2.
+B1.3.5 continues to use the platform-specific signed update packages introduced in B1.3.2.
 
 Oxide checks:
 
@@ -52,7 +53,7 @@ The downloaded package is still cryptographically verified with Oxide's existing
 ### Windows update package
 
 ```text
-oxide-update-windows-x86_64-1.3.4-b2.zip
+oxide-update-windows-x86_64-1.3.5-b1.zip
 ├── oxide-editor.exe
 ├── oxide-updater.exe
 └── update-package.json
@@ -63,7 +64,7 @@ The temporary Oxide Update Service backs up the installed runtime, replaces it, 
 ### Linux update package
 
 ```text
-oxide-update-linux-x86_64-1.3.4-b2.zip
+oxide-update-linux-x86_64-1.3.5-b1.zip
 ├── oxide-editor.AppImage
 ├── oxide-editor.deb
 └── update-package.json
@@ -96,27 +97,27 @@ Linux x64 verification (Ubuntu 22.04 / Pop!_OS baseline)
 
 A release produces both Windows and Linux assets in the same GitHub Release.
 
-Typical B1.3.4 assets:
+Typical B1.3.5 assets:
 
 ```text
 Windows
 ├── Oxide Editor ... setup.exe
-├── oxide-update-windows-x86_64-1.3.4-b2.zip
-├── oxide-update-windows-x86_64-1.3.4-b2.zip.sig
+├── oxide-update-windows-x86_64-1.3.5-b1.zip
+├── oxide-update-windows-x86_64-1.3.5-b1.zip.sig
 ├── oxide-latest-windows-x86_64.json
 └── latest.json
 
 Linux
 ├── Oxide Editor ... amd64.deb
 ├── Oxide Editor ... amd64.AppImage
-├── oxide-update-linux-x86_64-1.3.4-b2.zip
-├── oxide-update-linux-x86_64-1.3.4-b2.zip.sig
+├── oxide-update-linux-x86_64-1.3.5-b1.zip
+├── oxide-update-linux-x86_64-1.3.5-b1.zip.sig
 └── oxide-latest-linux-x86_64.json
 ```
 
 ## Linux development on Pop!_OS / Ubuntu
 
-Run the included helper once (it also installs the rust-analyzer rustup component when rustup is available):
+Run the included helper once (it also installs LLDB for the B1.3.5 debugger and the rust-analyzer rustup component when rustup is available):
 
 ```bash
 ./scripts/setup-linux.sh
@@ -209,6 +210,7 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 - multi-file tabs with independent dirty/cursor/scroll state
 - automatic brace-aware indentation
 - **Rust Code Analyzer/Completer** powered by rust-analyzer/LSP
+- **Oxide Debugger** powered by LLDB/DAP with breakpoints, stepping, stack/locals, and watches
 - context-aware completion popup with details and signature help
 - Cargo Check / Build / Run / Test / Clean
 - Cargo.toml package/dependency GUI
@@ -221,10 +223,10 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 
 ## Versioning
 
-- Release version: `1.3.4`
-- User-facing version: **B1.3.4**
-- Current internal build number: **2**
-- Full installed identity: **B1.3.4 · Build 2**
+- Release version: `1.3.5`
+- User-facing version: **B1.3.5**
+- Current internal build number: **1**
+- Full installed identity: **B1.3.5 · Build 1**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:

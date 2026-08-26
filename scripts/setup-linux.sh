@@ -23,7 +23,8 @@ sudo apt-get install -y \
   librsvg2-dev \
   patchelf \
   xdg-utils \
-  pkexec
+  pkexec \
+  lldb
 
 if ! command -v cargo >/dev/null 2>&1; then
   echo

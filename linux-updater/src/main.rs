@@ -308,6 +308,7 @@ fn main() {
     if let Err(error) = install(Args {
         package: args.package.clone(),
         version: args.version.clone(),
+        build: args.build,
         pid: args.pid,
         mode: match &args.mode {
             InstallMode::AppImage { path } => InstallMode::AppImage { path: path.clone() },

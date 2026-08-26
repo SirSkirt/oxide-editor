@@ -42,6 +42,23 @@ const state = {
     prefixStart: 0,
     signatureVisible: false,
   },
+  debugger: {
+    available: false,
+    adapter: '',
+    message: '',
+    running: false,
+    stopped: false,
+    threadId: null,
+    selectedFrameId: null,
+    frames: [],
+    variables: [],
+    watches: [],
+    watchResults: [],
+    breakpoints: new Map(),
+    executionPath: '',
+    executionLine: 0,
+    output: [],
+  },
   terminalRunning: false,
   terminalEnded: false,
   terminalVisible: false,
@@ -131,6 +148,21 @@ app.innerHTML = `
           </div>
         </div>
         <div class="menu-host">
+          <button class="menu-trigger" data-menu="debug">Debug</button>
+          <div class="menu-popup" data-popup="debug" role="menu">
+            <button role="menuitem" data-menu-action="debug-start"><span>Start Debugging</span><kbd>F9</kbd></button>
+            <button role="menuitem" data-menu-action="debug-continue"><span>Continue</span><kbd>Ctrl+F10</kbd></button>
+            <button role="menuitem" data-menu-action="debug-pause"><span>Pause</span></button>
+            <div class="menu-separator"></div>
+            <button role="menuitem" data-menu-action="debug-next"><span>Step Over</span><kbd>F10</kbd></button>
+            <button role="menuitem" data-menu-action="debug-step-in"><span>Step Into</span><kbd>F11</kbd></button>
+            <button role="menuitem" data-menu-action="debug-step-out"><span>Step Out</span><kbd>Shift+F11</kbd></button>
+            <div class="menu-separator"></div>
+            <button role="menuitem" data-menu-action="debug-stop"><span>Stop Debugging</span><kbd>Ctrl+F9</kbd></button>
+            <button role="menuitem" data-menu-action="show-debug"><span>Show Debug Panel</span></button>
+          </div>
+        </div>
+        <div class="menu-host">
           <button class="menu-trigger" data-menu="view">View</button>
           <div class="menu-popup" data-popup="view" role="menu">
             <button role="menuitem" data-menu-action="toggle-project"><span><i class="menu-check" data-check="project">✓</i> Project Panel</span></button>
@@ -165,6 +197,7 @@ app.innerHTML = `
       <button class="command-button" data-action="check"><span>✓</span>CHECK</button>
       <button class="command-button build" data-action="build"><span>◆</span>BUILD</button>
       <button class="command-button run" data-action="run"><span>▶</span>RUN</button>
+      <button class="command-button debug-command" data-debug-action="start"><span>◈</span>DEBUG</button>
       <button class="command-button" data-action="test"><span>▣</span>TEST</button>
       <button class="command-button danger-subtle" data-action="clean"><span>⌫</span>CLEAN</button>
       <div class="command-readout" id="command-readout">SELECT A PROJECT TO BEGIN</div>
@@ -172,7 +205,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.4 · BUILD 2</div>
+        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.5 · BUILD 1</div>
         <h1>Welcome to the Oxide Editor</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -213,8 +246,9 @@ app.innerHTML = `
           <span class="diagnostic-banner-more">VIEW PROBLEMS →</span>
         </button>
         <div class="editor-wrap">
-          <div id="line-numbers" class="line-numbers" aria-hidden="true"><span class="line-number">1</span></div>
+          <div id="line-numbers" class="line-numbers" title="Click a Rust line number to toggle a breakpoint"><span class="line-number" data-line="1">1</span></div>
           <pre id="syntax-layer" class="syntax-layer" aria-hidden="true"><code id="syntax-code"></code></pre>
+          <div id="debug-line-highlight" class="debug-line-highlight" hidden></div>
           <textarea id="editor" class="code-editor" spellcheck="false" aria-label="Code editor" placeholder="Open a .rs, .toml, or text file from the project tree."></textarea>
           <div id="code-completer" class="code-completer" hidden role="listbox" aria-label="Rust Code Analyzer/Completer suggestions">
             <div id="completion-list" class="completion-list"></div>
@@ -267,6 +301,7 @@ app.innerHTML = `
           <div class="console-view-tabs" role="tablist" aria-label="Bottom panel">
             <button class="console-tab console-view active" data-console-view="build">BUILD</button>
             <button class="console-tab console-view" data-console-view="problems">PROBLEMS <b id="problem-count">0</b></button>
+            <button class="console-tab console-view" data-console-view="debug">DEBUG</button>
           </div>
           <div id="build-mode-tabs" class="console-tabs" role="tablist">
             <button class="console-tab active" data-mode="friendly">FRIENDLY</button>
@@ -279,14 +314,33 @@ app.innerHTML = `
       <div id="problems-pane" class="problems-pane console-pane" hidden>
         <div id="problems-list" class="problems-list"><div class="problems-empty">No Rust problems detected.</div></div>
       </div>
+      <div id="debug-pane" class="debug-pane console-pane" hidden>
+        <div class="debug-toolbar">
+          <span class="debug-toolbar-label"><b>DEBUGGER</b><small id="debugger-detail">CHECKING LLDB…</small></span>
+          <button type="button" class="debug-tool primary" data-debug-action="start">START</button>
+          <button type="button" class="debug-tool" data-debug-action="continue" disabled>CONTINUE</button>
+          <button type="button" class="debug-tool" data-debug-action="pause" disabled>PAUSE</button>
+          <button type="button" class="debug-tool" data-debug-action="next" disabled>OVER</button>
+          <button type="button" class="debug-tool" data-debug-action="step-in" disabled>INTO</button>
+          <button type="button" class="debug-tool" data-debug-action="step-out" disabled>OUT</button>
+          <button type="button" class="debug-tool stop" data-debug-action="stop" disabled>STOP</button>
+        </div>
+        <div class="debug-grid">
+          <section class="debug-column"><div class="debug-section-head">CALL STACK</div><div id="debug-call-stack" class="debug-list"><div class="debug-empty">Start debugging to inspect stack frames.</div></div></section>
+          <section class="debug-column variables-column"><div class="debug-section-head">LOCALS / VARIABLES</div><div id="debug-variables" class="debug-list"><div class="debug-empty">Variables appear when execution is paused.</div></div></section>
+          <section class="debug-column"><div class="debug-section-head">WATCH</div><form id="debug-watch-form" class="debug-watch-form"><input id="debug-watch-input" spellcheck="false" placeholder="Expression, e.g. name"/><button type="submit">ADD</button></form><div id="debug-watch-list" class="debug-list"><div class="debug-empty">Add expressions to watch while paused.</div></div></section>
+          <section class="debug-column output-column"><div class="debug-section-head">DEBUG OUTPUT</div><div id="debug-output" class="debug-output"><div class="debug-empty">Debugger output will appear here.</div></div></section>
+        </div>
+      </div>
     </section>
 
     <footer class="status-rail">
       <span id="file-status">NO FILE</span>
       <span id="analysis-status">RUST CHECK: IDLE</span>
       <span id="analyzer-status">ANALYZER: CHECKING</span>
+      <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>OXIDE B1.3.4 · BUILD 2</span>
+      <span>OXIDE B1.3.5 · BUILD 1</span>
     </footer>
   </main>
 
@@ -423,6 +477,7 @@ const els = {
   editor: $('#editor'),
   syntaxLayer: $('#syntax-layer'),
   syntaxCode: $('#syntax-code'),
+  debugLineHighlight: $('#debug-line-highlight'),
   lines: $('#line-numbers'),
   fileTabs: $('#file-tabs'),
   save: $('#save-file'),
@@ -435,6 +490,15 @@ const els = {
   fileStatus: $('#file-status'),
   analysisStatus: $('#analysis-status'),
   analyzerStatus: $('#analyzer-status'),
+  debuggerStatus: $('#debugger-status'),
+  debuggerDetail: $('#debugger-detail'),
+  debugPane: $('#debug-pane'),
+  debugCallStack: $('#debug-call-stack'),
+  debugVariables: $('#debug-variables'),
+  debugWatchForm: $('#debug-watch-form'),
+  debugWatchInput: $('#debug-watch-input'),
+  debugWatchList: $('#debug-watch-list'),
+  debugOutput: $('#debug-output'),
   codeCompleter: $('#code-completer'),
   completionList: $('#completion-list'),
   completionDetailKind: $('#completion-detail-kind'),
@@ -600,7 +664,7 @@ function setProjectUiState() {
 function updateMenuAvailability() {
   const projectLoaded = Boolean(state.projectPath);
   const fileLoaded = Boolean(state.currentFile);
-  const cargoBusy = state.buildRunning || state.terminalRunning;
+  const cargoBusy = state.buildRunning || state.terminalRunning || state.debugger.running;
 
   document.querySelectorAll('[data-menu-action="save-file"], [data-menu-action="close-file"]').forEach((button) => {
     button.disabled = !fileLoaded;
@@ -629,6 +693,22 @@ function updateMenuAvailability() {
   document.querySelectorAll('[data-menu-action="trigger-completion"]').forEach((button) => {
     button.disabled = !projectLoaded || !fileLoaded || !state.completer.available || !state.completer.enabled;
   });
+  document.querySelectorAll('[data-menu-action="debug-start"], [data-debug-action="start"]').forEach((button) => {
+    button.disabled = !projectLoaded || state.buildRunning || state.terminalRunning || state.debugger.running;
+  });
+  document.querySelectorAll('[data-menu-action="debug-continue"], [data-debug-action="continue"]').forEach((button) => {
+    button.disabled = !state.debugger.running || !state.debugger.stopped;
+  });
+  document.querySelectorAll('[data-menu-action="debug-pause"], [data-debug-action="pause"]').forEach((button) => {
+    button.disabled = !state.debugger.running || state.debugger.stopped;
+  });
+  document.querySelectorAll('[data-menu-action="debug-next"], [data-menu-action="debug-step-in"], [data-menu-action="debug-step-out"], [data-debug-action="next"], [data-debug-action="step-in"], [data-debug-action="step-out"]').forEach((button) => {
+    button.disabled = !state.debugger.running || !state.debugger.stopped;
+  });
+  document.querySelectorAll('[data-menu-action="debug-stop"], [data-debug-action="stop"]').forEach((button) => {
+    button.disabled = !state.debugger.running;
+  });
+  document.querySelectorAll('[data-menu-action="show-debug"]').forEach((button) => { button.disabled = !projectLoaded; });
 }
 
 async function detectToolchain() {
@@ -651,6 +731,22 @@ async function detectToolchain() {
       state.completer.available = false;
       els.analyzerStatus.textContent = 'ANALYZER: ERROR';
       els.analyzerStatus.title = String(analyzerError);
+    }
+    try {
+      const debuggerInfo = await invoke('debugger_status');
+      state.debugger.available = Boolean(debuggerInfo.available);
+      state.debugger.adapter = debuggerInfo.adapter || '';
+      state.debugger.message = debuggerInfo.message || '';
+      els.debuggerStatus.textContent = debuggerInfo.available ? 'DEBUGGER: READY' : 'DEBUGGER: NOT FOUND';
+      els.debuggerStatus.title = debuggerInfo.available ? `${debuggerInfo.version} · ${debuggerInfo.path}` : debuggerInfo.message;
+      els.debuggerDetail.textContent = debuggerInfo.available ? `${debuggerInfo.adapter} READY` : 'LLDB DAP NOT FOUND';
+      els.debuggerDetail.title = debuggerInfo.message || '';
+    } catch (debuggerError) {
+      state.debugger.available = false;
+      state.debugger.message = String(debuggerError);
+      els.debuggerStatus.textContent = 'DEBUGGER: ERROR';
+      els.debuggerStatus.title = String(debuggerError);
+      els.debuggerDetail.textContent = 'DEBUGGER CHECK FAILED';
     }
     updateMenuAvailability();
   } catch (error) {
@@ -720,6 +816,10 @@ async function openProjectPath(projectPath, { keepBrowserOpen = false, created =
     if (!await oxideConfirm('PROGRAM RUNNING', 'A program is still running in the Oxide Run Terminal. Stop it before switching projects?', 'STOP & OPEN')) return false;
     try { await invoke('terminal_stop'); } catch { /* process may have just exited */ }
     hideTerminalWindow();
+  }
+  if (state.debugger.running) {
+    if (!await oxideConfirm('DEBUG SESSION ACTIVE', 'A program is currently being debugged. Stop debugging before switching projects?', 'STOP & OPEN')) return false;
+    await stopDebugging();
   }
   if (state.tutorial.active && !preserveTutorial) exitTutorialMode();
 
@@ -1013,6 +1113,10 @@ async function closeProject() {
     if (!await oxideConfirm('PROGRAM RUNNING', 'A program is still running in the Oxide Terminal. Stop it and close the project?', 'STOP & CLOSE')) return;
     try { await invoke('terminal_stop'); } catch { /* terminal may already have exited */ }
   }
+  if (state.debugger.running) {
+    if (!await oxideConfirm('DEBUG SESSION ACTIVE', 'Stop the active debugger session and close the project?', 'STOP & CLOSE')) return;
+    await stopDebugging();
+  }
 
   if (state.tutorial.active) exitTutorialMode();
   hideTerminalWindow();
@@ -1022,6 +1126,10 @@ async function closeProject() {
   state.projectPath = '';
   state.manifest = null;
   state.diagnostics = [];
+  state.debugger.breakpoints.clear();
+  state.debugger.output = [];
+  state.debugger.watches = [];
+  state.debugger.watchResults = [];
   state.analysisGeneration += 1;
   if (state.analysisTimer) clearTimeout(state.analysisTimer);
   clearTabs();
@@ -1211,6 +1319,14 @@ function updateSyntaxHighlight() {
   syncSyntaxScroll();
 }
 
+function positionDebugLineHighlight() {
+  if (!els.debugLineHighlight) return;
+  const visible = state.debugger.stopped && state.currentFile && normalizePath(state.debugger.executionPath) === normalizePath(state.currentFile) && state.debugger.executionLine > 0;
+  els.debugLineHighlight.hidden = !visible;
+  if (!visible) return;
+  els.debugLineHighlight.style.top = `${12 + ((state.debugger.executionLine - 1) * 20.15) - els.editor.scrollTop}px`;
+}
+
 function updateLineNumbers() {
   const count = Math.max(1, els.editor.value.split('\n').length);
   const byLine = new Map();
@@ -1224,11 +1340,18 @@ function updateLineNumbers() {
   els.lines.innerHTML = Array.from({ length: count }, (_, index) => {
     const line = index + 1;
     const diagnostic = byLine.get(line);
-    const kind = diagnostic ? ` diagnostic-${diagnostic.level}` : '';
-    const title = diagnostic ? ` title="${escapeHtml(diagnostic.message)}"` : '';
-    return `<span class="line-number${kind}" data-line="${line}"${title}>${line}</span>`;
+    const hasBreakpoint = breakpointLinesForFile(state.currentFile).has(line);
+    const isExecution = state.debugger.stopped && normalizePath(state.debugger.executionPath) === normalizePath(state.currentFile) && state.debugger.executionLine === line;
+    const kinds = [diagnostic ? `diagnostic-${diagnostic.level}` : '', hasBreakpoint ? 'breakpoint' : '', isExecution ? 'debug-execution' : ''].filter(Boolean).join(' ');
+    const titleParts = [];
+    if (diagnostic) titleParts.push(diagnostic.message);
+    if (hasBreakpoint) titleParts.push('Breakpoint');
+    if (isExecution) titleParts.push('Current execution line');
+    const title = titleParts.length ? ` title="${escapeHtml(titleParts.join(' · '))}"` : '';
+    return `<span class="line-number${kinds ? ` ${kinds}` : ''}" data-line="${line}"${title}>${line}</span>`;
   }).join('');
   els.lines.scrollTop = els.editor.scrollTop;
+  positionDebugLineHighlight();
 }
 
 function friendlyDiagnosticHint(diagnostic) {
@@ -1328,7 +1451,7 @@ async function jumpToDiagnostic(diagnostic) {
 }
 
 function scheduleAnalysis(delay = 900) {
-  if (!state.liveCheck || !state.projectPath || state.buildRunning || state.terminalRunning) return;
+  if (!state.liveCheck || !state.projectPath || state.buildRunning || state.terminalRunning || state.debugger.running) return;
   if (!activeTab()?.name.toLowerCase().endsWith('.rs')) return;
   if (state.analysisTimer) clearTimeout(state.analysisTimer);
   state.analysisTimer = setTimeout(() => {
@@ -1338,7 +1461,7 @@ function scheduleAnalysis(delay = 900) {
 }
 
 async function runDiagnostics({ silent = false, force = false } = {}) {
-  if (!state.projectPath || state.buildRunning || state.terminalRunning) return;
+  if (!state.projectPath || state.buildRunning || state.terminalRunning || state.debugger.running) return;
   if (state.analysisRunning) {
     state.analysisQueued = true;
     return;
@@ -1513,7 +1636,7 @@ function setBuildRunning(running, action = '') {
 }
 
 async function cargoAction(action) {
-  if (!state.projectPath || state.buildRunning || state.terminalRunning) return;
+  if (!state.projectPath || state.buildRunning || state.terminalRunning || state.debugger.running) return;
   if (!await saveAllDirtyTabs()) return;
   if (!state.view.build) setViewPanel('build', true);
   setConsoleView('build');
@@ -1547,7 +1670,7 @@ function projectLikelyGui() {
 }
 
 function requestRun() {
-  if (!state.projectPath || state.buildRunning || state.terminalRunning) return;
+  if (!state.projectPath || state.buildRunning || state.terminalRunning || state.debugger.running) return;
   els.runProjectName.textContent = state.manifest?.package_name || pathBase(state.projectPath);
   if (state.tutorial.active && currentTutorialStep()?.run_required) {
     els.runDetection.innerHTML = '<span class="lamp ok"></span><span>This tutorial activity expects the Oxide Run Terminal so it can verify the real program output.</span>';
@@ -1559,14 +1682,235 @@ function requestRun() {
   els.runDialog.showModal();
 }
 
+
+function breakpointLinesForFile(path) {
+  if (!path) return new Set();
+  const key = normalizePath(path);
+  if (!state.debugger.breakpoints.has(key)) state.debugger.breakpoints.set(key, { path, lines: new Set() });
+  return state.debugger.breakpoints.get(key).lines;
+}
+
+function debuggerBreakpointSets() {
+  return [...state.debugger.breakpoints.values()]
+    .filter((item) => item.lines.size)
+    .map((item) => ({ path: item.path, lines: [...item.lines].sort((a, b) => a - b) }));
+}
+
+async function toggleBreakpoint(path, line) {
+  if (!path || !path.toLowerCase().endsWith('.rs') || !line) return;
+  const key = normalizePath(path);
+  if (!state.debugger.breakpoints.has(key)) state.debugger.breakpoints.set(key, { path, lines: new Set() });
+  const entry = state.debugger.breakpoints.get(key);
+  if (entry.lines.has(line)) entry.lines.delete(line);
+  else entry.lines.add(line);
+  if (!entry.lines.size) state.debugger.breakpoints.delete(key);
+  updateLineNumbers();
+  if (state.debugger.running) {
+    try {
+      await invoke('debugger_set_breakpoints', { breakpointSet: { path, lines: [...(entry?.lines || [])].sort((a, b) => a - b) } });
+    } catch (error) {
+      appendDebugOutput(`Could not update breakpoint: ${error}`, 'error');
+    }
+  }
+}
+
+function appendDebugOutput(text, kind = 'normal') {
+  if (!text) return;
+  state.debugger.output.push({ text: String(text), kind });
+  if (state.debugger.output.length > 500) state.debugger.output.splice(0, state.debugger.output.length - 500);
+  els.debugOutput.innerHTML = state.debugger.output.length
+    ? state.debugger.output.map((item) => `<div class="debug-output-line ${item.kind}">${escapeHtml(item.text)}</div>`).join('')
+    : '<div class="debug-empty">Debugger output will appear here.</div>';
+  els.debugOutput.scrollTop = els.debugOutput.scrollHeight;
+}
+
+function resetDebugInspection() {
+  state.debugger.frames = [];
+  state.debugger.variables = [];
+  state.debugger.selectedFrameId = null;
+  state.debugger.executionPath = '';
+  state.debugger.executionLine = 0;
+  els.debugCallStack.innerHTML = '<div class="debug-empty">Execution is running.</div>';
+  els.debugVariables.innerHTML = '<div class="debug-empty">Pause at a breakpoint to inspect variables.</div>';
+  renderWatches();
+  updateLineNumbers();
+}
+
+function renderDebugStack() {
+  els.debugCallStack.innerHTML = state.debugger.frames.length
+    ? state.debugger.frames.map((frame, index) => `<button type="button" class="debug-frame ${frame.id === state.debugger.selectedFrameId ? 'active' : ''}" data-frame-index="${index}"><b>${escapeHtml(frame.name)}</b><span>${escapeHtml(pathBase(frame.path) || 'unknown')}:${frame.line}</span></button>`).join('')
+    : '<div class="debug-empty">No stack frames reported.</div>';
+  els.debugCallStack.querySelectorAll('.debug-frame').forEach((button) => button.addEventListener('click', async () => {
+    const frame = state.debugger.frames[Number(button.dataset.frameIndex)];
+    if (frame) await selectDebugFrame(frame);
+  }));
+}
+
+function renderDebugVariables() {
+  els.debugVariables.innerHTML = state.debugger.variables.length
+    ? state.debugger.variables.map((item) => `<div class="debug-variable"><span class="debug-variable-scope">${escapeHtml(item.scope)}</span><b>${escapeHtml(item.name)}</b><code>${escapeHtml(item.value)}</code><small>${escapeHtml(item.typeName || '')}</small></div>`).join('')
+    : '<div class="debug-empty">No local variables reported for this frame.</div>';
+}
+
+function renderWatches() {
+  if (!state.debugger.watches.length) {
+    els.debugWatchList.innerHTML = '<div class="debug-empty">Add expressions to watch while paused.</div>';
+    return;
+  }
+  els.debugWatchList.innerHTML = state.debugger.watches.map((expression, index) => {
+    const result = state.debugger.watchResults[index];
+    const value = result?.error ? `<code class="watch-error">${escapeHtml(result.error)}</code>` : `<code>${escapeHtml(result?.result ?? (state.debugger.stopped ? '…' : 'paused only'))}</code>`;
+    return `<div class="debug-watch"><button type="button" class="debug-watch-remove" data-watch-index="${index}" title="Remove watch">×</button><b>${escapeHtml(expression)}</b>${value}<small>${escapeHtml(result?.typeName || '')}</small></div>`;
+  }).join('');
+  els.debugWatchList.querySelectorAll('.debug-watch-remove').forEach((button) => button.addEventListener('click', () => {
+    state.debugger.watches.splice(Number(button.dataset.watchIndex), 1);
+    state.debugger.watchResults = [];
+    renderWatches();
+    if (state.debugger.stopped) refreshWatches();
+  }));
+}
+
+async function refreshWatches() {
+  if (!state.debugger.stopped || !state.debugger.selectedFrameId) { renderWatches(); return; }
+  state.debugger.watchResults = await Promise.all(state.debugger.watches.map(async (expression) => {
+    try {
+      return await invoke('debugger_evaluate', { expression, frameId: state.debugger.selectedFrameId });
+    } catch (error) {
+      return { error: String(error) };
+    }
+  }));
+  renderWatches();
+}
+
+async function selectDebugFrame(frame) {
+  state.debugger.selectedFrameId = frame.id;
+  state.debugger.executionPath = frame.path || '';
+  state.debugger.executionLine = frame.line || 0;
+  renderDebugStack();
+  const projectRoot = normalizePath(state.projectPath);
+  const framePath = normalizePath(frame.path || '');
+  if (frame.path && (framePath === projectRoot || framePath.startsWith(`${projectRoot}/`))) {
+    try {
+      await loadFile(frame.path);
+      const offset = offsetForLineColumn(els.editor.value, frame.line || 1, frame.column || 1);
+      els.editor.setSelectionRange(offset, offset);
+      els.editor.scrollTop = Math.max(0, ((frame.line || 1) - 5) * 20.15);
+      els.lines.scrollTop = els.editor.scrollTop;
+    } catch { /* stack frames can point into stdlib or generated sources */ }
+  }
+  updateLineNumbers();
+  try {
+    const scopes = await invoke('debugger_scopes', { frameId: frame.id });
+    const groups = await Promise.all(scopes.filter((scope) => scope.variablesReference > 0).map(async (scope) => {
+      try {
+        const variables = await invoke('debugger_variables', { variablesReference: scope.variablesReference });
+        return variables.map((variable) => ({ ...variable, scope: scope.name }));
+      } catch {
+        return [];
+      }
+    }));
+    state.debugger.variables = groups.flat();
+  } catch (error) {
+    state.debugger.variables = [];
+    appendDebugOutput(`Could not read variables: ${error}`, 'error');
+  }
+  renderDebugVariables();
+  await refreshWatches();
+}
+
+async function refreshDebugInspection(threadId) {
+  if (!threadId) return;
+  try {
+    state.debugger.frames = await invoke('debugger_stack_trace', { threadId });
+    state.debugger.selectedFrameId = state.debugger.frames[0]?.id ?? null;
+    renderDebugStack();
+    if (state.debugger.frames[0]) await selectDebugFrame(state.debugger.frames[0]);
+  } catch (error) {
+    appendDebugOutput(`Could not read call stack: ${error}`, 'error');
+  }
+}
+
+async function startDebugging() {
+  if (!state.projectPath || state.debugger.running || state.buildRunning || state.terminalRunning) return;
+  if (!state.debugger.available) {
+    showInfo('DEBUGGER NOT FOUND', `<p>${escapeHtml(state.debugger.message || 'Oxide could not find lldb-dap.')}</p><p>Build 1 uses LLDB's Debug Adapter Protocol for structured Rust debugging.</p>`);
+    return;
+  }
+  if (!await saveAllDirtyTabs()) return;
+  setViewPanel('build', true);
+  setConsoleView('debug');
+  state.debugger.output = [];
+  appendDebugOutput('Building project with debug information…', 'stage');
+  state.debugger.running = true;
+  state.debugger.stopped = false;
+  state.debugger.threadId = null;
+  resetDebugInspection();
+  els.debuggerStatus.textContent = 'DEBUGGER: STARTING';
+  els.debuggerDetail.textContent = 'BUILDING DEBUG TARGET';
+  els.commandReadout.textContent = 'DEBUG · BUILDING';
+  updateMenuAvailability();
+  try {
+    const result = await invoke('debugger_start', { projectPath: state.projectPath, breakpoints: debuggerBreakpointSets() });
+    appendDebugOutput(`Debugger attached to ${result.executable}`, 'success');
+    appendDebugOutput(`Adapter: ${result.adapter}`, 'muted');
+  } catch (error) {
+    state.debugger.running = false;
+    state.debugger.stopped = false;
+    els.debuggerStatus.textContent = 'DEBUGGER: READY';
+    els.debuggerDetail.textContent = 'START FAILED';
+    els.commandReadout.textContent = 'DEBUG START FAILED';
+    appendDebugOutput(String(error), 'error');
+    updateMenuAvailability();
+  }
+}
+
+async function debuggerCommand(action) {
+  if (!state.debugger.running) return;
+  const map = { continue: 'debugger_continue', pause: 'debugger_pause', next: 'debugger_next', 'step-in': 'debugger_step_in', 'step-out': 'debugger_step_out' };
+  const command = map[action];
+  if (!command) return;
+  try {
+    await invoke(command, { threadId: state.debugger.threadId });
+    if (action !== 'pause') {
+      state.debugger.stopped = false;
+      resetDebugInspection();
+      els.debuggerStatus.textContent = 'DEBUGGER: RUNNING';
+      els.debuggerDetail.textContent = action === 'continue' ? 'CONTINUING' : `STEP ${action.toUpperCase()}`;
+    }
+    updateMenuAvailability();
+  } catch (error) {
+    appendDebugOutput(`${action}: ${error}`, 'error');
+  }
+}
+
+async function stopDebugging() {
+  if (!state.debugger.running) return;
+  try { await invoke('debugger_stop'); } catch (error) { appendDebugOutput(`Stop debugger: ${error}`, 'error'); }
+  state.debugger.running = false;
+  state.debugger.stopped = false;
+  state.debugger.threadId = null;
+  resetDebugInspection();
+  els.debuggerStatus.textContent = state.debugger.available ? 'DEBUGGER: READY' : 'DEBUGGER: NOT FOUND';
+  els.debuggerDetail.textContent = state.debugger.available ? `${state.debugger.adapter} READY` : 'LLDB DAP NOT FOUND';
+  els.commandReadout.textContent = state.projectPath ? 'PROJECT READY' : 'SELECT A PROJECT TO BEGIN';
+  updateMenuAvailability();
+}
+
+async function handleDebugAction(action) {
+  if (action === 'start') return startDebugging();
+  if (action === 'stop') return stopDebugging();
+  return debuggerCommand(action);
+}
+
 function setConsoleView(view) {
-  if (!['build', 'problems'].includes(view)) view = 'build';
+  if (!['build', 'problems', 'debug'].includes(view)) view = 'build';
   state.consoleView = view;
   document.querySelectorAll('.console-view').forEach((button) => button.classList.toggle('active', button.dataset.consoleView === view));
   els.output.hidden = view !== 'build';
   $('#problems-pane').hidden = view !== 'problems';
+  els.debugPane.hidden = view !== 'debug';
   els.buildModeTabs.hidden = view !== 'build';
-  els.consoleTitle.textContent = view === 'build' ? 'BUILD BAY' : 'RUST PROBLEMS';
+  els.consoleTitle.textContent = view === 'build' ? 'BUILD BAY' : view === 'problems' ? 'RUST PROBLEMS' : 'DEBUG WORKBENCH';
 }
 
 function appendTerminalChunk(stream, data) {
@@ -1633,7 +1977,7 @@ function setupTerminalDragging() {
 }
 
 async function startTerminalRun() {
-  if (!state.projectPath || state.terminalRunning || state.buildRunning) return;
+  if (!state.projectPath || state.terminalRunning || state.buildRunning || state.debugger.running) return;
   if (!await saveAllDirtyTabs()) return;
   showTerminalWindow({ focus: false });
   clearTerminal();
@@ -2636,7 +2980,7 @@ function resetUpdateDialog() {
 function showUpdatePrompt(update) {
   state.updater.pending = update;
   resetUpdateDialog();
-  els.updateCurrentVersion.textContent = `CURRENT B1.3.4 · BUILD ${update.currentBuildNumber || 1}`;
+  els.updateCurrentVersion.textContent = `CURRENT B1.3.5 · BUILD ${update.currentBuildNumber || 1}`;
   els.updateNewVersion.textContent = `${update.displayVersion || `B${update.version}`} · BUILD ${update.buildNumber || 1}`;
   els.updateReleaseDate.textContent = update.date ? `Published ${update.date}` : 'A newer Oxide package is available.';
   els.updateNotes.textContent = update.body?.trim() || 'This release does not include update notes.';
@@ -2749,11 +3093,11 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.4 · Build 2</span><p>A cross-platform Rust-first workbench for Windows and Linux, with Cargo project management, compiler diagnostics, Rust Code Analyzer/Completer powered by rust-analyzer, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
+  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.5 · Build 1</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
 }
 
 function showShortcuts() {
-  showInfo('KEYBOARD SHORTCUTS', `<div class="shortcut-grid"><span>New Project</span><kbd>Ctrl+N</kbd><span>Open Project</span><kbd>Ctrl+O</kbd><span>Save File</span><kbd>Ctrl+S</kbd><span>Close File</span><kbd>Ctrl+W</kbd><span>Switch Tab</span><kbd>Ctrl+Tab</kbd><span>Save Project As</span><kbd>Ctrl+Shift+S</kbd><span>Run</span><kbd>F5</kbd><span>Check</span><kbd>F6</kbd><span>Build</span><kbd>F7</kbd><span>Test</span><kbd>F8</kbd><span>Analyze Now</span><kbd>Ctrl+F6</kbd><span>Code Completion</span><kbd>Ctrl+Space</kbd><span>Interactive Tutorial</span><kbd>Ctrl+Alt+T</kbd><span>Toggle Build Bay</span><kbd>Ctrl+&#96;</kbd></div>`);
+  showInfo('KEYBOARD SHORTCUTS', `<div class="shortcut-grid"><span>New Project</span><kbd>Ctrl+N</kbd><span>Open Project</span><kbd>Ctrl+O</kbd><span>Save File</span><kbd>Ctrl+S</kbd><span>Close File</span><kbd>Ctrl+W</kbd><span>Switch Tab</span><kbd>Ctrl+Tab</kbd><span>Save Project As</span><kbd>Ctrl+Shift+S</kbd><span>Run</span><kbd>F5</kbd><span>Start / Continue Debugging</span><kbd>F9</kbd><span>Step Over</span><kbd>F10</kbd><span>Step Into</span><kbd>F11</kbd><span>Step Out</span><kbd>Shift+F11</kbd><span>Stop Debugging</span><kbd>Ctrl+F9</kbd><span>Check</span><kbd>F6</kbd><span>Build</span><kbd>F7</kbd><span>Test</span><kbd>F8</kbd><span>Analyze Now</span><kbd>Ctrl+F6</kbd><span>Code Completion</span><kbd>Ctrl+Space</kbd><span>Interactive Tutorial</span><kbd>Ctrl+Alt+T</kbd><span>Toggle Build Bay</span><kbd>Ctrl+&#96;</kbd></div>`);
 }
 
 let messageResolver = null;
@@ -2781,7 +3125,15 @@ async function handleMenuAction(action) {
   if (['check', 'build', 'test', 'clean'].includes(action)) return cargoAction(action);
   if (action === 'run') return requestRun();
 
-  if (action === 'new-project') await openFileBrowser('new-project');
+  if (action === 'debug-start') await startDebugging();
+  else if (action === 'debug-continue') await debuggerCommand('continue');
+  else if (action === 'debug-pause') await debuggerCommand('pause');
+  else if (action === 'debug-next') await debuggerCommand('next');
+  else if (action === 'debug-step-in') await debuggerCommand('step-in');
+  else if (action === 'debug-step-out') await debuggerCommand('step-out');
+  else if (action === 'debug-stop') await stopDebugging();
+  else if (action === 'show-debug') { setViewPanel('build', true); setConsoleView('debug'); }
+  else if (action === 'new-project') await openFileBrowser('new-project');
   else if (action === 'open-project') await openFileBrowser('open');
   else if (action === 'save-file') await saveCurrentFile();
   else if (action === 'close-file') await closeTab();
@@ -2853,7 +3205,7 @@ els.tutorialLearnMore.addEventListener('click', () => {
 });
 els.save.addEventListener('click', () => saveCurrentFile());
 els.editor.addEventListener('input', (event) => { markEditorChanged(); scheduleCodeCompletion(event); });
-els.editor.addEventListener('scroll', () => { els.lines.scrollTop = els.editor.scrollTop; syncSyntaxScroll(); if (state.completer.visible || state.completer.signatureVisible) positionCompletionUi(); });
+els.editor.addEventListener('scroll', () => { els.lines.scrollTop = els.editor.scrollTop; syncSyntaxScroll(); positionDebugLineHighlight(); if (state.completer.visible || state.completer.signatureVisible) positionCompletionUi(); });
 const OXIDE_INDENT = '    ';
 
 function currentLineContext(text, position) {
@@ -2923,15 +3275,32 @@ els.editor.addEventListener('keydown', (event) => {
   }
 });
 
+els.lines.addEventListener('click', async (event) => {
+  const lineElement = event.target.closest('.line-number');
+  if (!lineElement || !state.currentFile?.toLowerCase().endsWith('.rs')) return;
+  await toggleBreakpoint(state.currentFile, Number(lineElement.dataset.line));
+});
+
+els.debugWatchForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const expression = els.debugWatchInput.value.trim();
+  if (!expression || state.debugger.watches.includes(expression)) return;
+  state.debugger.watches.push(expression);
+  els.debugWatchInput.value = '';
+  renderWatches();
+  if (state.debugger.stopped) await refreshWatches();
+});
+
 els.diagnosticBanner.addEventListener('click', () => {
   setViewPanel('build', true);
   setConsoleView('problems');
 });
 
-document.querySelectorAll('.command-button').forEach((button) => button.addEventListener('click', () => {
+document.querySelectorAll('.command-button[data-action]').forEach((button) => button.addEventListener('click', () => {
   if (button.dataset.action === 'run') requestRun();
   else cargoAction(button.dataset.action);
 }));
+document.querySelectorAll('[data-debug-action]').forEach((button) => button.addEventListener('click', () => handleDebugAction(button.dataset.debugAction)));
 
 document.querySelectorAll('.profile').forEach((button) => button.addEventListener('click', () => {
   state.release = button.dataset.profile === 'release';
@@ -3078,6 +3447,22 @@ document.addEventListener('keydown', async (event) => {
   } else if (ctrl && event.key === 'F6') {
     event.preventDefault();
     await runDiagnostics({ silent: false, force: true });
+  } else if (event.ctrlKey && event.key === 'F9') {
+    event.preventDefault();
+    await stopDebugging();
+  } else if (event.key === 'F9') {
+    event.preventDefault();
+    if (state.debugger.running && state.debugger.stopped) await debuggerCommand('continue');
+    else if (!state.debugger.running) await startDebugging();
+  } else if (event.shiftKey && event.key === 'F11') {
+    event.preventDefault();
+    await debuggerCommand('step-out');
+  } else if (event.key === 'F11') {
+    event.preventDefault();
+    await debuggerCommand('step-in');
+  } else if (event.key === 'F10') {
+    event.preventDefault();
+    await debuggerCommand(event.ctrlKey ? 'continue' : 'next');
   } else if (event.key === 'F5') {
     event.preventDefault();
     requestRun();
@@ -3106,6 +3491,81 @@ listen('cargo-output', (event) => {
 listen('cargo-state', (event) => {
   const { state: cargoState, detail } = event.payload;
   if (cargoState === 'started' || cargoState === 'finished') appendFriendly('stage', detail);
+});
+
+listen('debugger-output', (event) => {
+  const { output, category } = event.payload || {};
+  appendDebugOutput(output || '', category === 'stderr' ? 'error' : category === 'adapter' ? 'muted' : 'normal');
+});
+
+listen('debugger-state', (event) => {
+  const { state: debuggerState, detail } = event.payload || {};
+  if (detail) appendDebugOutput(detail, debuggerState === 'adapter-exited' ? 'error' : 'stage');
+  if (debuggerState === 'building') {
+    els.debuggerStatus.textContent = 'DEBUGGER: BUILDING';
+    els.debuggerDetail.textContent = 'CARGO DEBUG BUILD';
+  } else if (debuggerState === 'starting') {
+    els.debuggerStatus.textContent = 'DEBUGGER: STARTING';
+    els.debuggerDetail.textContent = 'STARTING LLDB DAP';
+  } else if (debuggerState === 'running') {
+    state.debugger.running = true;
+    els.debuggerStatus.textContent = 'DEBUGGER: RUNNING';
+    els.debuggerDetail.textContent = 'PROGRAM RUNNING';
+    els.commandReadout.textContent = 'DEBUG · PROGRAM ACTIVE';
+  } else if (debuggerState === 'adapter-exited' && state.debugger.running) {
+    state.debugger.running = false;
+    state.debugger.stopped = false;
+    els.debuggerStatus.textContent = state.debugger.available ? 'DEBUGGER: READY' : 'DEBUGGER: NOT FOUND';
+    els.debuggerDetail.textContent = 'SESSION ENDED';
+  }
+  updateMenuAvailability();
+});
+
+listen('debugger-event', async (event) => {
+  const message = event.payload || {};
+  const kind = message.event;
+  const body = message.body || {};
+  if (kind === 'output') {
+    appendDebugOutput(body.output || '', body.category === 'stderr' ? 'error' : 'normal');
+    return;
+  }
+  if (kind === 'stopped') {
+    state.debugger.running = true;
+    state.debugger.stopped = true;
+    state.debugger.threadId = body.threadId || state.debugger.threadId;
+    els.debuggerStatus.textContent = 'DEBUGGER: PAUSED';
+    els.debuggerDetail.textContent = `${String(body.reason || 'stopped').toUpperCase()}${body.description ? ` · ${body.description}` : ''}`;
+    els.commandReadout.textContent = `DEBUG · ${String(body.reason || 'PAUSED').toUpperCase()}`;
+    setViewPanel('build', true);
+    setConsoleView('debug');
+    appendDebugOutput(`Paused: ${body.description || body.reason || 'debugger stop'}`, 'stage');
+    updateMenuAvailability();
+    await refreshDebugInspection(state.debugger.threadId);
+    return;
+  }
+  if (kind === 'continued') {
+    state.debugger.stopped = false;
+    resetDebugInspection();
+    els.debuggerStatus.textContent = 'DEBUGGER: RUNNING';
+    els.debuggerDetail.textContent = 'PROGRAM RUNNING';
+    updateMenuAvailability();
+    return;
+  }
+  if (kind === 'exited') {
+    appendDebugOutput(`Program exited${body.exitCode == null ? '' : ` with code ${body.exitCode}`}.`, body.exitCode === 0 ? 'success' : 'error');
+    return;
+  }
+  if (kind === 'terminated') {
+    try { await invoke('debugger_stop'); } catch { /* adapter may already have exited */ }
+    state.debugger.running = false;
+    state.debugger.stopped = false;
+    state.debugger.threadId = null;
+    resetDebugInspection();
+    els.debuggerStatus.textContent = state.debugger.available ? 'DEBUGGER: READY' : 'DEBUGGER: NOT FOUND';
+    els.debuggerDetail.textContent = 'SESSION COMPLETE';
+    els.commandReadout.textContent = 'DEBUG COMPLETE';
+    updateMenuAvailability();
+  }
 });
 
 listen('terminal-output', (event) => {
@@ -3180,6 +3640,7 @@ clearTerminal();
 els.tutorialPanel.hidden = true;
 renderProblems();
 renderOutput();
+renderWatches();
 resetLayout();
 setProjectUiState();
 detectPlatform().finally(() => detectToolchain());

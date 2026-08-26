@@ -1388,3 +1388,102 @@ html, body, #app {
   .tutorial-explanation { margin-block: 6px 9px; }
   .tutorial-example { margin-block: 7px 9px; }
 }
+
+/* B1.3.5 Build 1 — debugger workbench */
+.debug-command { border-color: #6d4934; background: linear-gradient(#433127,#261d19); color: #e1a477; }
+.debug-command:hover:not(:disabled) { border-color: #9d6845; background: linear-gradient(#55392b,#2e211b); }
+
+.line-number { cursor: pointer; padding-left: 16px; }
+.line-number::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+}
+.line-number:hover::after { border-color: #6d4b3a; background: rgba(177,92,50,.12); }
+.line-number.breakpoint::after { border-color: #c86942; background: #a33e2e; box-shadow: 0 0 0 1px #35140f, 0 0 7px rgba(194,77,49,.35); }
+.line-number.debug-execution { color: #f0c384; font-weight: 900; background: linear-gradient(90deg, rgba(181,111,48,.17), transparent); }
+.line-number.debug-execution::after { border-radius: 1px; transform: rotate(45deg); border-color: #e3aa56; background: #c77f34; box-shadow: 0 0 0 1px #3b2610; }
+.line-number.breakpoint.debug-execution::after { border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #b74630; border-color: #e3aa56; }
+
+.debug-pane { height: calc(100% - 30px); overflow: hidden; background: #101210; min-height: 0; }
+.debug-pane[hidden] { display: none; }
+.debug-toolbar {
+  height: 34px;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border-bottom: 1px solid #34352f;
+  background: linear-gradient(#20221f,#171916);
+}
+.debug-toolbar-label { min-width: 210px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border-right: 1px solid #34352f; }
+.debug-toolbar-label b { color: #c8865e; font-size: 11px; letter-spacing: .1em; }
+.debug-toolbar-label small { color: #777b72; font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.debug-tool {
+  min-width: 68px;
+  border: 0;
+  border-right: 1px solid #34352f;
+  color: #a4a79f;
+  background: #1a1c19;
+  font: 800 9px/1 sans-serif;
+  letter-spacing: .07em;
+}
+.debug-tool:hover:not(:disabled) { background: #292b26; color: #ddd5cc; }
+.debug-tool.primary { color: #e0a171; background: #30231d; }
+.debug-tool.stop { color: #cf8173; }
+.debug-tool:disabled { opacity: .35; cursor: default; }
+.debug-grid { height: calc(100% - 34px); min-height: 0; display: grid; grid-template-columns: minmax(190px,.9fr) minmax(260px,1.35fr) minmax(210px,1fr) minmax(230px,1.1fr); }
+.debug-column { min-width: 0; min-height: 0; display: flex; flex-direction: column; border-right: 1px solid #292b27; }
+.debug-column:last-child { border-right: 0; }
+.debug-section-head { flex: 0 0 25px; padding: 7px 9px 0; color: #7f8179; background: #161815; border-bottom: 1px solid #292b27; font: 800 9px/1 sans-serif; letter-spacing: .1em; }
+.debug-list, .debug-output { min-height: 0; flex: 1 1 auto; overflow: auto; }
+.debug-empty { padding: 10px; color: #5e625b; font-size: 11px; font-style: italic; }
+.debug-frame { width: 100%; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; padding: 6px 8px; border: 0; border-bottom: 1px solid #22241f; text-align: left; background: transparent; color: #b7bab1; }
+.debug-frame:hover, .debug-frame.active { background: #242720; }
+.debug-frame.active { box-shadow: inset 2px 0 #bb6b42; }
+.debug-frame b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 11px/1.25 "Cascadia Code", Consolas, monospace; }
+.debug-frame span { color: #73776e; font: 10px/1.25 "Cascadia Code", Consolas, monospace; }
+.debug-variable, .debug-watch { position: relative; display: grid; grid-template-columns: auto minmax(60px,.7fr) minmax(90px,1.3fr) auto; align-items: baseline; gap: 7px; padding: 5px 8px; border-bottom: 1px solid #22241f; font: 10.5px/1.35 "Cascadia Code", Consolas, monospace; }
+.debug-variable-scope { color: #735846; font-size: 9px; text-transform: uppercase; }
+.debug-variable b, .debug-watch b { color: #c78965; overflow: hidden; text-overflow: ellipsis; }
+.debug-variable code, .debug-watch code { color: #c5c9bd; overflow-wrap: anywhere; }
+.debug-variable small, .debug-watch small { color: #69726e; }
+.debug-watch { grid-template-columns: 18px minmax(70px,.8fr) minmax(90px,1.3fr) auto; }
+.debug-watch-remove { border: 0; background: transparent; color: #76534b; font-weight: 900; }
+.debug-watch-remove:hover { color: #d17a68; }
+.watch-error { color: #cf7467 !important; }
+.debug-watch-form { flex: 0 0 30px; display: grid; grid-template-columns: 1fr 44px; border-bottom: 1px solid #292b27; }
+.debug-watch-form input { min-width: 0; border: 0; padding: 0 7px; color: #c6c9c0; background: #0f110f; font: 10.5px "Cascadia Code", Consolas, monospace; outline: none; }
+.debug-watch-form input:focus { box-shadow: inset 0 -1px #a9613f; }
+.debug-watch-form button { border: 0; border-left: 1px solid #292b27; background: #22251f; color: #a77a61; font: 800 9px sans-serif; }
+.debug-output { padding: 6px 8px; font: 10.5px/1.4 "Cascadia Code", Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.debug-output-line { color: #aeb2a8; }
+.debug-output-line.stage { color: #bd8e69; }
+.debug-output-line.success { color: #84a67e; }
+.debug-output-line.error { color: #cf7467; }
+.debug-output-line.muted { color: #656b63; }
+
+@media (max-width: 1180px) {
+  .debug-grid { grid-template-columns: 1fr 1.25fr; grid-template-rows: 1fr 1fr; }
+  .debug-column:nth-child(2) { border-right: 0; }
+  .debug-column:nth-child(-n+2) { border-bottom: 1px solid #292b27; }
+}
+.debug-line-highlight {
+  position: absolute;
+  z-index: 2;
+  left: 48px;
+  right: 0;
+  height: 20.15px;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(182,113,49,.18), rgba(182,113,49,.06) 72%, transparent);
+  border-top: 1px solid rgba(210,146,76,.16);
+  border-bottom: 1px solid rgba(210,146,76,.11);
+}
+.debug-line-highlight[hidden] { display: none; }
+.code-editor { z-index: 3; }
+.line-numbers { z-index: 4; }
+.code-completer, .signature-help { z-index: 10; }
