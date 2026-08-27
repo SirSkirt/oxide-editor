@@ -56,7 +56,7 @@ release_version: 1.3.5
 build: 3
 ```
 
-The editor compares release version first, then build number when the public version is equal. Therefore `1.3.5 Build 3` is newer than `1.3.5 Build 2`. Build 3 also requests updater feeds with no-cache headers and publishes each internal build as a distinct GitHub Release tag so GitHub's `releases/latest/download/...` route cannot remain pinned to an older same-version release.
+The editor compares release version first, then build number when the public version is equal. Therefore `1.3.5 Build 4` is newer than `1.3.5 Build 3`. Build 3+ requests updater feeds with no-cache headers and publishes each internal build as a distinct GitHub Release tag so GitHub's `releases/latest/download/...` route cannot remain pinned to an older same-version release.
 
 ## Package verification
 
@@ -110,7 +110,7 @@ git tag v1.3.5-b3
 git push origin v1.3.5-b3
 ```
 
-The public Oxide version is still `1.3.5`; the `-b3` tag makes each internal build a distinct GitHub Release so `releases/latest/download/...` advances for Build 1 → Build 2 → Build 3 updates. The platform feed remains authoritative and carries both `release_version` and `build`.
+The public Oxide version is still `1.3.5`; the `-b4` tag (and the same `-bN` pattern for every build) makes each internal build a distinct GitHub Release so `releases/latest/download/...` advances for Build 1 → Build 2 → Build 3 → Build 4 updates. The platform feed remains authoritative and carries both `release_version` and `build`.
 
 The pipeline creates the build-specific release as a **draft**, runs the Windows and Linux jobs, uploads and validates both platform feeds, and only then publishes the release. If either platform job fails, the incomplete draft does not replace the previous working `releases/latest` target.
 

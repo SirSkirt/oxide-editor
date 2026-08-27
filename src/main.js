@@ -41,12 +41,18 @@ const state = {
     timer: null,
     prefixStart: 0,
     signatureVisible: false,
+    dismissedThroughWord: false,
   },
   semanticReadability: {
     tokens: [],
     timer: null,
     requestToken: 0,
     active: false,
+  },
+  intelligence: {
+    references: [],
+    codeActions: [],
+    pendingRename: null,
   },
   debugger: {
     available: false,
@@ -152,6 +158,11 @@ app.innerHTML = `
             <button role="menuitem" data-menu-action="toggle-completer"><span><i class="menu-check" data-check="completer">✓</i> Rust Code Analyzer/Completer</span></button>
             <button role="menuitem" data-menu-action="trigger-completion"><span>Trigger Code Completion</span><kbd>Ctrl+Space</kbd></button>
             <div class="menu-separator"></div>
+            <button role="menuitem" data-menu-action="go-definition"><span>Go to Definition</span><kbd>F12</kbd></button>
+            <button role="menuitem" data-menu-action="find-references"><span>Find References</span><kbd>Shift+F12</kbd></button>
+            <button role="menuitem" data-menu-action="rename-symbol"><span>Rename Symbol…</span><kbd>F2</kbd></button>
+            <button role="menuitem" data-menu-action="code-actions"><span>Code Actions / Quick Fixes…</span><kbd>Ctrl+.</kbd></button>
+            <div class="menu-separator"></div>
             <button role="menuitem" data-menu-action="tutorial"><span>Interactive Rust Tutorial…</span><kbd>Ctrl+Alt+T</kbd></button>
             <div class="menu-separator"></div>
             <button role="menuitem" data-menu-action="add-dependency"><span>Add Dependency…</span></button>
@@ -217,7 +228,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.5 · BUILD 3</div>
+        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.5 · BUILD 4</div>
         <h1>Welcome to the Oxide Editor</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -261,6 +272,8 @@ app.innerHTML = `
           <div id="line-numbers" class="line-numbers" title="Click a Rust line number to toggle a breakpoint"><span class="line-number" data-line="1">1</span></div>
           <pre id="syntax-layer" class="syntax-layer" aria-hidden="true"><code id="syntax-code"></code></pre>
           <div id="debug-line-highlight" class="debug-line-highlight" hidden></div>
+          <span id="bracket-match-a" class="bracket-match-marker" hidden aria-hidden="true"></span>
+          <span id="bracket-match-b" class="bracket-match-marker" hidden aria-hidden="true"></span>
           <textarea id="editor" class="code-editor" spellcheck="false" aria-label="Code editor" placeholder="Open a .rs, .toml, or text file from the project tree."></textarea>
           <div id="code-completer" class="code-completer" hidden role="listbox" aria-label="Rust Code Analyzer/Completer suggestions">
             <div id="completion-list" class="completion-list"></div>
@@ -362,7 +375,7 @@ app.innerHTML = `
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>OXIDE B1.3.5 · BUILD 3</span>
+      <span>OXIDE B1.3.5 · BUILD 4</span>
     </footer>
   </main>
 
@@ -458,6 +471,27 @@ app.innerHTML = `
     </form>
   </dialog>
 
+  <dialog id="references-dialog" class="oxide-dialog intelligence-dialog">
+    <div class="dialog-head"><div><span>FIND REFERENCES</span><small id="references-summary">RUST SYMBOL REFERENCES</small></div><button type="button" id="references-close" class="dialog-close">×</button></div>
+    <div id="references-list" class="intelligence-list"><div class="intelligence-empty">No references loaded.</div></div>
+    <div class="dialog-actions intelligence-actions"><button type="button" id="references-done" class="metal-button primary">CLOSE</button></div>
+  </dialog>
+
+  <dialog id="rename-dialog" class="oxide-dialog rename-dialog">
+    <form id="rename-form">
+      <div class="dialog-head"><div><span>SEMANTIC RENAME</span><small id="rename-symbol-label">RUST SYMBOL</small></div><button type="button" id="rename-close" class="dialog-close">×</button></div>
+      <label><span>NEW NAME</span><input id="rename-input" spellcheck="false" autocomplete="off" /></label>
+      <p class="intelligence-note">rust-analyzer will rename this symbol by meaning and scope, not by blind text replacement.</p>
+      <div class="dialog-actions"><button type="button" id="rename-cancel" class="metal-button">CANCEL</button><button type="submit" class="metal-button primary">RENAME</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="code-actions-dialog" class="oxide-dialog intelligence-dialog">
+    <div class="dialog-head"><div><span>CODE ACTIONS / QUICK FIXES</span><small>RUST-ANALYZER</small></div><button type="button" id="code-actions-close" class="dialog-close">×</button></div>
+    <div id="code-actions-list" class="intelligence-list"><div class="intelligence-empty">No code actions loaded.</div></div>
+    <div class="dialog-actions intelligence-actions"><button type="button" id="code-actions-done" class="metal-button">CLOSE</button></div>
+  </dialog>
+
   <section id="terminal-window" class="terminal-window" hidden aria-label="Oxide Run Terminal">
     <header id="terminal-drag-handle" class="terminal-window-head">
       <div><span>OXIDE RUN TERMINAL</span><small id="terminal-window-project">NO PROJECT</small></div>
@@ -518,6 +552,8 @@ const els = {
   syntaxLayer: $('#syntax-layer'),
   syntaxCode: $('#syntax-code'),
   debugLineHighlight: $('#debug-line-highlight'),
+  bracketMatchA: $('#bracket-match-a'),
+  bracketMatchB: $('#bracket-match-b'),
   lines: $('#line-numbers'),
   fileTabs: $('#file-tabs'),
   save: $('#save-file'),
@@ -552,6 +588,15 @@ const els = {
   breakpointHitCondition: $('#breakpoint-hit-condition'),
   breakpointLogMessage: $('#breakpoint-log-message'),
   breakpointRemove: $('#breakpoint-remove'),
+  referencesDialog: $('#references-dialog'),
+  referencesSummary: $('#references-summary'),
+  referencesList: $('#references-list'),
+  renameDialog: $('#rename-dialog'),
+  renameForm: $('#rename-form'),
+  renameInput: $('#rename-input'),
+  renameSymbolLabel: $('#rename-symbol-label'),
+  codeActionsDialog: $('#code-actions-dialog'),
+  codeActionsList: $('#code-actions-list'),
   codeCompleter: $('#code-completer'),
   completionList: $('#completion-list'),
   completionDetailKind: $('#completion-detail-kind'),
@@ -848,6 +893,9 @@ function updateMenuAvailability() {
   document.querySelectorAll('[data-menu-action="trigger-completion"]').forEach((button) => {
     button.disabled = !projectLoaded || !fileLoaded || !state.completer.available || !state.completer.enabled;
   });
+  document.querySelectorAll('[data-menu-action="go-definition"], [data-menu-action="find-references"], [data-menu-action="rename-symbol"], [data-menu-action="code-actions"]').forEach((button) => {
+    button.disabled = !projectLoaded || !fileLoaded || !state.completer.available || !state.currentFile?.toLowerCase().endsWith('.rs');
+  });
   document.querySelectorAll('[data-menu-action="debug-start"], [data-debug-action="start"]').forEach((button) => {
     button.disabled = !projectLoaded || state.buildRunning || state.terminalRunning || state.debugger.running;
   });
@@ -1121,6 +1169,7 @@ function updateActiveTabVisual() {
 
 function setEditorFromTab(tab) {
   closeCompletionUi();
+  state.completer.dismissedThroughWord = false;
   if (!tab) {
     state.activeTabPath = '';
     state.currentFile = '';
@@ -1135,6 +1184,7 @@ function setEditorFromTab(tab) {
     renderTabs();
     updateLineNumbers();
     updateDiagnosticBanner();
+    updateBracketMatch();
     updateMenuAvailability();
     return;
   }
@@ -1157,6 +1207,7 @@ function setEditorFromTab(tab) {
     const max = els.editor.value.length;
     els.editor.setSelectionRange(Math.min(tab.selectionStart || 0, max), Math.min(tab.selectionEnd || 0, max));
     els.lines.scrollTop = els.editor.scrollTop;
+    updateBracketMatch();
   });
   updateMenuAvailability();
 }
@@ -1305,6 +1356,10 @@ async function closeProject() {
   state.debugger.threads = [];
   state.debugger.selectedTarget = null;
   state.debugger.expandedVariables.clear();
+  state.intelligence.references = [];
+  state.intelligence.codeActions = [];
+  state.intelligence.pendingRename = null;
+  state.completer.dismissedThroughWord = false;
   renderBreakpoints();
   renderDebugThreads();
   clearSemanticReadability();
@@ -3110,7 +3165,7 @@ function completionPrefixAt(text, offset) {
   return { prefix, start, memberAccess };
 }
 
-function closeCompletionUi() {
+function closeCompletionUi({ dismissWord = false } = {}) {
   state.completer.requestToken += 1;
   state.completer.visible = false;
   state.completer.items = [];
@@ -3118,6 +3173,7 @@ function closeCompletionUi() {
   els.codeCompleter.hidden = true;
   els.signatureHelp.hidden = true;
   state.completer.signatureVisible = false;
+  if (dismissWord) state.completer.dismissedThroughWord = true;
 }
 
 function caretPopupPoint() {
@@ -3147,27 +3203,25 @@ function positionCompletionUi() {
   const usableWidth = Math.max(180, wrap.clientWidth - gutter - (margin * 2));
   const popupWidth = Math.min(650, usableWidth, Math.max(320, wrap.clientWidth * 0.52));
 
-  const below = Math.max(0, wrap.clientHeight - point.top - margin);
-  const above = Math.max(0, point.top - margin);
-  const placeAbove = below < 150 && above > below;
-  const availableHeight = Math.max(70, (placeAbove ? above : below) - margin);
-  const popupHeight = Math.min(250, availableHeight, Math.max(70, wrap.clientHeight - (margin * 2)));
+  // Build 4 rule: the completer never flips above or covers the line being typed.
+  // If the caret is near the bottom, the editor simply clips/shrinks the popup instead.
+  const top = Math.max(margin, point.top + 4);
+  const below = Math.max(0, wrap.clientHeight - top - margin);
+  const popupHeight = Math.max(44, Math.min(250, below || 44));
 
   let left = point.left;
   if (left + popupWidth > wrap.clientWidth - margin) left = wrap.clientWidth - popupWidth - margin;
   left = Math.max(margin, left);
-
-  let top = placeAbove ? point.top - popupHeight - 8 : point.top + 4;
-  top = Math.max(margin, Math.min(top, wrap.clientHeight - popupHeight - margin));
 
   els.codeCompleter.classList.toggle('compact', popupWidth < 500);
   els.codeCompleter.style.left = `${left}px`;
   els.codeCompleter.style.top = `${top}px`;
   els.codeCompleter.style.width = `${popupWidth}px`;
   els.codeCompleter.style.height = `${popupHeight}px`;
+  els.codeCompleter.style.maxHeight = `${Math.max(44, below)}px`;
 
   const signatureWidth = Math.max(180, Math.min(720, wrap.clientWidth - left - margin));
-  const signatureTop = Math.max(margin, Math.min(top - 72, wrap.clientHeight - 64));
+  const signatureTop = Math.max(margin, Math.min(point.top - 72, wrap.clientHeight - 64));
   els.signatureHelp.style.left = `${left}px`;
   els.signatureHelp.style.top = `${signatureTop}px`;
   els.signatureHelp.style.maxWidth = `${signatureWidth}px`;
@@ -3280,14 +3334,14 @@ function acceptCompletion() {
 function handleCompleterKey(event) {
   if ((event.ctrlKey || event.metaKey) && event.code === 'Space') {
     event.preventDefault();
+    state.completer.dismissedThroughWord = false;
     requestCodeCompletion({ manual: true });
     return true;
   }
   if (!state.completer.visible) {
-    if (event.key === 'Escape' && state.completer.signatureVisible) {
+    if (event.key === 'Escape' && (state.completer.signatureVisible || isRustEditorContext())) {
       event.preventDefault();
-      els.signatureHelp.hidden = true;
-      state.completer.signatureVisible = false;
+      closeCompletionUi({ dismissWord: true });
       return true;
     }
     return false;
@@ -3311,13 +3365,15 @@ function handleCompleterKey(event) {
   }
   if (event.key === 'Escape') {
     event.preventDefault();
-    closeCompletionUi();
+    closeCompletionUi({ dismissWord: true });
     return true;
   }
   return false;
 }
 
 async function requestCodeCompletion({ manual = false } = {}) {
+  if (manual) state.completer.dismissedThroughWord = false;
+  if (!manual && state.completer.dismissedThroughWord) return;
   if (!state.completer.enabled || !state.completer.available || !isRustEditorContext()) {
     if (manual && !state.completer.available) {
       showInfo('RUST CODE ANALYZER/COMPLETER', '<p>rust-analyzer was not found. Install it with <code>rustup component add rust-analyzer</code>, then choose Tools → Refresh Toolchain.</p>');
@@ -3377,6 +3433,29 @@ function scheduleCodeCompletion(event) {
   if (state.completer.timer) clearTimeout(state.completer.timer);
   if (!isRustEditorContext() || !state.completer.enabled || !state.completer.available) return;
   const data = event?.data || '';
+
+  if (state.completer.dismissedThroughWord) {
+    const continuesWord = /^[A-Za-z0-9_]+$/.test(data);
+    if (!data) {
+      const current = completionPrefixAt(els.editor.value, els.editor.selectionStart);
+      if (!current.prefix && !current.memberAccess) state.completer.dismissedThroughWord = false;
+      els.codeCompleter.hidden = true;
+      state.completer.visible = false;
+      return;
+    }
+    if (continuesWord) {
+      els.codeCompleter.hidden = true;
+      state.completer.visible = false;
+      return;
+    }
+    // A boundary ended the dismissed word. Do not reopen on the boundary itself;
+    // the first character of the next word can trigger completion normally.
+    state.completer.dismissedThroughWord = false;
+    els.codeCompleter.hidden = true;
+    state.completer.visible = false;
+    return;
+  }
+
   if (data === ')' || data === ';' || data === '\n' || data === ' ') {
     els.codeCompleter.hidden = true;
     state.completer.visible = false;
@@ -3420,6 +3499,332 @@ async function requestSignatureHelp() {
   }
 }
 
+
+function sourcePathLabel(path = '') {
+  const normalized = normalizePath(path);
+  const root = normalizePath(state.projectPath);
+  if (root && (normalized === root || normalized.startsWith(`${root}/`))) {
+    return path.replaceAll('\\', '/').slice(state.projectPath.replaceAll('\\', '/').replace(/\/$/, '').length + 1) || pathBase(path);
+  }
+  return path;
+}
+
+function analyzerPositionPayload() {
+  const position = lspPositionAt(els.editor.value, els.editor.selectionStart);
+  return {
+    projectPath: state.projectPath,
+    path: state.currentFile,
+    content: els.editor.value,
+    line: position.line,
+    character: position.character,
+  };
+}
+
+function requireRustIntelligence() {
+  if (!isRustEditorContext()) {
+    showInfo('RUST INTELLIGENCE', '<p>Open a Rust source file to use this command.</p>');
+    return false;
+  }
+  if (!state.completer.available) {
+    showInfo('RUST ANALYZER NOT FOUND', '<p>Install rust-analyzer with <code>rustup component add rust-analyzer</code>, then choose Tools → Refresh Toolchain.</p>');
+    return false;
+  }
+  return true;
+}
+
+async function navigateToRustLocation(location) {
+  if (!location?.path || !location?.range) return;
+  await loadFile(location.path);
+  if (normalizePath(state.currentFile) !== normalizePath(location.path)) return;
+  const start = offsetFromLspPosition(els.editor.value, location.range.start);
+  const end = offsetFromLspPosition(els.editor.value, location.range.end);
+  els.editor.setSelectionRange(start, Math.max(start, end));
+  const style = getComputedStyle(els.editor);
+  const lineHeight = parseFloat(style.lineHeight) || 20;
+  const targetTop = Number(location.range.start?.line || 0) * lineHeight;
+  els.editor.scrollTop = Math.max(0, targetTop - Math.max(30, els.editor.clientHeight * 0.32));
+  els.lines.scrollTop = els.editor.scrollTop;
+  syncSyntaxScroll();
+  updateBracketMatch();
+  els.editor.focus();
+}
+
+async function goToDefinition() {
+  if (!requireRustIntelligence()) return;
+  closeCompletionUi();
+  try {
+    const locations = await invoke('rust_definition', analyzerPositionPayload());
+    if (!locations?.length) {
+      showInfo('GO TO DEFINITION', '<p>rust-analyzer did not find a definition at the current caret position.</p>');
+      return;
+    }
+    await navigateToRustLocation(locations[0]);
+  } catch (error) {
+    showInfo('GO TO DEFINITION FAILED', `<p class="info-error">${escapeHtml(String(error))}</p>`);
+  }
+}
+
+function renderReferences() {
+  const refs = state.intelligence.references || [];
+  els.referencesSummary.textContent = `${refs.length} REFERENCE${refs.length === 1 ? '' : 'S'}`;
+  if (!refs.length) {
+    els.referencesList.innerHTML = '<div class="intelligence-empty">No references found for this symbol.</div>';
+    return;
+  }
+  els.referencesList.innerHTML = refs.map((location, index) => {
+    const line = Number(location.range?.start?.line || 0) + 1;
+    const column = Number(location.range?.start?.character || 0) + 1;
+    return `<button type="button" class="intelligence-result" data-reference-index="${index}"><span class="intelligence-result-icon">R</span><span><b>${escapeHtml(pathBase(location.path))}:${line}</b><small>${escapeHtml(sourcePathLabel(location.path))} · column ${column}</small></span><span class="intelligence-jump">OPEN →</span></button>`;
+  }).join('');
+  els.referencesList.querySelectorAll('[data-reference-index]').forEach((button) => button.addEventListener('click', async () => {
+    const location = refs[Number(button.dataset.referenceIndex || 0)];
+    if (els.referencesDialog.open) els.referencesDialog.close();
+    await navigateToRustLocation(location);
+  }));
+}
+
+async function findReferences() {
+  if (!requireRustIntelligence()) return;
+  closeCompletionUi();
+  try {
+    state.intelligence.references = await invoke('rust_references', analyzerPositionPayload());
+    renderReferences();
+    if (!els.referencesDialog.open) els.referencesDialog.showModal();
+  } catch (error) {
+    showInfo('FIND REFERENCES FAILED', `<p class="info-error">${escapeHtml(String(error))}</p>`);
+  }
+}
+
+function applyEditsToText(text, edits = []) {
+  const normalized = edits.map((edit) => ({
+    start: offsetFromLspPosition(text, edit.range?.start),
+    end: offsetFromLspPosition(text, edit.range?.end),
+    text: String(edit.newText ?? ''),
+  })).sort((a, b) => b.start - a.start || b.end - a.end);
+  let output = text;
+  for (const edit of normalized) output = output.slice(0, edit.start) + edit.text + output.slice(edit.end);
+  return output;
+}
+
+async function refreshProjectTree() {
+  if (!state.projectPath) return;
+  try {
+    renderTree(await invoke('list_project_files', { projectPath: state.projectPath }));
+  } catch (error) {
+    appendFriendly('warning', `Project tree refresh failed: ${error}`);
+  }
+}
+
+async function applyWorkspaceEdit(edit, label = 'Rust edit') {
+  if (!edit?.editCount) return false;
+  if (edit.unsupportedOperations) {
+    showInfo('ACTION NOT APPLIED', `<p>This action includes ${edit.unsupportedOperations} file create/rename/delete operation${edit.unsupportedOperations === 1 ? '' : 's'} that Oxide B1.3.5 Build 4 deliberately does not apply automatically yet.</p>`);
+    return false;
+  }
+  const affected = [];
+  try {
+    for (const file of edit.files || []) {
+      const original = await invoke('read_text_file', { path: file.path });
+      const updated = applyEditsToText(original, file.edits || []);
+      if (updated === original) continue;
+      await invoke('write_text_file', { path: file.path, content: updated });
+      affected.push(file.path);
+    }
+    for (const path of affected) {
+      if (state.tabs.some((tab) => normalizePath(tab.path) === normalizePath(path))) await reloadTabFromDisk(path);
+    }
+    await refreshProjectTree();
+    if (state.liveCheck) scheduleAnalysis(120);
+    appendFriendly('success', `${label} applied · ${edit.editCount} edit${edit.editCount === 1 ? '' : 's'} across ${affected.length} file${affected.length === 1 ? '' : 's'}.`);
+    return true;
+  } catch (error) {
+    showInfo('RUST EDIT FAILED', `<p class="info-error">${escapeHtml(String(error))}</p>`);
+    return false;
+  }
+}
+
+async function startSemanticRename() {
+  if (!requireRustIntelligence()) return;
+  closeCompletionUi();
+  if (!await saveAllDirtyTabs({ announce: false })) return;
+  const payload = analyzerPositionPayload();
+  try {
+    const prepared = await invoke('rust_prepare_rename', payload);
+    if (!prepared?.range) {
+      showInfo('SEMANTIC RENAME', '<p>The symbol at the caret cannot be renamed.</p>');
+      return;
+    }
+    const start = offsetFromLspPosition(els.editor.value, prepared.range.start);
+    const end = offsetFromLspPosition(els.editor.value, prepared.range.end);
+    const currentName = prepared.placeholder || els.editor.value.slice(start, end);
+    state.intelligence.pendingRename = { ...payload, currentName };
+    els.renameSymbolLabel.textContent = currentName ? `RENAME ${currentName}` : 'RUST SYMBOL';
+    els.renameInput.value = currentName;
+    if (!els.renameDialog.open) els.renameDialog.showModal();
+    requestAnimationFrame(() => { els.renameInput.focus(); els.renameInput.select(); });
+  } catch (error) {
+    showInfo('SEMANTIC RENAME FAILED', `<p class="info-error">${escapeHtml(String(error))}</p>`);
+  }
+}
+
+async function submitSemanticRename(event) {
+  event.preventDefault();
+  const pending = state.intelligence.pendingRename;
+  const newName = els.renameInput.value.trim();
+  if (!pending || !newName || newName === pending.currentName) {
+    if (els.renameDialog.open) els.renameDialog.close();
+    return;
+  }
+  try {
+    const edit = await invoke('rust_rename', {
+      projectPath: pending.projectPath,
+      path: pending.path,
+      content: pending.content,
+      line: pending.line,
+      character: pending.character,
+      newName,
+    });
+    if (els.renameDialog.open) els.renameDialog.close();
+    if (!edit?.editCount) {
+      showInfo('SEMANTIC RENAME', '<p>rust-analyzer returned no rename edits.</p>');
+      return;
+    }
+    const approved = await oxideConfirm('SEMANTIC RENAME', `Rename ${pending.currentName || 'symbol'} to ${newName}? rust-analyzer will apply ${edit.editCount} edit${edit.editCount === 1 ? '' : 's'} across ${edit.files?.length || 0} file${edit.files?.length === 1 ? '' : 's'}.`, 'RENAME');
+    if (approved) await applyWorkspaceEdit(edit, `Renamed ${pending.currentName || 'symbol'} → ${newName}`);
+  } catch (error) {
+    showInfo('SEMANTIC RENAME FAILED', `<p class="info-error">${escapeHtml(String(error))}</p>`);
+  } finally {
+    state.intelligence.pendingRename = null;
+  }
+}
+
+function renderCodeActions() {
+  const actions = state.intelligence.codeActions || [];
+  if (!actions.length) {
+    els.codeActionsList.innerHTML = '<div class="intelligence-empty">No rust-analyzer actions are available at the caret.</div>';
+    return;
+  }
+  els.codeActionsList.innerHTML = actions.map((action, index) => {
+    const disabled = Boolean(action.disabledReason || !action.edit);
+    return `<button type="button" class="intelligence-result code-action-result ${action.preferred ? 'preferred' : ''}" data-code-action-index="${index}" ${disabled ? 'disabled' : ''}><span class="intelligence-result-icon">${action.preferred ? '★' : '⚙'}</span><span><b>${escapeHtml(action.title)}</b><small>${escapeHtml(action.disabledReason || action.kind || 'rust-analyzer action')}</small></span><span class="intelligence-jump">${disabled ? 'UNAVAILABLE' : 'APPLY →'}</span></button>`;
+  }).join('');
+  els.codeActionsList.querySelectorAll('[data-code-action-index]:not(:disabled)').forEach((button) => button.addEventListener('click', async () => {
+    const action = actions[Number(button.dataset.codeActionIndex || 0)];
+    if (!action?.edit) return;
+    if (els.codeActionsDialog.open) els.codeActionsDialog.close();
+    await applyWorkspaceEdit(action.edit, action.title);
+  }));
+}
+
+async function showCodeActions() {
+  if (!requireRustIntelligence()) return;
+  closeCompletionUi();
+  if (!await saveAllDirtyTabs({ announce: false })) return;
+  try {
+    state.intelligence.codeActions = await invoke('rust_code_actions', analyzerPositionPayload());
+    renderCodeActions();
+    if (!els.codeActionsDialog.open) els.codeActionsDialog.showModal();
+  } catch (error) {
+    showInfo('CODE ACTIONS FAILED', `<p class="info-error">${escapeHtml(String(error))}</p>`);
+  }
+}
+
+const AUTO_CLOSE_PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"' };
+const AUTO_CLOSE_ENDINGS = new Set(Object.values(AUTO_CLOSE_PAIRS));
+
+function handleAutoClosePairs(event) {
+  if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return false;
+  const key = event.key;
+  const start = els.editor.selectionStart;
+  const end = els.editor.selectionEnd;
+  const next = els.editor.value[start] || '';
+
+  if (AUTO_CLOSE_ENDINGS.has(key) && start === end && next === key) {
+    event.preventDefault();
+    els.editor.setSelectionRange(start + 1, start + 1);
+    updateBracketMatch();
+    return true;
+  }
+
+  const closing = AUTO_CLOSE_PAIRS[key];
+  if (!closing) return false;
+  state.completer.dismissedThroughWord = false;
+  event.preventDefault();
+  closeCompletionUi();
+  if (start !== end) {
+    const selected = els.editor.value.slice(start, end);
+    els.editor.setRangeText(`${key}${selected}${closing}`, start, end, 'select');
+    els.editor.setSelectionRange(start + 1, end + 1);
+  } else {
+    els.editor.setRangeText(`${key}${closing}`, start, end, 'end');
+    els.editor.setSelectionRange(start + 1, start + 1);
+  }
+  markEditorChanged();
+  updateBracketMatch();
+  if (key === '(') requestAnimationFrame(requestSignatureHelp);
+  return true;
+}
+
+function matchingBracketOffsets(text, caret) {
+  const pairs = { '(': ')', '[': ']', '{': '}', ')': '(', ']': '[', '}': '{' };
+  let index = caret > 0 && pairs[text[caret - 1]] ? caret - 1 : (pairs[text[caret]] ? caret : -1);
+  if (index < 0) return null;
+  const bracket = text[index];
+  const forward = '([{'.includes(bracket);
+  const match = pairs[bracket];
+  let depth = 0;
+  for (let cursor = index; forward ? cursor < text.length : cursor >= 0; cursor += forward ? 1 : -1) {
+    const char = text[cursor];
+    if (char === bracket) depth += 1;
+    else if (char === match) {
+      depth -= 1;
+      if (depth === 0) return [index, cursor];
+    }
+  }
+  return null;
+}
+
+function editorPointForOffset(offset) {
+  const before = els.editor.value.slice(0, Math.max(0, offset));
+  const line = (before.match(/\n/g) || []).length;
+  const lastBreak = before.lastIndexOf('\n');
+  const columnText = before.slice(lastBreak + 1);
+  const style = getComputedStyle(els.editor);
+  const fontSize = parseFloat(style.fontSize) || 13;
+  const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.55;
+  const canvas = editorPointForOffset.canvas || (editorPointForOffset.canvas = document.createElement('canvas'));
+  const context = canvas.getContext('2d');
+  context.font = style.font;
+  const width = context.measureText(columnText).width;
+  const charWidth = context.measureText('M').width || fontSize * 0.62;
+  return {
+    left: els.editor.offsetLeft + (parseFloat(style.paddingLeft) || 14) + width - els.editor.scrollLeft,
+    top: els.editor.offsetTop + (parseFloat(style.paddingTop) || 12) + line * lineHeight - els.editor.scrollTop,
+    width: Math.max(6, charWidth),
+    height: lineHeight,
+  };
+}
+
+function updateBracketMatch() {
+  const markers = [els.bracketMatchA, els.bracketMatchB];
+  const matches = isRustEditorContext() && els.editor.selectionStart === els.editor.selectionEnd
+    ? matchingBracketOffsets(els.editor.value, els.editor.selectionStart)
+    : null;
+  if (!matches) {
+    markers.forEach((marker) => { marker.hidden = true; });
+    return;
+  }
+  matches.forEach((offset, index) => {
+    const point = editorPointForOffset(offset);
+    const marker = markers[index];
+    marker.hidden = false;
+    marker.style.left = `${point.left}px`;
+    marker.style.top = `${point.top}px`;
+    marker.style.width = `${point.width}px`;
+    marker.style.height = `${point.height}px`;
+  });
+}
+
 function markEditorChanged() {
   const tab = activeTab();
   if (!tab) return;
@@ -3434,6 +3839,7 @@ function markEditorChanged() {
   scheduleSemanticReadability();
   scheduleAnalysis();
   scheduleTutorialEvaluation();
+  updateBracketMatch();
 }
 
 function cycleTab(direction = 1) {
@@ -3580,11 +3986,11 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.5 · Build 3</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence with Semantic Readability Colors, LLDB/DAP debugging, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
+  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.5 · Build 4</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence with Semantic Readability Colors, LLDB/DAP debugging, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
 }
 
 function showShortcuts() {
-  showInfo('KEYBOARD SHORTCUTS', `<div class="shortcut-grid"><span>New Project</span><kbd>Ctrl+N</kbd><span>Open Project</span><kbd>Ctrl+O</kbd><span>Save File</span><kbd>Ctrl+S</kbd><span>Close File</span><kbd>Ctrl+W</kbd><span>Switch Tab</span><kbd>Ctrl+Tab</kbd><span>Save Project As</span><kbd>Ctrl+Shift+S</kbd><span>Run</span><kbd>F5</kbd><span>Start / Continue Debugging</span><kbd>F9</kbd><span>Step Over</span><kbd>F10</kbd><span>Step Into</span><kbd>F11</kbd><span>Step Out</span><kbd>Shift+F11</kbd><span>Stop Debugging</span><kbd>Ctrl+F9</kbd><span>Check</span><kbd>F6</kbd><span>Build</span><kbd>F7</kbd><span>Test</span><kbd>F8</kbd><span>Analyze Now</span><kbd>Ctrl+F6</kbd><span>Code Completion</span><kbd>Ctrl+Space</kbd><span>Interactive Tutorial</span><kbd>Ctrl+Alt+T</kbd><span>Toggle Build Bay</span><kbd>Ctrl+&#96;</kbd></div>`);
+  showInfo('KEYBOARD SHORTCUTS', `<div class="shortcut-grid"><span>New Project</span><kbd>Ctrl+N</kbd><span>Open Project</span><kbd>Ctrl+O</kbd><span>Save File</span><kbd>Ctrl+S</kbd><span>Close File</span><kbd>Ctrl+W</kbd><span>Switch Tab</span><kbd>Ctrl+Tab</kbd><span>Save Project As</span><kbd>Ctrl+Shift+S</kbd><span>Run</span><kbd>F5</kbd><span>Start / Continue Debugging</span><kbd>F9</kbd><span>Step Over</span><kbd>F10</kbd><span>Step Into</span><kbd>F11</kbd><span>Step Out</span><kbd>Shift+F11</kbd><span>Stop Debugging</span><kbd>Ctrl+F9</kbd><span>Check</span><kbd>F6</kbd><span>Build</span><kbd>F7</kbd><span>Test</span><kbd>F8</kbd><span>Analyze Now</span><kbd>Ctrl+F6</kbd><span>Code Completion</span><kbd>Ctrl+Space</kbd><span>Go to Definition</span><kbd>F12</kbd><span>Find References</span><kbd>Shift+F12</kbd><span>Semantic Rename</span><kbd>F2</kbd><span>Code Actions / Quick Fixes</span><kbd>Ctrl+.</kbd><span>Interactive Tutorial</span><kbd>Ctrl+Alt+T</kbd><span>Toggle Build Bay</span><kbd>Ctrl+&#96;</kbd></div>`);
 }
 
 let messageResolver = null;
@@ -3643,6 +4049,10 @@ async function handleMenuAction(action) {
     updateMenuAvailability();
   }
   else if (action === 'trigger-completion') await requestCodeCompletion({ manual: true });
+  else if (action === 'go-definition') await goToDefinition();
+  else if (action === 'find-references') await findReferences();
+  else if (action === 'rename-symbol') await startSemanticRename();
+  else if (action === 'code-actions') await showCodeActions();
   else if (action === 'tutorial') await openTutorialHome();
   else if (action === 'toggle-project') setViewPanel('project', !state.view.project);
   else if (action === 'toggle-cargo') setViewPanel('cargo', !state.view.cargo);
@@ -3692,8 +4102,11 @@ els.tutorialLearnMore.addEventListener('click', () => {
   els.tutorialLearnMore.textContent = willShow ? 'HIDE DETAILS' : 'LEARN MORE';
 });
 els.save.addEventListener('click', () => saveCurrentFile());
-els.editor.addEventListener('input', (event) => { markEditorChanged(); scheduleCodeCompletion(event); });
-els.editor.addEventListener('scroll', () => { els.lines.scrollTop = els.editor.scrollTop; syncSyntaxScroll(); positionDebugLineHighlight(); if (state.completer.visible || state.completer.signatureVisible) positionCompletionUi(); });
+els.editor.addEventListener('input', (event) => { markEditorChanged(); scheduleCodeCompletion(event); updateBracketMatch(); });
+els.editor.addEventListener('scroll', () => { els.lines.scrollTop = els.editor.scrollTop; syncSyntaxScroll(); positionDebugLineHighlight(); updateBracketMatch(); if (state.completer.visible || state.completer.signatureVisible) positionCompletionUi(); });
+els.editor.addEventListener('click', updateBracketMatch);
+els.editor.addEventListener('keyup', updateBracketMatch);
+els.editor.addEventListener('select', updateBracketMatch);
 const OXIDE_INDENT = '    ';
 
 function currentLineContext(text, position) {
@@ -3753,6 +4166,7 @@ function handleClosingBraceIndent(event) {
 
 els.editor.addEventListener('keydown', (event) => {
   if (handleCompleterKey(event)) return;
+  if (handleAutoClosePairs(event)) return;
   if (handleSmartEnter(event)) return;
   if (handleClosingBraceIndent(event)) return;
 
@@ -3800,6 +4214,13 @@ els.breakpointForm.addEventListener('submit', saveBreakpointOptions);
 $('#breakpoint-remove').addEventListener('click', removeEditedBreakpoint);
 $('#breakpoint-cancel').addEventListener('click', closeBreakpointEditor);
 $('#breakpoint-close').addEventListener('click', closeBreakpointEditor);
+$('#references-close').addEventListener('click', () => els.referencesDialog.close());
+$('#references-done').addEventListener('click', () => els.referencesDialog.close());
+$('#rename-close').addEventListener('click', () => { state.intelligence.pendingRename = null; els.renameDialog.close(); });
+$('#rename-cancel').addEventListener('click', () => { state.intelligence.pendingRename = null; els.renameDialog.close(); });
+els.renameForm.addEventListener('submit', submitSemanticRename);
+$('#code-actions-close').addEventListener('click', () => els.codeActionsDialog.close());
+$('#code-actions-done').addEventListener('click', () => els.codeActionsDialog.close());
 $('#debug-target-cancel').addEventListener('click', () => finishDebugTargetChoice(null));
 $('#debug-target-close').addEventListener('click', () => finishDebugTargetChoice(null));
 
@@ -3959,6 +4380,18 @@ document.addEventListener('keydown', async (event) => {
   } else if (ctrl && event.key === 'F6') {
     event.preventDefault();
     await runDiagnostics({ silent: false, force: true });
+  } else if (event.key === 'F12' && event.shiftKey) {
+    event.preventDefault();
+    await findReferences();
+  } else if (event.key === 'F12') {
+    event.preventDefault();
+    await goToDefinition();
+  } else if (event.key === 'F2') {
+    event.preventDefault();
+    await startSemanticRename();
+  } else if (ctrl && event.key === '.') {
+    event.preventDefault();
+    await showCodeActions();
   } else if (event.ctrlKey && event.shiftKey && event.key === 'F9') {
     event.preventDefault();
     await restartDebugging();

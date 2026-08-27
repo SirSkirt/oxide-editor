@@ -1,5 +1,10 @@
-# Oxide Editor B1.3.5 · Build 3
+# Oxide Editor B1.3.5 · Build 4
 
+B1.3.5 Build 4 is the **Rust Intelligence & Editing build**. It expands Oxide's existing persistent rust-analyzer connection into traditional IDE navigation/refactoring features while keeping the Rust-heavy architecture and normal Cargo project model.
+
+Build 4 adds **Go to Definition (F12), Find References (Shift+F12), Semantic Rename (F2), and Code Actions / Quick Fixes (Ctrl+.)**. It also repairs the Rust Code Analyzer/Completer UX: the popup stays below the line being typed, Escape dismisses it for the remainder of the current word, and completion is allowed again when the next word starts. Auto-close pairs and bracket matching add a smaller typing-quality pass.
+
+The resizable Build Bay, Build 3 workbench-polish preview, Semantic Readability Colors, LLDB/DAP debugger, and Windows/Linux `(release_version, build)` updater behavior remain intact.
 Oxide is a Rust-first desktop IDE built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, language intelligence, debugging, and update orchestration are handled by Rust.
 
 B1.3.5 Build 3 is a **workbench-polish and reliability build**. It keeps Oxide's existing forged-metal layout and workflow, but tightens the visual hierarchy of panels, tabs, command controls, project rows, Cargo/dependency cards, the editor chrome, and the Build Bay. It does not replace the current UI with a new layout.
@@ -247,7 +252,7 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 - Release version: `1.3.5`
 - User-facing version: **B1.3.5**
 - Current internal build number: **3**
-- Full installed identity: **B1.3.5 · Build 3**
+- Full installed identity: **B1.3.5 · Build 4**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:
@@ -268,7 +273,7 @@ For example:
 ```text
 B1.3.5 · Build 2
         ↓
-B1.3.5 · Build 3
+B1.3.5 · Build 4
 ```
 
 The signed update feed carries `release_version` plus `build`, and Oxide compares both. GitHub update packages include the build in their filename. Build 3 also gives every build its own release tag (`v1.3.5-b3`, `v1.3.5-b4`, and so on), so GitHub's `releases/latest/download/...` route advances even when the public Oxide version stays the same. For compatibility with older updater-enabled Oxide builds, the feed's required SemVer `version` is a monotonic updater sequence while `release_version` remains the actual Oxide release version.

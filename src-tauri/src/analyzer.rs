@@ -33,6 +33,7 @@ struct AnalyzerSession {
     document_contents: HashMap<PathBuf, String>,
     semantic_token_types: Vec<String>,
     semantic_token_modifiers: Vec<String>,
+    diagnostics: Arc<Mutex<HashMap<String, Vec<Value>>>>,
 }
 
 #[derive(Serialize)]
@@ -95,6 +96,45 @@ pub struct SemanticTokenView {
     pub length: u32,
     pub token_type: String,
     pub modifiers: Vec<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocationView {
+    pub path: String,
+    pub range: LspRangeView,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceFileEditView {
+    pub path: String,
+    pub edits: Vec<CompletionTextEditView>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceEditView {
+    pub files: Vec<WorkspaceFileEditView>,
+    pub edit_count: usize,
+    pub unsupported_operations: usize,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrepareRenameView {
+    pub range: LspRangeView,
+    pub placeholder: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CodeActionView {
+    pub title: String,
+    pub kind: String,
+    pub preferred: bool,
+    pub edit: Option<WorkspaceEditView>,
+    pub disabled_reason: String,
 }
 
 fn executable_name(program: &str) -> String {
@@ -162,6 +202,7 @@ fn reader_loop<R: Read + Send + 'static>(
     reader: R,
     pending: Arc<Mutex<HashMap<u64, mpsc::Sender<Value>>>>,
     stdin: Arc<Mutex<ChildStdin>>,
+    diagnostics: Arc<Mutex<HashMap<String, Vec<Value>>>>,
 ) {
     thread::spawn(move || {
         let mut reader = BufReader::new(reader);
@@ -188,6 +229,21 @@ fn reader_loop<R: Read + Send + 'static>(
                 return;
             }
             let Ok(message) = serde_json::from_slice::<Value>(&body) else { continue; };
+
+            if message.get("method").and_then(Value::as_str) == Some("textDocument/publishDiagnostics") {
+                if let Some(params) = message.get("params") {
+                    if let (Some(uri), Some(items)) = (
+                        params.get("uri").and_then(Value::as_str),
+                        params.get("diagnostics").and_then(Value::as_array),
+                    ) {
+                        if let Ok(mut cache) = diagnostics.lock() {
+                            cache.insert(uri.to_string(), items.clone());
+                        }
+                    }
+                }
+                continue;
+            }
+
             let Some(id) = message.get("id").and_then(Value::as_u64) else { continue; };
 
             // Requests from rust-analyzer also carry an id. Handle those before
@@ -248,7 +304,8 @@ impl AnalyzerSession {
         let stdin = Arc::new(Mutex::new(child.stdin.take().ok_or_else(|| "Could not open rust-analyzer stdin.".to_string())?));
         let stdout = child.stdout.take().ok_or_else(|| "Could not open rust-analyzer stdout.".to_string())?;
         let pending = Arc::new(Mutex::new(HashMap::new()));
-        reader_loop(stdout, pending.clone(), stdin.clone());
+        let diagnostics = Arc::new(Mutex::new(HashMap::new()));
+        reader_loop(stdout, pending.clone(), stdin.clone(), diagnostics.clone());
 
         let mut session = Self {
             project_path: project_path.to_path_buf(),
@@ -261,6 +318,7 @@ impl AnalyzerSession {
             document_contents: HashMap::new(),
             semantic_token_types: Vec::new(),
             semantic_token_modifiers: Vec::new(),
+            diagnostics,
         };
 
         let root_uri = Url::from_directory_path(project_path)
@@ -284,6 +342,12 @@ impl AnalyzerSession {
                             "documentationFormat": ["markdown", "plaintext"],
                             "parameterInformation": { "labelOffsetSupport": true }
                         }
+                    },
+                    "definition": {},
+                    "references": {},
+                    "rename": { "prepareSupport": true },
+                    "codeAction": {
+                        "resolveSupport": { "properties": ["edit"] }
                     },
                     "semanticTokens": {
                         "requests": { "full": true },
@@ -480,6 +544,82 @@ fn text_edit_view(value: &Value) -> Option<CompletionTextEditView> {
         range: range_view(range_value)?,
         new_text,
     })
+}
+
+fn uri_path(uri: &str) -> Option<String> {
+    Url::parse(uri).ok()?.to_file_path().ok().map(|path| path.to_string_lossy().to_string())
+}
+
+fn location_view(value: &Value) -> Option<LocationView> {
+    let uri = value
+        .get("uri")
+        .and_then(Value::as_str)
+        .or_else(|| value.get("targetUri").and_then(Value::as_str))?;
+    let range = value
+        .get("selectionRange")
+        .or_else(|| value.get("targetSelectionRange"))
+        .or_else(|| value.get("range"))
+        .or_else(|| value.get("targetRange"))?;
+    Some(LocationView { path: uri_path(uri)?, range: range_view(range)? })
+}
+
+fn location_views(value: Value) -> Vec<LocationView> {
+    if value.is_null() {
+        return Vec::new();
+    }
+    if let Some(items) = value.as_array() {
+        return items.iter().filter_map(location_view).collect();
+    }
+    location_view(&value).into_iter().collect()
+}
+
+fn workspace_edit_view(value: &Value) -> WorkspaceEditView {
+    let mut by_path: HashMap<String, Vec<CompletionTextEditView>> = HashMap::new();
+    let mut unsupported_operations = 0usize;
+
+    if let Some(changes) = value.get("changes").and_then(Value::as_object) {
+        for (uri, edits) in changes {
+            let Some(path) = uri_path(uri) else {
+                unsupported_operations += 1;
+                continue;
+            };
+            let parsed = edits
+                .as_array()
+                .map(|items| items.iter().filter_map(text_edit_view).collect::<Vec<_>>())
+                .unwrap_or_default();
+            by_path.entry(path).or_default().extend(parsed);
+        }
+    }
+
+    if let Some(changes) = value.get("documentChanges").and_then(Value::as_array) {
+        for change in changes {
+            if let (Some(document), Some(edits)) = (change.get("textDocument"), change.get("edits").and_then(Value::as_array)) {
+                let Some(uri) = document.get("uri").and_then(Value::as_str) else {
+                    unsupported_operations += 1;
+                    continue;
+                };
+                let Some(path) = uri_path(uri) else {
+                    unsupported_operations += 1;
+                    continue;
+                };
+                by_path
+                    .entry(path)
+                    .or_default()
+                    .extend(edits.iter().filter_map(text_edit_view));
+            } else {
+                // Create/Rename/Delete file operations are deliberately not applied by Build 4.
+                unsupported_operations += 1;
+            }
+        }
+    }
+
+    let mut files = by_path
+        .into_iter()
+        .map(|(path, edits)| WorkspaceFileEditView { path, edits })
+        .collect::<Vec<_>>();
+    files.sort_by(|a, b| a.path.cmp(&b.path));
+    let edit_count = files.iter().map(|file| file.edits.len()).sum();
+    WorkspaceEditView { files, edit_count, unsupported_operations }
 }
 
 fn completion_kind(kind: Option<u64>) -> String {
@@ -688,3 +828,194 @@ pub fn signature_help(
         }))
     })
 }
+
+pub fn definition(
+    runtime: &RustAnalyzerRuntime,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+) -> Result<Vec<LocationView>, String> {
+    let project = PathBuf::from(project_path);
+    let document = PathBuf::from(path);
+    runtime.with_session(&project, |session| {
+        let uri = session.sync_document(&document, &content)?;
+        let result = session.request(
+            "textDocument/definition",
+            json!({
+                "textDocument": { "uri": uri },
+                "position": { "line": line, "character": character }
+            }),
+            Duration::from_secs(5),
+        )?;
+        Ok(location_views(result))
+    })
+}
+
+pub fn references(
+    runtime: &RustAnalyzerRuntime,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+) -> Result<Vec<LocationView>, String> {
+    let project = PathBuf::from(project_path);
+    let document = PathBuf::from(path);
+    runtime.with_session(&project, |session| {
+        let uri = session.sync_document(&document, &content)?;
+        let result = session.request(
+            "textDocument/references",
+            json!({
+                "textDocument": { "uri": uri },
+                "position": { "line": line, "character": character },
+                "context": { "includeDeclaration": true }
+            }),
+            Duration::from_secs(7),
+        )?;
+        Ok(location_views(result))
+    })
+}
+
+pub fn prepare_rename(
+    runtime: &RustAnalyzerRuntime,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+) -> Result<Option<PrepareRenameView>, String> {
+    let project = PathBuf::from(project_path);
+    let document = PathBuf::from(path);
+    runtime.with_session(&project, |session| {
+        let uri = session.sync_document(&document, &content)?;
+        let result = session.request(
+            "textDocument/prepareRename",
+            json!({
+                "textDocument": { "uri": uri },
+                "position": { "line": line, "character": character }
+            }),
+            Duration::from_secs(5),
+        )?;
+        if result.is_null() {
+            return Ok(None);
+        }
+        let range = if let Some(range) = result.get("range") {
+            range_view(range)
+        } else if result.get("defaultBehavior").and_then(Value::as_bool).unwrap_or(false) {
+            Some(LspRangeView {
+                start: LspPositionView { line, character },
+                end: LspPositionView { line, character },
+            })
+        } else {
+            range_view(&result)
+        };
+        Ok(range.map(|range| PrepareRenameView {
+            range,
+            placeholder: result.get("placeholder").and_then(Value::as_str).unwrap_or_default().to_string(),
+        }))
+    })
+}
+
+pub fn rename(
+    runtime: &RustAnalyzerRuntime,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+    new_name: String,
+) -> Result<WorkspaceEditView, String> {
+    let project = PathBuf::from(project_path);
+    let document = PathBuf::from(path);
+    runtime.with_session(&project, |session| {
+        let uri = session.sync_document(&document, &content)?;
+        let result = session.request(
+            "textDocument/rename",
+            json!({
+                "textDocument": { "uri": uri },
+                "position": { "line": line, "character": character },
+                "newName": new_name
+            }),
+            Duration::from_secs(8),
+        )?;
+        Ok(workspace_edit_view(&result))
+    })
+}
+
+fn diagnostic_contains_position(diagnostic: &Value, line: u32, character: u32) -> bool {
+    let Some(range) = diagnostic.get("range") else { return true; };
+    let Some(start) = range.get("start").and_then(position_view) else { return true; };
+    let Some(end) = range.get("end").and_then(position_view) else { return true; };
+    let after_start = line > start.line || (line == start.line && character >= start.character);
+    let before_end = line < end.line || (line == end.line && character <= end.character);
+    after_start && before_end
+}
+
+pub fn code_actions(
+    runtime: &RustAnalyzerRuntime,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+) -> Result<Vec<CodeActionView>, String> {
+    let project = PathBuf::from(project_path);
+    let document = PathBuf::from(path);
+    runtime.with_session(&project, |session| {
+        let uri = session.sync_document(&document, &content)?;
+        let diagnostics = session
+            .diagnostics
+            .lock()
+            .ok()
+            .and_then(|cache| cache.get(&uri).cloned())
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|diagnostic| diagnostic_contains_position(diagnostic, line, character))
+            .collect::<Vec<_>>();
+        let result = session.request(
+            "textDocument/codeAction",
+            json!({
+                "textDocument": { "uri": uri },
+                "range": {
+                    "start": { "line": line, "character": character },
+                    "end": { "line": line, "character": character }
+                },
+                "context": { "diagnostics": diagnostics }
+            }),
+            Duration::from_secs(7),
+        )?;
+
+        let mut output = Vec::new();
+        for item in result.as_array().cloned().unwrap_or_default().into_iter().take(40) {
+            let mut action = item;
+            if action.get("edit").is_none() && action.get("data").is_some() {
+                if let Ok(resolved) = session.request("codeAction/resolve", action.clone(), Duration::from_secs(4)) {
+                    action = resolved;
+                }
+            }
+            let title = action.get("title").and_then(Value::as_str).unwrap_or("Rust code action").to_string();
+            let kind = action.get("kind").and_then(Value::as_str).unwrap_or("action").to_string();
+            let preferred = action.get("isPreferred").and_then(Value::as_bool).unwrap_or(false);
+            let edit = action.get("edit").map(workspace_edit_view).filter(|edit| edit.edit_count > 0 || edit.unsupported_operations > 0);
+            let disabled_reason = action
+                .get("disabled")
+                .and_then(|value| value.get("reason"))
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .unwrap_or_else(|| {
+                    if action.get("command").is_some() {
+                        "This action requires a rust-analyzer command after its edit; Oxide Build 4 does not execute command actions yet.".to_string()
+                    } else if edit.is_none() {
+                        "This rust-analyzer action requires a command that Oxide Build 4 does not apply yet.".to_string()
+                    } else {
+                        String::new()
+                    }
+                });
+            output.push(CodeActionView { title, kind, preferred, edit, disabled_reason });
+        }
+        Ok(output)
+    })
+}
+

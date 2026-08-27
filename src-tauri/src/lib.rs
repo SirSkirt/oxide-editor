@@ -3560,6 +3560,82 @@ async fn rust_signature_help(
 }
 
 #[tauri::command]
+async fn rust_definition(
+    runtime: State<'_, analyzer::RustAnalyzerRuntime>,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+) -> Result<Vec<analyzer::LocationView>, String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || analyzer::definition(&runtime, project_path, path, content, line, character))
+        .await
+        .map_err(|error| format!("Go to Definition request could not be joined: {error}"))?
+}
+
+#[tauri::command]
+async fn rust_references(
+    runtime: State<'_, analyzer::RustAnalyzerRuntime>,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+) -> Result<Vec<analyzer::LocationView>, String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || analyzer::references(&runtime, project_path, path, content, line, character))
+        .await
+        .map_err(|error| format!("Find References request could not be joined: {error}"))?
+}
+
+#[tauri::command]
+async fn rust_prepare_rename(
+    runtime: State<'_, analyzer::RustAnalyzerRuntime>,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+) -> Result<Option<analyzer::PrepareRenameView>, String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || analyzer::prepare_rename(&runtime, project_path, path, content, line, character))
+        .await
+        .map_err(|error| format!("Rename preparation request could not be joined: {error}"))?
+}
+
+#[tauri::command]
+async fn rust_rename(
+    runtime: State<'_, analyzer::RustAnalyzerRuntime>,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+    new_name: String,
+) -> Result<analyzer::WorkspaceEditView, String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || analyzer::rename(&runtime, project_path, path, content, line, character, new_name))
+        .await
+        .map_err(|error| format!("Semantic Rename request could not be joined: {error}"))?
+}
+
+#[tauri::command]
+async fn rust_code_actions(
+    runtime: State<'_, analyzer::RustAnalyzerRuntime>,
+    project_path: String,
+    path: String,
+    content: String,
+    line: u32,
+    character: u32,
+) -> Result<Vec<analyzer::CodeActionView>, String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || analyzer::code_actions(&runtime, project_path, path, content, line, character))
+        .await
+        .map_err(|error| format!("Code Actions request could not be joined: {error}"))?
+}
+
+#[tauri::command]
 async fn rust_analyzer_stop(runtime: State<'_, analyzer::RustAnalyzerRuntime>) -> Result<(), String> {
     let runtime = runtime.inner().clone();
     tauri::async_runtime::spawn_blocking(move || runtime.stop())
@@ -3651,6 +3727,11 @@ pub fn run() {
             rust_semantic_tokens,
             rust_completions,
             rust_signature_help,
+            rust_definition,
+            rust_references,
+            rust_prepare_rename,
+            rust_rename,
+            rust_code_actions,
             rust_analyzer_stop,
             oxide_update_check,
             oxide_update_prepare,
