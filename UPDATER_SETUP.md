@@ -144,6 +144,6 @@ install Tauri Linux build dependencies
 - Fresh Linux users download either the B1.3.2 `.deb` or AppImage from GitHub Releases.
 - B1.3.2 AppImage installs use the Linux Rivet package feed for subsequent automatic updates.
 
-## B1.3.6 Build 2 branding compatibility
+## B1.3.6 Build 3 branding/package compatibility
 
-Rivet intentionally keeps the existing `oxide-editor` binary/package slug, `com.oxide.editor` identifier, `oxide-*` feed names, and signing key identity so installed Oxide builds can update directly into Rivet. These names are internal compatibility contracts and do not represent the current product branding.
+Rivet intentionally keeps the existing `oxide-editor` executable path, `com.oxide.editor` identifier, `oxide-*` feed names, and signing key identity where changing them would break installed-update compatibility. The Debian package itself is now named `rivet`; Build 3 adds `Provides: oxide-editor`, `Replaces: oxide-editor`, and `Conflicts: oxide-editor` so dpkg can perform the one-time Oxide → Rivet package migration without a manual uninstall.

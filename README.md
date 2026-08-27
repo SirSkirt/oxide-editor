@@ -1,8 +1,8 @@
-# Rivet B1.3.6 · Build 2
+# Rivet B1.3.6 · Build 3
 
 
 **Rivet** is the product name; **Rust Development Environment** is its tagline. The default presentation theme remains named **Oxide**.
-B1.3.6 Build 2 carries the B1.3.6 theme engine forward under the new **Rivet** product name. Build 1 introduced the presentation-layer theme engine; Build 2 changes branding without moving or restructuring the IDE's existing layout or functionality.
+B1.3.6 Build 3 carries the Rivet rename and B1.3.6 theme engine forward with two compatibility fixes: full frontend startup is restored after a theme-initialization typo in Build 2, and Linux `.deb` packages now declare the package migration needed to replace existing `oxide-editor` installations cleanly.
 
 The default **Oxide** theme preserves the current forged-workbench appearance. **Metallic** makes the same interface feel more like machined/forged steel, **Rust** applies a weathered rusted-iron treatment, and **Modern (Dark)** / **Modern (Light)** provide conventional IDE presentations for users who prefer a less industrial look.
 
@@ -39,6 +39,10 @@ Supported release targets in B1.3.6:
 - **Windows x86_64** — NSIS installer plus Rivet's signed native ZIP update packages
 - **Linux x86_64 AppImage** — portable build with Rivet automatic package updates
 - **Linux x86_64 .deb** — native Debian/Ubuntu/Pop!_OS package with Polkit-authorized automatic updates
+
+### Oxide → Rivet Debian package migration
+
+B1.3.6 Build 3 adds `Provides`, `Replaces`, and `Conflicts` metadata for the former `oxide-editor` Debian package. This allows a machine with an existing Oxide `.deb` installation to install/update to the new `rivet` package even though both generations intentionally use the compatibility executable path `/usr/bin/oxide-editor`.
 
 The Linux CI build runs on Ubuntu 22.04 so the produced binaries target a reasonably old WebKitGTK/glibc baseline instead of accidentally requiring the newest Ubuntu release.
 
@@ -272,7 +276,7 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 - Release version: `1.3.6`
 - User-facing version: **B1.3.6**
 - Current internal build number: **1**
-- Full installed identity: **Rivet B1.3.6 · Build 2**
+- Full installed identity: **Rivet B1.3.6 · Build 3**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:
@@ -293,7 +297,7 @@ For example:
 ```text
 B1.3.6 · Build 2
         ↓
-B1.3.6 · Build 2
+B1.3.6 · Build 3
 ```
 
 The signed update feed carries `release_version` plus `build`, and Rivet compares both. GitHub update packages include the build in their filename. Every internal build gets its own release tag (`v1.3.6-b1`, `v1.3.6-b2`, and so on), so GitHub's `releases/latest/download/...` route advances even when the public Rivet version stays the same. For compatibility with older updater-enabled Rivet builds, the feed's required SemVer `version` is a monotonic updater sequence while `release_version` remains the actual Rivet release version.

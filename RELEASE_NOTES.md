@@ -1,36 +1,41 @@
-# Rivet B1.3.6 · Build 2
+# Rivet B1.3.6 · Build 3
 
-B1.3.6 Build 2 renames **Oxide Editor** to **Rivet**. The product tagline is **Rust Development Environment**. This build is a branding change only: the B1.3.6 theme engine, IDE layout, commands, debugger, tutorial, Build Bay, Cargo integration, and editor functionality remain the same.
+B1.3.6 Build 3 is a **rename-compatibility and startup reliability fix** for the first Rivet-branded release.
 
-## Branding
+## Startup / project controls
 
-- Product name: **Rivet**
-- Tagline: **Rust Development Environment**
-- New Rivet application/logo mark across the main window and application icons.
-- Window titles, About dialog, Run Terminal, file browser, updater UI, tutorial wording, and release presentation now use Rivet branding.
-- The default visual theme is still named **Oxide**. Theme names are presentation choices and are independent of the product name.
+Build 2 could stop frontend initialization while applying the active theme because the theme path called a removed function name (`syncSyntaxHighlight`) instead of the current syntax renderer (`updateSyntaxHighlight`). The failure happened after top-menu handlers were attached but before the Welcome-screen project controls and automatic toolchain detection were attached.
 
-## Themes
+That produced a very specific failure pattern on launch:
 
-The five B1.3.6 themes remain unchanged:
+- Cargo and rustc remained at `unknown` / `Checking…`.
+- **Tools → Refresh Toolchain** still worked because menu handlers had already been registered.
+- After refresh, Cargo/rustc appeared correctly.
+- **New Project**, **Open Project**, and **Tutorial** remained unresponsive because their click handlers were never reached during startup.
 
-- **Oxide** — default forged-workbench appearance.
-- **Metallic** — machined/forged metal treatment.
-- **Rust** — weathered rusted-iron treatment.
-- **Modern (Light)** — conventional light IDE presentation.
-- **Modern (Dark)** — conventional dark IDE presentation.
+Build 3 corrects the theme startup call so full frontend initialization completes and automatic Cargo/rustc discovery runs normally again.
 
-Semantic Readability Colors remain theme-aware and continue to preserve semantic category distinctions within every theme.
+## Linux Oxide → Rivet package migration
 
-## Upgrade compatibility
+Build 2's Rivet `.deb` used the new Debian package name `rivet`, while an existing Oxide installation was owned by package `oxide-editor`. Both packages contained `/usr/bin/oxide-editor`, so Debian correctly refused to overwrite a file owned by the other package.
 
-Existing installations must be able to update into Rivet rather than becoming a separate product installation. For that reason, several legacy implementation identifiers intentionally remain unchanged in Build 2, including the `com.oxide.editor` application identifier, `oxide-editor` executable/package slug, `oxide-*` update feed/artifact names, updater command channels, and updater signing identity. These are compatibility details, not user-facing branding.
+Build 3 now post-processes the release `.deb` with explicit migration metadata:
 
-The existing application-data folder is also retained so tutorial progress and other persisted data are not orphaned by the rename.
+- `Provides: oxide-editor`
+- `Replaces: oxide-editor`
+- `Conflicts: oxide-editor`
+
+This lets Debian/Ubuntu/Pop!_OS replace the old `oxide-editor` package with the new `rivet` package during a normal Rivet update instead of requiring the user to manually uninstall Oxide first. The release workflow validates this metadata before publishing the Linux assets.
+
+Rivet still retains legacy internal executable/update identifiers such as `/usr/bin/oxide-editor`, `com.oxide.editor`, `oxide-*` update feeds, and updater signing identity where changing them would break installed-update compatibility.
+
+## Branding and themes
+
+The product remains **Rivet — Rust Development Environment**. The default visual theme remains named **Oxide**. The five B1.3.6 themes and theme-aware Semantic Readability Colors are otherwise unchanged.
 
 ## Version
 
 - Release version: `1.3.6`
 - Display version: **B1.3.6**
-- Build: **2**
-- Full identity: **Rivet B1.3.6 · Build 2**
+- Build: **3**
+- Full identity: **Rivet B1.3.6 · Build 3**

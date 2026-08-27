@@ -260,7 +260,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 2</div>
+        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 3</div>
         <h1>Welcome to Rivet</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -407,7 +407,7 @@ app.innerHTML = `
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>RIVET B1.3.6 · BUILD 2</span>
+      <span>RIVET B1.3.6 · BUILD 3</span>
     </footer>
   </main>
 
@@ -791,8 +791,14 @@ function applyTheme(themeId, { persist = true } = {}) {
 
   // Semantic tokens represent meaning, not color. The CSS palette bound to
   // the active theme changes instantly without asking rust-analyzer to
-  // recompute token classifications.
-  syncSyntaxHighlight();
+  // recompute token classifications. Presentation refresh must remain
+  // non-fatal: a theme/highlighter problem should never prevent the rest of
+  // Rivet's startup handlers from being registered.
+  try {
+    updateSyntaxHighlight();
+  } catch (error) {
+    console.warn('Could not refresh syntax presentation after theme change:', error);
+  }
 }
 
 const BUILD_BAY_HEIGHT_KEY = 'oxide.layout.buildBayHeight';
@@ -4046,7 +4052,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 2</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, theme-aware Semantic Readability Colors, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and five presentation themes that preserve the same Rivet workflow.</p></div>`);
+  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 3</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, theme-aware Semantic Readability Colors, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and five presentation themes that preserve the same Rivet workflow.</p></div>`);
 }
 
 function showShortcuts() {
