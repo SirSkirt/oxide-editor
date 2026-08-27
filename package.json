@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "release:version": "node scripts/set-release-version.mjs",
     "prepare:updater": "node scripts/prepare-updater-sidecar.mjs",
-    "release:build": "node scripts/increment-build.mjs"
+    "release:build": "node scripts/increment-build.mjs",
+    "validate:themes": "node scripts/validate-semantic-contrast.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1"
@@ -23,5 +24,5 @@
   "engines": {
     "node": ">=24"
   },
-  "buildNumber": 4
+  "buildNumber": 5
 }

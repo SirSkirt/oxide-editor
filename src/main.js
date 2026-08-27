@@ -272,7 +272,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 4</div>
+        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 5</div>
         <h1>Welcome to Rivet</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -419,7 +419,7 @@ app.innerHTML = `
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>RIVET B1.3.6 · BUILD 4</span>
+      <span>RIVET B1.3.6 · BUILD 5</span>
     </footer>
   </main>
 
@@ -551,6 +551,15 @@ app.innerHTML = `
           <strong>CURRENT RECIPE</strong>
           <code id="theme-recipe-readout">Oxide Iron · Oxide · Oxide Industrial · Oxide Readability</code>
           <p>Theme recipes change presentation only. Rivet's layout, panels, commands, and functionality stay identical.</p>
+        </div>
+        <div class="theme-readability-preview">
+          <strong>SEMANTIC READABILITY PREVIEW</strong>
+          <pre><span class="syntax-keyword">fn</span> <span class="syntax-function">main</span><span class="syntax-operator">() {</span>
+    <span class="syntax-keyword">let</span> <span class="syntax-ident">player_name</span><span class="syntax-operator">:</span> <span class="syntax-type">String</span> <span class="syntax-operator">=</span> <span class="syntax-string">&quot;Quinn&quot;</span><span class="syntax-operator">;</span>
+    <span class="syntax-keyword">let</span> <span class="syntax-ident">score</span> <span class="syntax-operator">=</span> <span class="syntax-number">42</span><span class="syntax-operator">;</span>
+    <span class="syntax-macro">println!</span><span class="syntax-operator">(</span><span class="syntax-string">&quot;{}: {}&quot;</span><span class="syntax-operator">,</span> <span class="syntax-ident">player_name</span><span class="syntax-operator">,</span> <span class="syntax-ident">score</span><span class="syntax-operator">);</span> <span class="syntax-comment">// readable?</span>
+<span class="syntax-operator">}</span></pre>
+          <div id="theme-readability-warning" class="theme-readability-warning">Semantic palette and editor surface are compatible.</div>
         </div>
         <div id="theme-saved-wrap" class="theme-saved-wrap" hidden>
           <div class="theme-saved-head"><span>SAVED CUSTOM THEMES</span><small>SELECT ONE TO EDIT</small></div>
@@ -684,6 +693,7 @@ const els = {
   themeControlsDescription: $('#theme-controls-description'),
   themeSemanticDescription: $('#theme-semantic-description'),
   themeRecipeReadout: $('#theme-recipe-readout'),
+  themeReadabilityWarning: $('#theme-readability-warning'),
   themeSavedWrap: $('#theme-saved-wrap'),
   themeSavedList: $('#theme-saved-list'),
   themeStudioDelete: $('#theme-studio-delete'),
@@ -844,6 +854,7 @@ const THEME_PALETTE_OVERRIDE_MAP = Object.freeze({
   caret: '--t-caret',
 });
 const THEME_SEMANTIC_OVERRIDE_MAP = Object.freeze({
+  default: '--syntax-default',
   keyword: '--syntax-keyword',
   identifier: '--syntax-ident',
   string: '--syntax-string',
@@ -946,6 +957,15 @@ function updateThemeStudioSummary() {
   els.themeControlsDescription.textContent = controls.description;
   els.themeSemanticDescription.textContent = semantic.description;
   els.themeRecipeReadout.textContent = `${material.label} · ${palette.label} · ${controls.label} · ${semantic.label}`;
+  const paletteTone = palette.tone || 'dark';
+  const semanticTone = semantic.tone || 'dark';
+  const compatible = paletteTone === semanticTone;
+  if (els.themeReadabilityWarning) {
+    els.themeReadabilityWarning.classList.toggle('warn', !compatible);
+    els.themeReadabilityWarning.textContent = compatible
+      ? 'Semantic palette and editor surface are contrast-matched.'
+      : `READABILITY WARNING: ${semantic.label} is designed for ${semanticTone} editor surfaces, while ${palette.label} uses a ${paletteTone} editor surface. Preview before saving.`;
+  }
 }
 
 function renderSavedThemeList() {
@@ -4311,7 +4331,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 4</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, five built-in material themes, theme-aware Semantic Readability Colors, and the composable Theme Workshop for user-created presentation recipes.</p></div>`);
+  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 5</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, five built-in material themes, theme-aware Semantic Readability Colors, and the composable Theme Workshop for user-created presentation recipes.</p></div>`);
 }
 
 function showShortcuts() {

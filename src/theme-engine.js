@@ -17,11 +17,11 @@ export const THEME_COMPONENTS = Object.freeze({
     modern: { label: 'Modern Flat', description: 'Clean conventional IDE surfaces with minimal material texture.' },
   }),
   palettes: Object.freeze({
-    oxide: { label: 'Oxide', description: 'Charcoal iron with Rivet rust-orange accents.' },
-    metallic: { label: 'Metallic', description: 'Cool gunmetal neutrals with restrained copper accents.' },
-    rust: { label: 'Rust', description: 'Aged iron, warm brown-black surfaces, and oxidized accents.' },
-    'modern-dark': { label: 'Modern Dark', description: 'Neutral contemporary dark IDE colors.' },
-    'modern-light': { label: 'Modern Light', description: 'Neutral contemporary light IDE colors.' },
+    oxide: { label: 'Oxide', tone: 'dark', description: 'Charcoal iron with Rivet rust-orange accents.' },
+    metallic: { label: 'Metallic', tone: 'dark', description: 'Cool gunmetal neutrals with restrained copper accents.' },
+    rust: { label: 'Rust', tone: 'dark', description: 'Aged iron, warm brown-black surfaces, and oxidized accents.' },
+    'modern-dark': { label: 'Modern Dark', tone: 'dark', description: 'Neutral contemporary dark IDE colors.' },
+    'modern-light': { label: 'Modern Light', tone: 'light', description: 'Neutral contemporary light IDE colors.' },
   }),
   controls: Object.freeze({
     oxide: { label: 'Oxide Industrial', description: 'Compact squared controls with the original Rivet treatment.' },
@@ -30,11 +30,11 @@ export const THEME_COMPONENTS = Object.freeze({
     modern: { label: 'Modern', description: 'Simple flat controls with subtle borders and small corner radius.' },
   }),
   semantic: Object.freeze({
-    oxide: { label: 'Oxide Readability', description: 'Original Semantic Readability palette.' },
-    metallic: { label: 'Metallic Readability', description: 'Slightly brighter steel/copper readability palette.' },
-    rust: { label: 'Rust Readability', description: 'Warmer aged-metal readability palette.' },
-    'modern-dark': { label: 'Modern Dark Readability', description: 'Clean dark-editor semantic palette.' },
-    'modern-light': { label: 'Modern Light Readability', description: 'High-contrast semantic palette for light editors.' },
+    oxide: { label: 'Oxide Readability', tone: 'dark', description: 'Original Semantic Readability palette.' },
+    metallic: { label: 'Metallic Readability', tone: 'dark', description: 'High-contrast steel, sage, amber, copper, and cream roles for dark gunmetal editors.' },
+    rust: { label: 'Rust Readability', tone: 'dark', description: 'Warm but contrast-forward roles for dark aged-iron editors, retaining cool steel identifiers.' },
+    'modern-dark': { label: 'Modern Dark Readability', tone: 'dark', description: 'Clean high-contrast semantic roles for conventional dark editors.' },
+    'modern-light': { label: 'Modern Light Readability', tone: 'light', description: 'Purpose-built dark-on-light semantic roles with a dark neutral fallback so code cannot disappear on white.' },
   }),
 });
 

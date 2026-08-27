@@ -1,14 +1,16 @@
-# Rivet B1.3.6 · Build 4
+# Rivet B1.3.6 · Build 5
 
 
 **Rivet** is the product name; **Rust Development Environment** is its tagline. The default presentation theme remains named **Oxide**.
-B1.3.6 Build 4 upgrades Rivet's theme engine from monolithic built-in themes into a **composable presentation system**. Layout and functionality remain unchanged; themes are recipes assembled from independent material, UI palette, control-treatment, and Semantic Readability components.
+B1.3.6 Build 5 repairs **Semantic Readability across the expanded theme system** while preserving Build 4's composable presentation architecture. The Oxide code palette remains unchanged; Metallic, Rust, Modern Dark, and Modern Light now use contrast-first semantic palettes, and the syntax layer has a theme-aware neutral/fallback source color so unclassified code remains visible on every built-in editor surface.
+
+Build 4 introduced the **composable presentation system**. Layout and functionality remain unchanged; themes are recipes assembled from independent material, UI palette, control-treatment, and Semantic Readability components.
 
 The five built-ins still ship as **Oxide**, **Metallic**, **Rust**, **Modern (Dark)**, and **Modern (Light)**, but they now use the same recipe model as user-created themes. **View → Theme → Theme Workshop…** can create, edit, save, delete, and apply custom themes by mixing the available presentation components. Custom themes persist locally and can be selected directly from the View → Theme menu.
 
 Material treatment is no longer treated as a color swap. **Metallic** adds forged/brushed gunmetal texture, edge highlights, recessed depth, and raised controls. **Rust** uses the same physical-depth idea with aged iron, patina, oxidation around seams/edges, and rougher weathering. **Modern** material intentionally removes most industrial texture.
 
-**Semantic Readability Colors remain independently selectable.** rust-analyzer still supplies semantic meaning; the active theme recipe supplies the readability palette for variables, functions, types, macros, strings, numbers, comments, keywords, and punctuation.
+**Semantic Readability Colors remain independently selectable.** rust-analyzer still supplies semantic meaning; the active theme recipe supplies the readability palette for variables, functions, types, macros, strings, numbers, comments, keywords, punctuation, and now a neutral/fallback source role. Theme Workshop includes a live Rust readability preview and warns when a semantic preset is designed for the opposite editor-surface tone.
 
 Rivet is a Rust-first desktop IDE built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, language intelligence, debugging, and update orchestration are handled by Rust.
 
@@ -286,8 +288,8 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 
 - Release version: `1.3.6`
 - User-facing version: **B1.3.6**
-- Current internal build number: **4**
-- Full installed identity: **Rivet B1.3.6 · Build 4**
+- Current internal build number: **5**
+- Full installed identity: **Rivet B1.3.6 · Build 5**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:
@@ -306,9 +308,9 @@ Rivet keeps the public release version and the internal build number separate. T
 For example:
 
 ```text
-B1.3.6 · Build 3
-        ↓
 B1.3.6 · Build 4
+        ↓
+B1.3.6 · Build 5
 ```
 
 The signed update feed carries `release_version` plus `build`, and Rivet compares both. GitHub update packages include the build in their filename. Every internal build gets its own release tag (`v1.3.6-b1`, `v1.3.6-b2`, and so on), so GitHub's `releases/latest/download/...` route advances even when the public Rivet version stays the same. For compatibility with older updater-enabled Rivet builds, the feed's required SemVer `version` is a monotonic updater sequence while `release_version` remains the actual Rivet release version.

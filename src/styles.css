@@ -22,6 +22,7 @@
 
   /* Semantic Readability Colors are semantic roles. Each theme remaps these
      roles while rust-analyzer continues to provide the same token meaning. */
+  --syntax-default: #d7d1c8;
   --syntax-keyword: #D87941;
   --syntax-ident: #83A6B8;
   --syntax-string: #8FAF72;
@@ -218,7 +219,7 @@ button:disabled { cursor: not-allowed; }
 .line-numbers { position: relative; z-index: 3; overflow: hidden; padding-right: 10px; color: #545852; background: #0e0f0e; border-right: 1px solid #242623; text-align: right; user-select: none; }
 .syntax-layer {
   position: absolute; z-index: 1; top: 0; right: 0; bottom: 0; left: 48px;
-  overflow: hidden; padding-left: 14px; padding-right: 14px; color: #d7d1c8;
+  overflow: hidden; padding-left: 14px; padding-right: 14px; color: var(--syntax-default, #d7d1c8);
   background: #121312; white-space: pre; pointer-events: none;
 }
 .syntax-layer[hidden] { display: none; }
@@ -1943,6 +1944,7 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
 /* OXIDE — the existing B1.3.5 forged-workbench look remains the default. */
 :root[data-theme="oxide"] {
   color-scheme: dark;
+  --syntax-default: #d7d1c8;
   --syntax-keyword: #D87941;
   --syntax-ident: #83A6B8;
   --syntax-string: #8FAF72;
@@ -1972,15 +1974,16 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
   --muted: #8e9599;
   --steel: #87a9bb;
 
-  --syntax-keyword: #E0844C;
-  --syntax-ident: #8FB5C9;
-  --syntax-string: #95B77D;
-  --syntax-number: #DEB565;
-  --syntax-type: #D2B46B;
-  --syntax-macro: #F0A06A;
-  --syntax-function: #E8D9C7;
-  --syntax-comment: #78847D;
-  --syntax-operator: #D9DEE1;
+  --syntax-default: #D7DDE1;
+  --syntax-keyword: #F08C52;
+  --syntax-ident: #9BC3D6;
+  --syntax-string: #A3C789;
+  --syntax-number: #E8BE68;
+  --syntax-type: #DBC274;
+  --syntax-macro: #FFAB73;
+  --syntax-function: #F0E0CF;
+  --syntax-comment: #8C9A92;
+  --syntax-operator: #E1E6E8;
   --syntax-bracket-border: rgba(222,181,101,.72);
   --syntax-bracket-bg: rgba(222,181,101,.12);
   --syntax-bracket-shadow: rgba(222,181,101,.34);
@@ -2049,15 +2052,16 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
   --muted: #93867c;
   --steel: #849fa9;
 
-  --syntax-keyword: #D8753F;
-  --syntax-ident: #89A8B4;
-  --syntax-string: #96AA70;
-  --syntax-number: #D0A65B;
-  --syntax-type: #C59A58;
-  --syntax-macro: #E58D50;
-  --syntax-function: #DEC8B1;
-  --syntax-comment: #777D6F;
-  --syntax-operator: #D2C7BB;
+  --syntax-default: #D8CCC0;
+  --syntax-keyword: #E27B45;
+  --syntax-ident: #9ABBC6;
+  --syntax-string: #A7BE82;
+  --syntax-number: #E0B864;
+  --syntax-type: #D2AF67;
+  --syntax-macro: #F19A5B;
+  --syntax-function: #EAD6C3;
+  --syntax-comment: #8B9587;
+  --syntax-operator: #DDD2C7;
   --syntax-bracket-border: rgba(208,166,91,.72);
   --syntax-bracket-bg: rgba(208,166,91,.12);
   --syntax-bracket-shadow: rgba(208,166,91,.34);
@@ -2129,15 +2133,16 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
   --muted: #8b929c;
   --steel: #77a7c6;
 
-  --syntax-keyword: #D98A56;
-  --syntax-ident: #7FAFCB;
-  --syntax-string: #8FB978;
-  --syntax-number: #D7B25E;
-  --syntax-type: #D1B56C;
-  --syntax-macro: #E69A65;
-  --syntax-function: #E2D5C5;
-  --syntax-comment: #78837C;
-  --syntax-operator: #CDD3DA;
+  --syntax-default: #D8DCE2;
+  --syntax-keyword: #E38C55;
+  --syntax-ident: #8CBCE0;
+  --syntax-string: #9AC580;
+  --syntax-number: #E3BE68;
+  --syntax-type: #D9C077;
+  --syntax-macro: #F2A06A;
+  --syntax-function: #E9DED0;
+  --syntax-comment: #8A978F;
+  --syntax-operator: #DCE2E8;
   --syntax-bracket-border: rgba(215,178,94,.72);
   --syntax-bracket-bg: rgba(215,178,94,.12);
   --syntax-bracket-shadow: rgba(215,178,94,.34);
@@ -2209,15 +2214,16 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
   --red: #b0473e;
   --steel: #3e748f;
 
-  --syntax-keyword: #A95328;
-  --syntax-ident: #3D748F;
-  --syntax-string: #587B46;
-  --syntax-number: #986F21;
-  --syntax-type: #8A6A20;
-  --syntax-macro: #B96130;
-  --syntax-function: #665441;
-  --syntax-comment: #6C776E;
-  --syntax-operator: #3C4249;
+  --syntax-default: #252A30;
+  --syntax-keyword: #7A341D;
+  --syntax-ident: #245A78;
+  --syntax-string: #3F642F;
+  --syntax-number: #765A12;
+  --syntax-type: #665114;
+  --syntax-macro: #8C451F;
+  --syntax-function: #4E4338;
+  --syntax-comment: #55615A;
+  --syntax-operator: #252A30;
   --syntax-bracket-border: rgba(152,111,33,.62);
   --syntax-bracket-bg: rgba(152,111,33,.10);
   --syntax-bracket-shadow: rgba(152,111,33,.26);
@@ -2897,30 +2903,42 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
 }
 
 /* ---------------------- SEMANTIC READABILITY PALETTES -------------------- */
+/*
+   Build 5 readability rule: semantic colors are chosen for code contrast first
+   and theme character second. --syntax-default is the neutral/fallback source
+   color used by text that is not assigned a more specific lexical/semantic
+   class. This is critical on light editor surfaces, where the historical
+   dark-theme fallback gray was nearly invisible.
+*/
 :root[data-theme-semantic="oxide"] {
+  --syntax-default: #d7d1c8;
   --syntax-keyword: #D87941; --syntax-ident: #83A6B8; --syntax-string: #8FAF72; --syntax-number: #D3A95F;
   --syntax-type: #C4A45F; --syntax-macro: #E99A62; --syntax-function: #DDD0BF; --syntax-comment: #70786E; --syntax-operator: #d7d1c8;
   --syntax-bracket-border: rgba(211,169,95,.72); --syntax-bracket-bg: rgba(211,169,95,.12); --syntax-bracket-shadow: rgba(211,169,95,.34);
 }
 :root[data-theme-semantic="metallic"] {
-  --syntax-keyword: #E0844C; --syntax-ident: #8FB5C9; --syntax-string: #95B77D; --syntax-number: #DEB565;
-  --syntax-type: #D2B46B; --syntax-macro: #F0A06A; --syntax-function: #E8D9C7; --syntax-comment: #78847D; --syntax-operator: #D9DEE1;
-  --syntax-bracket-border: rgba(222,181,101,.72); --syntax-bracket-bg: rgba(222,181,101,.12); --syntax-bracket-shadow: rgba(222,181,101,.34);
+  --syntax-default: #D7DDE1;
+  --syntax-keyword: #F08C52; --syntax-ident: #9BC3D6; --syntax-string: #A3C789; --syntax-number: #E8BE68;
+  --syntax-type: #DBC274; --syntax-macro: #FFAB73; --syntax-function: #F0E0CF; --syntax-comment: #8C9A92; --syntax-operator: #E1E6E8;
+  --syntax-bracket-border: rgba(232,190,104,.78); --syntax-bracket-bg: rgba(232,190,104,.13); --syntax-bracket-shadow: rgba(232,190,104,.38);
 }
 :root[data-theme-semantic="rust"] {
-  --syntax-keyword: #D8753F; --syntax-ident: #89A8B4; --syntax-string: #96AA70; --syntax-number: #D0A65B;
-  --syntax-type: #C59A58; --syntax-macro: #E58D50; --syntax-function: #DEC8B1; --syntax-comment: #777D6F; --syntax-operator: #D2C7BB;
-  --syntax-bracket-border: rgba(208,166,91,.72); --syntax-bracket-bg: rgba(208,166,91,.12); --syntax-bracket-shadow: rgba(208,166,91,.34);
+  --syntax-default: #D8CCC0;
+  --syntax-keyword: #E27B45; --syntax-ident: #9ABBC6; --syntax-string: #A7BE82; --syntax-number: #E0B864;
+  --syntax-type: #D2AF67; --syntax-macro: #F19A5B; --syntax-function: #EAD6C3; --syntax-comment: #8B9587; --syntax-operator: #DDD2C7;
+  --syntax-bracket-border: rgba(224,184,100,.78); --syntax-bracket-bg: rgba(224,184,100,.13); --syntax-bracket-shadow: rgba(224,184,100,.36);
 }
 :root[data-theme-semantic="modern-dark"] {
-  --syntax-keyword: #D98A56; --syntax-ident: #7FAFCB; --syntax-string: #8FB978; --syntax-number: #D7B25E;
-  --syntax-type: #D1B56C; --syntax-macro: #E69A65; --syntax-function: #E2D5C5; --syntax-comment: #78837C; --syntax-operator: #CDD3DA;
-  --syntax-bracket-border: rgba(215,178,94,.72); --syntax-bracket-bg: rgba(215,178,94,.12); --syntax-bracket-shadow: rgba(215,178,94,.34);
+  --syntax-default: #D8DCE2;
+  --syntax-keyword: #E38C55; --syntax-ident: #8CBCE0; --syntax-string: #9AC580; --syntax-number: #E3BE68;
+  --syntax-type: #D9C077; --syntax-macro: #F2A06A; --syntax-function: #E9DED0; --syntax-comment: #8A978F; --syntax-operator: #DCE2E8;
+  --syntax-bracket-border: rgba(227,190,104,.78); --syntax-bracket-bg: rgba(227,190,104,.13); --syntax-bracket-shadow: rgba(227,190,104,.36);
 }
 :root[data-theme-semantic="modern-light"] {
-  --syntax-keyword: #A95328; --syntax-ident: #3D748F; --syntax-string: #587B46; --syntax-number: #986F21;
-  --syntax-type: #8A6A20; --syntax-macro: #B96130; --syntax-function: #665441; --syntax-comment: #6C776E; --syntax-operator: #3C4249;
-  --syntax-bracket-border: rgba(152,111,33,.62); --syntax-bracket-bg: rgba(152,111,33,.10); --syntax-bracket-shadow: rgba(152,111,33,.26);
+  --syntax-default: #252A30;
+  --syntax-keyword: #7A341D; --syntax-ident: #245A78; --syntax-string: #3F642F; --syntax-number: #765A12;
+  --syntax-type: #665114; --syntax-macro: #8C451F; --syntax-function: #4E4338; --syntax-comment: #55615A; --syntax-operator: #252A30;
+  --syntax-bracket-border: rgba(118,90,18,.72); --syntax-bracket-bg: rgba(118,90,18,.11); --syntax-bracket-shadow: rgba(118,90,18,.28);
 }
 
 /* ------------------------------- MATERIALS ------------------------------- */
@@ -3195,6 +3213,11 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
 .theme-studio-actions { display: flex; align-items: center; }
 .theme-action-spacer { flex: 1 1 auto; }
 #custom-theme-menu-items { display: contents; }
+.theme-readability-preview { margin-top: 11px; padding: 10px 11px; background: var(--t-editor); border: 1px solid var(--t-border); }
+.theme-readability-preview > strong { display: block; margin-bottom: 7px; color: var(--t-accent-hot); font: 700 9px var(--t-ui-font); letter-spacing: .08em; }
+.theme-readability-preview pre { margin: 0; overflow: auto; color: var(--syntax-default); font: 12px/1.55 "Cascadia Code", "JetBrains Mono", Consolas, monospace; white-space: pre; }
+.theme-readability-warning { margin-top: 7px; color: var(--t-muted); font: 10px/1.45 var(--t-ui-font); }
+.theme-readability-warning.warn { color: var(--t-accent-hot); font-weight: 700; }
 @media (max-width: 760px) {
   .theme-component-grid, .theme-saved-list { grid-template-columns: 1fr; }
 }

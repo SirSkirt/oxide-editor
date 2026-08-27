@@ -1,49 +1,41 @@
-# Rivet B1.3.6 · Build 4
+# Rivet B1.3.6 · Build 5
 
-B1.3.6 Build 4 is the **Composable Themes** build. It keeps Rivet's layout and functionality unchanged while replacing the first-generation monolithic theme selection with a component-based presentation engine designed for built-in and user-created themes.
+B1.3.6 Build 5 is the **Semantic Readability repair** for Rivet's expanded theme system. The Oxide readability palette remains unchanged; Metallic, Rust, Modern Dark, and especially Modern Light now prioritize source-code contrast and semantic separation instead of merely matching the surrounding UI palette.
 
-## Composable theme recipes
+## Modern Light visibility fix
 
-Every theme now resolves through the same four-part recipe:
+Modern Light had a structural readability bug beyond its individual token colors: source text that did not receive a specific lexical/semantic class inherited the old dark-theme neutral gray. Against the white Modern Light editor this could make ordinary code appear extremely faint or effectively disappear.
 
-- **Material** — physical surface, texture, depth, seams, highlights, and weathering
-- **Color Palette** — UI surfaces, text, borders, editor colors, and accents
-- **Control Treatment** — button/tab edges, bevel/pressed behavior, and industrial-vs-modern control styling
-- **Semantic Readability** — Rust semantic token colors
+Build 5 adds a first-class `--syntax-default` Semantic Readability role. The syntax layer now uses that theme-aware neutral source color for all unclassified/fallback text.
 
-The five built-in themes are implemented as recipes using that same model. Theme components only affect presentation; they do not alter workspace geometry, panel placement, commands, or functionality.
+Modern Light therefore uses a purpose-built **dark-on-light** semantic palette, including a dark neutral fallback, dark steel-blue identifiers, dark sage strings, dark amber numbers/types, warm dark keywords/macros, and clearly readable comments. Red remains reserved for real errors/problems.
 
-## Material improvements
+## Rebalanced dark-theme readability
 
-Build 4 also strengthens the intended distinction between Rivet's industrial themes:
+The repaired dark themes also receive higher-contrast palettes:
 
-- **Oxide** remains the relatively restrained/original industrial material.
-- **Metallic** now leans further into forged/brushed gunmetal with subtle directional texture, brighter upper edges, darker inset edges, recessed depth, and more physical raised controls.
-- **Rust** uses the forged-depth approach as a foundation but adds aged iron, irregular oxidation/patina, worn seams and edges, and rougher surface variation instead of simply tinting the interface brown.
-- **Modern** material intentionally strips most of that physical treatment away for a conventional IDE presentation.
+- **Metallic** — brighter steel identifiers, sage strings, amber/gold numbers and types, copper/orange keywords/macros, cream functions, and more readable gray-green comments against gunmetal.
+- **Rust** — preserves the warm aged-iron character while keeping identifiers deliberately cool/steel-colored and lifting comments and semantic roles away from the dark rust surface.
+- **Modern Dark** — cleaner, brighter conventional dark-IDE semantic colors with stronger category separation.
+- **Oxide** — unchanged, by design.
 
-## Theme Workshop
+## Theme Workshop readability preview
 
-**View → Theme → Theme Workshop…** now provides the first user-custom-theme workflow. Users can:
+Theme Workshop now shows an actual Rust **Semantic Readability Preview** while composing a custom theme. Palette and Semantic Readability presets carry an intended editor-surface tone (`dark` or `light`), and the Workshop warns when a user mixes a light editor surface with a dark semantic preset or vice versa. The combination is still allowed; Rivet simply makes the readability risk visible before saving it.
 
-- choose Material independently
-- choose the UI Color Palette independently
-- choose Control Treatment independently
-- choose the Semantic Readability palette independently
-- preview an unsaved component combination without committing it
-- name and save a custom theme
-- edit or delete saved custom themes
-- select saved custom themes directly from the Theme menu
+The custom-theme semantic override map also gains a `default`/neutral source role so future granular custom color controls can tune fallback source text explicitly.
 
-Custom themes persist locally. The storage format is versioned and includes reserved palette/semantic override maps so future Rivet builds can add fine-grained custom colors, import/export, and additional theme components without introducing a second theme system.
+## Contrast regression validation
 
-## Existing fixes retained
+A new `npm run validate:themes` check audits every repaired built-in semantic role against its matching editor background. Metallic, Rust, Modern Dark, and Modern Light must maintain at least **4.5:1** contrast for neutral text, keywords, identifiers, strings, numbers, types, macros, functions, comments, and operators. Build and release GitHub Actions now run this validation before publishing.
 
-Build 4 includes the Build 3 startup reliability fix and the Linux Oxide → Rivet Debian migration metadata (`Provides`, `Replaces`, and `Conflicts`). The signed updater continues to compare release version plus build number.
+## Existing features retained
+
+Build 5 retains Build 4's composable Theme Workshop, material/palette/control/semantic separation, the Build 3 startup and Debian migration fixes, version+build updater behavior, LLDB/DAP debugger, Rust Code Analyzer/Completer, resizable Build Bay, and the rest of the B1.3.6 functionality.
 
 ## Version
 
 - Release version: `1.3.6`
 - Display version: **B1.3.6**
-- Build: **4**
-- Full identity: **Rivet B1.3.6 · Build 4**
+- Build: **5**
+- Full identity: **Rivet B1.3.6 · Build 5**
