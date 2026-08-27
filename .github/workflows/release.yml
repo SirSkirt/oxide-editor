@@ -16,6 +16,8 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       display: ${{ steps.version.outputs.display }}
+      build: ${{ steps.version.outputs.build }}
+      updater_version: ${{ steps.version.outputs.updater_version }}
       tag: ${{ steps.version.outputs.tag }}
     steps:
       - name: Checkout source
@@ -32,9 +34,13 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           DISPLAY=$(node -p "require('./package.json').displayVersion")
+          BUILD=$(node -p "require('./package.json').buildNumber || 1")
+          UPDATER_VERSION=$(node -p "(()=>{const p=require('./package.json'); const v=p.version.split('.').map(Number); return v[0]+'.'+v[1]+'.'+(v[2]*10000+Number(p.buildNumber||1));})()")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "display=$DISPLAY" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "updater_version=$UPDATER_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION-b$BUILD" >> "$GITHUB_OUTPUT"
 
       - name: Create or update GitHub Release
         shell: bash
@@ -42,18 +48,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OXIDE_TAG: ${{ steps.version.outputs.tag }}
           OXIDE_DISPLAY_VERSION: ${{ steps.version.outputs.display }}
+          OXIDE_BUILD: ${{ steps.version.outputs.build }}
         run: |
           if gh release view "$OXIDE_TAG" >/dev/null 2>&1; then
             if [ -f RELEASE_NOTES.md ]; then
-              gh release edit "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION" --notes-file RELEASE_NOTES.md
+              gh release edit "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes-file RELEASE_NOTES.md
             else
-              gh release edit "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION" --notes "Oxide Editor $OXIDE_DISPLAY_VERSION"
+              gh release edit "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD"
             fi
           else
             if [ -f RELEASE_NOTES.md ]; then
-              gh release create "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION" --notes-file RELEASE_NOTES.md
+              gh release create "$OXIDE_TAG" --draft --title "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes-file RELEASE_NOTES.md
             else
-              gh release create "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION" --notes "Oxide Editor $OXIDE_DISPLAY_VERSION"
+              gh release create "$OXIDE_TAG" --draft --title "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD"
             fi
           fi
 
@@ -115,6 +122,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           OXIDE_VERSION: ${{ needs.prepare-release.outputs.version }}
           OXIDE_DISPLAY_VERSION: ${{ needs.prepare-release.outputs.display }}
+          OXIDE_BUILD: ${{ needs.prepare-release.outputs.build }}
+          OXIDE_UPDATER_VERSION: ${{ needs.prepare-release.outputs.updater_version }}
           OXIDE_TAG: ${{ needs.prepare-release.outputs.tag }}
         run: |
           $ErrorActionPreference = 'Stop'
@@ -132,8 +141,10 @@ jobs:
 
           $packageManifest = [ordered]@{
             format = 1
-            version = $env:OXIDE_VERSION
+            version = $env:OXIDE_UPDATER_VERSION
+            release_version = $env:OXIDE_VERSION
             display_version = $env:OXIDE_DISPLAY_VERSION
+            build = [int]$env:OXIDE_BUILD
             platform = 'windows-x86_64'
             files = @('oxide-editor.exe', 'oxide-updater.exe')
           } | ConvertTo-Json -Depth 5
@@ -143,7 +154,7 @@ jobs:
             (New-Object System.Text.UTF8Encoding($false))
           )
 
-          $assetName = "oxide-update-windows-x86_64-$($env:OXIDE_VERSION).zip"
+          $assetName = "oxide-update-windows-x86_64-$($env:OXIDE_VERSION)-b$($env:OXIDE_BUILD).zip"
           $packagePath = Join-Path $releaseDir $assetName
           if (Test-Path $packagePath) { Remove-Item $packagePath -Force }
           Compress-Archive -Path (Join-Path $stageDir '*') -DestinationPath $packagePath -CompressionLevel Optimal
@@ -157,8 +168,10 @@ jobs:
           $notes = if (Test-Path 'RELEASE_NOTES.md') { (Get-Content 'RELEASE_NOTES.md' -Raw).Trim() } else { "Oxide Editor $($env:OXIDE_DISPLAY_VERSION)" }
 
           $latest = [ordered]@{
-            version = $env:OXIDE_VERSION
+            version = $env:OXIDE_UPDATER_VERSION
+            release_version = $env:OXIDE_VERSION
             display_version = $env:OXIDE_DISPLAY_VERSION
+            build = [int]$env:OXIDE_BUILD
             notes = $notes
             pub_date = (Get-Date).ToUniversalTime().ToString('o')
             url = $downloadUrl
@@ -167,6 +180,13 @@ jobs:
           } | ConvertTo-Json -Depth 8
           $latestPath = Join-Path $releaseDir 'oxide-latest-windows-x86_64.json'
           [System.IO.File]::WriteAllText($latestPath, $latest, (New-Object System.Text.UTF8Encoding($false)))
+
+          # Build numbers are part of Oxide's release identity. Fail the release
+          # instead of publishing a feed that would make Build N invisible to Build N-1.
+          $feedCheck = Get-Content $latestPath -Raw | ConvertFrom-Json
+          if ($feedCheck.release_version -ne $env:OXIDE_VERSION -or [int]$feedCheck.build -ne [int]$env:OXIDE_BUILD) {
+            throw "Windows updater feed identity mismatch: expected $($env:OXIDE_VERSION) Build $($env:OXIDE_BUILD)"
+          }
 
           $installer = Get-ChildItem 'src-tauri\target\release\bundle\nsis\*-setup.exe' | Select-Object -First 1
           if (-not $installer) { throw 'The NSIS installer was not produced.' }
@@ -177,7 +197,7 @@ jobs:
 
           # Legacy bridge for B1.3.1 and older Windows updater-enabled builds.
           $legacyLatest = [ordered]@{
-            version = $env:OXIDE_VERSION
+            version = $env:OXIDE_UPDATER_VERSION
             notes = $notes
             pub_date = (Get-Date).ToUniversalTime().ToString('o')
             url = $installerUrl
@@ -211,7 +231,7 @@ jobs:
       - name: Upload Windows workflow artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: oxide-windows-x64-${{ needs.prepare-release.outputs.version }}
+          name: oxide-windows-x64-${{ needs.prepare-release.outputs.version }}-b${{ needs.prepare-release.outputs.build }}
           path: |
             ${{ steps.package.outputs.installer }}
             ${{ steps.package.outputs.package }}
@@ -285,6 +305,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           OXIDE_VERSION: ${{ needs.prepare-release.outputs.version }}
           OXIDE_DISPLAY_VERSION: ${{ needs.prepare-release.outputs.display }}
+          OXIDE_BUILD: ${{ needs.prepare-release.outputs.build }}
+          OXIDE_UPDATER_VERSION: ${{ needs.prepare-release.outputs.updater_version }}
           OXIDE_TAG: ${{ needs.prepare-release.outputs.tag }}
         run: |
           set -euo pipefail
@@ -303,14 +325,16 @@ jobs:
           cat > "$stage_dir/update-package.json" <<JSON
           {
             "format": 1,
-            "version": "$OXIDE_VERSION",
+            "version": "$OXIDE_UPDATER_VERSION",
+            "release_version": "$OXIDE_VERSION",
             "display_version": "$OXIDE_DISPLAY_VERSION",
+            "build": $OXIDE_BUILD,
             "platform": "linux-x86_64",
             "files": ["oxide-editor.AppImage", "oxide-editor.deb"]
           }
           JSON
 
-          asset_name="oxide-update-linux-x86_64-$OXIDE_VERSION.zip"
+          asset_name="oxide-update-linux-x86_64-$OXIDE_VERSION-b$OXIDE_BUILD.zip"
           package_path="$release_dir/$asset_name"
           python3 - "$stage_dir" "$package_path" <<'PY'
           import os, sys, zipfile
@@ -327,12 +351,14 @@ jobs:
           download_url="https://github.com/${{ github.repository }}/releases/download/$OXIDE_TAG/$asset_name"
           notes=$(cat RELEASE_NOTES.md 2>/dev/null || printf 'Oxide Editor %s' "$OXIDE_DISPLAY_VERSION")
           latest_path="$release_dir/oxide-latest-linux-x86_64.json"
-          python3 - "$latest_path" "$OXIDE_VERSION" "$OXIDE_DISPLAY_VERSION" "$download_url" "$signature" "$sha256" "$notes" <<'PY'
+          python3 - "$latest_path" "$OXIDE_UPDATER_VERSION" "$OXIDE_VERSION" "$OXIDE_DISPLAY_VERSION" "$OXIDE_BUILD" "$download_url" "$signature" "$sha256" "$notes" <<'PY'
           import datetime, json, sys
-          path, version, display, url, signature, sha256, notes = sys.argv[1:]
+          path, updater_version, release_version, display, build, url, signature, sha256, notes = sys.argv[1:]
           payload = {
-              'version': version,
+              'version': updater_version,
+              'release_version': release_version,
               'display_version': display,
+              'build': int(build),
               'notes': notes,
               'pub_date': datetime.datetime.now(datetime.timezone.utc).isoformat(),
               'url': url,
@@ -342,6 +368,16 @@ jobs:
           with open(path, 'w', encoding='utf-8', newline='\n') as f:
               json.dump(payload, f, indent=2)
               f.write('\n')
+          PY
+
+          # Validate the build-aware feed before it can be uploaded.
+          python3 - "$latest_path" "$OXIDE_VERSION" "$OXIDE_BUILD" <<'PY'
+          import json, sys
+          path, expected_version, expected_build = sys.argv[1:]
+          with open(path, encoding='utf-8') as handle:
+              feed = json.load(handle)
+          if feed.get('release_version') != expected_version or int(feed.get('build', 0)) != int(expected_build):
+              raise SystemExit(f"Linux updater feed identity mismatch: expected {expected_version} Build {expected_build}")
           PY
 
           echo "package=$package_path" >> "$GITHUB_OUTPUT"
@@ -366,10 +402,25 @@ jobs:
       - name: Upload Linux workflow artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: oxide-linux-x64-${{ needs.prepare-release.outputs.version }}
+          name: oxide-linux-x64-${{ needs.prepare-release.outputs.version }}-b${{ needs.prepare-release.outputs.build }}
           path: |
             ${{ steps.package.outputs.deb }}
             ${{ steps.package.outputs.appimage }}
             ${{ steps.package.outputs.package }}
             ${{ steps.package.outputs.signature }}
             ${{ steps.package.outputs.latest }}
+
+
+  publish-release:
+    name: Publish completed Oxide release
+    needs: [prepare-release, windows-release, linux-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release after both platform feeds are ready
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          OXIDE_TAG: ${{ needs.prepare-release.outputs.tag }}
+        run: |
+          gh release edit "$OXIDE_TAG" --draft=false --latest
