@@ -16,3 +16,4 @@ main = main.replace(/CURRENT B\d+\.\d+\.\d+(?: · BUILD \$\{update\.currentBuild
 fs.writeFileSync(mainPath, main);
 
 console.log(`Oxide build number updated: ${current} -> ${packageJson.buildNumber}`);
+console.log(`Updater ordering: ${packageJson.version} Build ${packageJson.buildNumber} (release version, then build number)`);

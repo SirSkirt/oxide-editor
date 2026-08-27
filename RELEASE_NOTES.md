@@ -1,3 +1,37 @@
+# Oxide Editor B1.3.5 · Build 3
+
+## Resizable Build Bay
+
+- Added a forged-metal resize grip along the Build Bay's top edge.
+- Drag upward to give Build/Problems/Debug more room; drag downward to reclaim editor space.
+- Added viewport-aware minimum and maximum heights so the Build Bay cannot become uselessly tiny or consume the entire editor.
+- The chosen height is stored locally and restored between Oxide sessions.
+- Double-click the grip or press Home while it is focused to restore the responsive default height.
+- Keyboard resizing is available with Up/Down; holding Shift uses a larger step.
+- View → Reset Layout also restores the default Build Bay height.
+- The user-resized height stays separate from the hide/show layout state, so hiding the Build Bay still collapses it correctly.
+
+## Build-aware Windows + Linux updates
+
+- Hardened update ordering around Oxide's actual identity pair: **release version first, build number second**.
+- B1.3.5 Build 1 now treats B1.3.5 Build 2/3 as newer even though all use the same `1.3.5` SemVer.
+- Added updater comparison tests covering newer builds, equal/older builds, and public-version precedence.
+- Added `Cache-Control: no-cache` and `Pragma: no-cache` to update-feed requests to reduce stale same-release feed reuse.
+- Release workflow now publishes each build under a distinct GitHub Release tag such as `v1.3.5-b3` while keeping Oxide's public version at `1.3.5`.
+- Windows and Linux release jobs validate that generated platform feeds contain the expected `release_version` and `build` before upload.
+- New build releases stay in GitHub draft state until both Windows and Linux jobs finish, preventing `releases/latest` from pointing at a half-published update.
+- Signed package manifests continue to be checked against the exact requested version + build by both updater helpers before installation.
+- The legacy Windows `latest.json` bridge remains available for older updater-enabled Oxide builds.
+
+## Forged-workbench UI polish
+
+- Kept Oxide's existing layout and industrial identity; this is a refinement pass, not a redesign.
+- Tightened panel/header hierarchy with cleaner forged edges and restrained copper markers.
+- Improved command buttons, profile selector, tabs, project-tree rows, editor chrome, Cargo inspector cards, and dependency rows.
+- Improved Build Bay tabs/output treatment so the bottom workbench reads as one intentional subsystem.
+- Added more consistent dark workbench scrollbars across project, Cargo, debug, tutorial, browser, and completion surfaces.
+- Preserved the compact desktop density, charcoal/iron surfaces, rust-orange accents, and existing Build Bay/project-tree structure.
+
 # Oxide Editor B1.3.5 · Build 2
 
 ## Semantic Readability Colors

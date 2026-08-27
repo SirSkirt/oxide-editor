@@ -217,7 +217,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.5 · BUILD 2</div>
+        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.5 · BUILD 3</div>
         <h1>Welcome to the Oxide Editor</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -307,6 +307,9 @@ app.innerHTML = `
     </section>
 
     <section id="build-console" class="build-console panel" data-view-panel="build" hidden>
+      <div id="build-resizer" class="build-resizer" role="separator" aria-label="Resize Build Bay" aria-orientation="horizontal" aria-valuemin="96" aria-valuemax="500" tabindex="0" title="Drag to resize Build Bay · Double-click to reset">
+        <span class="build-resizer-grip" aria-hidden="true"></span>
+      </div>
       <div class="console-head enhanced-console-head">
         <div><span id="console-title">BUILD BAY</span><small id="build-status">IDLE</small></div>
         <div class="console-controls">
@@ -359,7 +362,7 @@ app.innerHTML = `
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>OXIDE B1.3.5 · BUILD 2</span>
+      <span>OXIDE B1.3.5 · BUILD 3</span>
     </footer>
   </main>
 
@@ -508,6 +511,7 @@ const els = {
   welcome: $('#welcome-screen'),
   workspace: $('#workspace'),
   buildConsole: $('#build-console'),
+  buildResizer: $('#build-resizer'),
   tree: $('#project-tree'),
   projectName: $('#project-name'),
   editor: $('#editor'),
@@ -689,6 +693,108 @@ function setLamp(element, ok) {
 function closeMenus() {
   document.querySelectorAll('.menu-popup.open').forEach((popup) => popup.classList.remove('open'));
   document.querySelectorAll('.menu-trigger.active').forEach((button) => button.classList.remove('active'));
+}
+
+const BUILD_BAY_HEIGHT_KEY = 'oxide.layout.buildBayHeight';
+const BUILD_BAY_MIN_HEIGHT = 96;
+
+function buildBayHeightLimits() {
+  const viewport = Math.max(520, window.innerHeight || 0);
+  const max = Math.max(BUILD_BAY_MIN_HEIGHT, Math.min(Math.round(viewport * 0.58), viewport - 350));
+  return { min: BUILD_BAY_MIN_HEIGHT, max };
+}
+
+function currentBuildBayHeight() {
+  const measured = els.buildConsole.getBoundingClientRect().height;
+  if (measured > 0) return measured;
+  const cssValue = Number.parseFloat(getComputedStyle(els.shell).getPropertyValue('--build-height'));
+  return Number.isFinite(cssValue) ? cssValue : 180;
+}
+
+function updateBuildBayResizeAria(height = currentBuildBayHeight()) {
+  const { min, max } = buildBayHeightLimits();
+  els.buildResizer.setAttribute('aria-valuemin', String(min));
+  els.buildResizer.setAttribute('aria-valuemax', String(max));
+  els.buildResizer.setAttribute('aria-valuenow', String(Math.round(Math.min(max, Math.max(min, height)))));
+}
+
+function setBuildBayHeight(height, { persist = true } = {}) {
+  const { min, max } = buildBayHeightLimits();
+  const clamped = Math.round(Math.min(max, Math.max(min, Number(height) || min)));
+  els.shell.style.setProperty('--build-height-user', `${clamped}px`);
+  updateBuildBayResizeAria(clamped);
+  if (persist) localStorage.setItem(BUILD_BAY_HEIGHT_KEY, String(clamped));
+  return clamped;
+}
+
+function restoreBuildBayHeight() {
+  const saved = Number(localStorage.getItem(BUILD_BAY_HEIGHT_KEY));
+  if (Number.isFinite(saved) && saved >= BUILD_BAY_MIN_HEIGHT) {
+    setBuildBayHeight(saved, { persist: false });
+  } else {
+    els.shell.style.removeProperty('--build-height-user');
+    requestAnimationFrame(() => updateBuildBayResizeAria());
+  }
+}
+
+function resetBuildBayHeight() {
+  localStorage.removeItem(BUILD_BAY_HEIGHT_KEY);
+  els.shell.style.removeProperty('--build-height-user');
+  requestAnimationFrame(() => updateBuildBayResizeAria());
+}
+
+function setupBuildBayResize() {
+  let drag = null;
+
+  els.buildResizer.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    const startHeight = currentBuildBayHeight();
+    drag = { startY: event.clientY, startHeight, lastHeight: startHeight };
+    els.buildResizer.setPointerCapture?.(event.pointerId);
+    els.shell.classList.add('build-bay-resizing');
+    document.body.classList.add('build-bay-resizing');
+    event.preventDefault();
+  });
+
+  els.buildResizer.addEventListener('pointermove', (event) => {
+    if (!drag) return;
+    drag.lastHeight = setBuildBayHeight(drag.startHeight + (drag.startY - event.clientY), { persist: false });
+  });
+
+  const finishDrag = (event) => {
+    if (!drag) return;
+    const finalHeight = drag.lastHeight;
+    drag = null;
+    try { els.buildResizer.releasePointerCapture?.(event.pointerId); } catch { /* pointer may already be released */ }
+    els.shell.classList.remove('build-bay-resizing');
+    document.body.classList.remove('build-bay-resizing');
+    setBuildBayHeight(finalHeight, { persist: true });
+  };
+  els.buildResizer.addEventListener('pointerup', finishDrag);
+  els.buildResizer.addEventListener('pointercancel', finishDrag);
+
+  els.buildResizer.addEventListener('dblclick', resetBuildBayHeight);
+  els.buildResizer.addEventListener('keydown', (event) => {
+    const step = event.shiftKey ? 40 : 16;
+    if (event.key === 'ArrowUp') {
+      setBuildBayHeight(currentBuildBayHeight() + step);
+      event.preventDefault();
+    } else if (event.key === 'ArrowDown') {
+      setBuildBayHeight(currentBuildBayHeight() - step);
+      event.preventDefault();
+    } else if (event.key === 'Home') {
+      resetBuildBayHeight();
+      event.preventDefault();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (!els.shell.style.getPropertyValue('--build-height-user')) {
+      updateBuildBayResizeAria();
+      return;
+    }
+    setBuildBayHeight(currentBuildBayHeight(), { persist: false });
+  });
 }
 
 function setProjectUiState() {
@@ -2932,10 +3038,11 @@ function setViewPanel(panel, visible) {
   if (panel === 'build') els.buildConsole.hidden = !state.projectPath || !visible;
 }
 
-function resetLayout() {
+function resetLayout({ resetBuildBay = true } = {}) {
   setViewPanel('project', true);
   setViewPanel('cargo', true);
   setViewPanel('build', true);
+  if (resetBuildBay) resetBuildBayHeight();
 }
 
 async function runEditCommand(action) {
@@ -3473,7 +3580,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.5 · Build 2</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence with Semantic Readability Colors, LLDB/DAP debugging, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
+  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.5 · Build 3</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence with Semantic Readability Colors, LLDB/DAP debugging, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
 }
 
 function showShortcuts() {
@@ -4059,7 +4166,9 @@ els.tutorialPanel.hidden = true;
 renderProblems();
 renderOutput();
 renderWatches();
-resetLayout();
+setupBuildBayResize();
+resetLayout({ resetBuildBay: false });
+restoreBuildBayHeight();
 setProjectUiState();
 detectPlatform().finally(() => detectToolchain());
 window.setTimeout(() => checkForOxideUpdates({ manual: false }), 1400);

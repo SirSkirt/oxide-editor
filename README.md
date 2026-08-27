@@ -1,12 +1,14 @@
-# Oxide Editor B1.3.5 · Build 2
+# Oxide Editor B1.3.5 · Build 3
 
 Oxide is a Rust-first desktop IDE built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, language intelligence, debugging, and update orchestration are handled by Rust.
 
-B1.3.5 Build 2 expands Oxide's **proper IDE debugging** work and introduces **Semantic Readability Colors**. The LLDB/DAP debugger now supports Cargo binary-target selection, thread switching, nested variable expansion, conditional/hit-count breakpoints, logpoints, restart, watch expressions, and a paused-state Debug Console/REPL in addition to the Build 1 stepping/call-stack foundation. The debugger still launches normal Cargo-built Rust executables; projects remain standard Cargo projects.
+B1.3.5 Build 3 is a **workbench-polish and reliability build**. It keeps Oxide's existing forged-metal layout and workflow, but tightens the visual hierarchy of panels, tabs, command controls, project rows, Cargo/dependency cards, the editor chrome, and the Build Bay. It does not replace the current UI with a new layout.
 
-Semantic Readability Colors use rust-analyzer semantic tokens when available and keep Oxide's lexical highlighter as a fallback. Rust keywords are rust orange, ordinary variables/identifiers are steel blue, strings sage green, numbers amber, types brass/gold, macros bright copper, functions warm cream, comments muted gray-green, and punctuation/operators remain neutral off-white. Red is reserved for actual errors/problems.
+The **Build Bay is now vertically resizable** from its forged top-edge grip. Its height is clamped so the output remains usable without swallowing the editor, is remembered between sessions, and can be reset by double-clicking the grip, pressing Home while it is focused, or using View → Reset Layout.
 
-The B1.3.4 compatibility, Linux updater, responsive-layout, syntax-highlighting, tutorial, and Rust Code Analyzer/Completer work is retained.
+Build 3 also hardens **Windows and Linux automatic updates around Oxide's real identity: `(release_version, build)`**. A machine on B1.3.5 Build 1 can therefore see B1.3.5 Build 2/3 even though the public SemVer is still `1.3.5`. Update requests bypass stale cache reuse, release feeds are validated before publication, every build gets its own GitHub Release tag such as `v1.3.5-b3`, and the release stays draft until both Windows and Linux assets are ready.
+
+The B1.3.5 Build 2 LLDB/DAP debugger expansion and **Semantic Readability Colors** remain intact. Semantic colors use rust-analyzer tokens when available with the lexical highlighter as fallback; ordinary variables/identifiers stay steel blue, and red remains reserved for actual errors/problems.
 
 ## Windows + Linux
 
@@ -55,7 +57,7 @@ The downloaded package is still cryptographically verified with Oxide's existing
 ### Windows update package
 
 ```text
-oxide-update-windows-x86_64-1.3.5-b2.zip
+oxide-update-windows-x86_64-1.3.5-b3.zip
 ├── oxide-editor.exe
 ├── oxide-updater.exe
 └── update-package.json
@@ -66,7 +68,7 @@ The temporary Oxide Update Service backs up the installed runtime, replaces it, 
 ### Linux update package
 
 ```text
-oxide-update-linux-x86_64-1.3.5-b2.zip
+oxide-update-linux-x86_64-1.3.5-b3.zip
 ├── oxide-editor.AppImage
 ├── oxide-editor.deb
 └── update-package.json
@@ -104,16 +106,16 @@ Typical B1.3.5 assets:
 ```text
 Windows
 ├── Oxide Editor ... setup.exe
-├── oxide-update-windows-x86_64-1.3.5-b2.zip
-├── oxide-update-windows-x86_64-1.3.5-b2.zip.sig
+├── oxide-update-windows-x86_64-1.3.5-b3.zip
+├── oxide-update-windows-x86_64-1.3.5-b3.zip.sig
 ├── oxide-latest-windows-x86_64.json
 └── latest.json
 
 Linux
 ├── Oxide Editor ... amd64.deb
 ├── Oxide Editor ... amd64.AppImage
-├── oxide-update-linux-x86_64-1.3.5-b2.zip
-├── oxide-update-linux-x86_64-1.3.5-b2.zip.sig
+├── oxide-update-linux-x86_64-1.3.5-b3.zip
+├── oxide-update-linux-x86_64-1.3.5-b3.zip.sig
 └── oxide-latest-linux-x86_64.json
 ```
 
@@ -244,8 +246,8 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 
 - Release version: `1.3.5`
 - User-facing version: **B1.3.5**
-- Current internal build number: **2**
-- Full installed identity: **B1.3.5 · Build 2**
+- Current internal build number: **3**
+- Full installed identity: **B1.3.5 · Build 3**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:
@@ -264,12 +266,12 @@ Oxide keeps the public release version and the internal build number separate. T
 For example:
 
 ```text
-B1.3.4 · Build 1
+B1.3.5 · Build 2
         ↓
-B1.3.4 · Build 2
+B1.3.5 · Build 3
 ```
 
-The signed update feed carries `release_version` plus `build`, and Oxide compares both. GitHub update packages include the build in their filename. For compatibility with older updater-enabled Oxide builds, the feed's required SemVer `version` is a monotonic updater sequence while `release_version` remains the actual Oxide release version.
+The signed update feed carries `release_version` plus `build`, and Oxide compares both. GitHub update packages include the build in their filename. Build 3 also gives every build its own release tag (`v1.3.5-b3`, `v1.3.5-b4`, and so on), so GitHub's `releases/latest/download/...` route advances even when the public Oxide version stays the same. For compatibility with older updater-enabled Oxide builds, the feed's required SemVer `version` is a monotonic updater sequence while `release_version` remains the actual Oxide release version.
 
 To increment only the build number:
 

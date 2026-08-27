@@ -3096,25 +3096,46 @@ fn updater_build_number(update: &tauri_plugin_updater::Update) -> u64 {
         .unwrap_or(1)
 }
 
-fn remote_oxide_is_newer(update: &tauri_plugin_updater::Update) -> Result<bool, String> {
-    let current = semver::Version::parse(env!("CARGO_PKG_VERSION"))
-        .map_err(|error| format!("Oxide's installed version is invalid: {error}"))?;
-    let remote_text = updater_release_version(update);
-    let remote = semver::Version::parse(remote_text.trim_start_matches('v'))
-        .map_err(|error| format!("The Oxide release feed has an invalid release_version '{remote_text}': {error}"))?;
-    let remote_build = updater_build_number(update);
-    let current_build = current_oxide_build_number();
+fn oxide_release_is_newer(
+    current_version: &str,
+    current_build: u64,
+    remote_version: &str,
+    remote_build: u64,
+) -> Result<bool, String> {
+    let current = semver::Version::parse(current_version.trim_start_matches('v'))
+        .map_err(|error| format!("Oxide's installed version '{current_version}' is invalid: {error}"))?;
+    let remote = semver::Version::parse(remote_version.trim_start_matches('v'))
+        .map_err(|error| format!("The Oxide release feed has an invalid release_version '{remote_version}': {error}"))?;
 
+    // Oxide releases are ordered by the pair (release version, build number).
+    // A higher public release always wins. For the same release, a higher
+    // build number is a real update even though Cargo/Tauri SemVer is equal.
     Ok(remote > current || (remote == current && remote_build > current_build))
 }
 
+fn remote_oxide_is_newer(update: &tauri_plugin_updater::Update) -> Result<bool, String> {
+    let remote_version = updater_release_version(update);
+    oxide_release_is_newer(
+        env!("CARGO_PKG_VERSION"),
+        current_oxide_build_number(),
+        &remote_version,
+        updater_build_number(update),
+    )
+}
+
 async fn raw_oxide_update(app: &AppHandle) -> Result<Option<tauri_plugin_updater::Update>, String> {
-    // Tauri normally filters equal SemVer releases before returning them.
-    // Oxide has its own public-version + build-number comparison, so request
-    // the signed remote release unconditionally and decide locally.
+    // Tauri's default comparator only understands SemVer and would normally
+    // reject an equal 1.3.5 before Oxide could notice Build 1 -> Build 2.
+    // Always retrieve the signed feed, then compare (release_version, build)
+    // ourselves. Explicit no-cache headers also prevent a same-release feed
+    // from being reused after a newer Oxide build is published.
     let updater = app
         .updater_builder()
         .version_comparator(|_, _| true)
+        .header("Cache-Control", "no-cache")
+        .map_err(|error| format!("Could not configure updater cache control: {error}"))?
+        .header("Pragma", "no-cache")
+        .map_err(|error| format!("Could not configure updater cache control: {error}"))?
         .build()
         .map_err(|error| format!("Could not initialize the Oxide update service: {error}"))?;
 
@@ -3163,6 +3184,28 @@ async fn oxide_update_check(app: AppHandle) -> Result<Option<OxideUpdateInfo>, S
             update_mode,
         }
     }))
+}
+
+#[cfg(test)]
+mod updater_version_tests {
+    use super::oxide_release_is_newer;
+
+    #[test]
+    fn newer_build_of_same_release_is_an_update() {
+        assert!(oxide_release_is_newer("1.3.5", 1, "1.3.5", 2).unwrap());
+    }
+
+    #[test]
+    fn same_or_older_build_is_not_an_update() {
+        assert!(!oxide_release_is_newer("1.3.5", 2, "1.3.5", 2).unwrap());
+        assert!(!oxide_release_is_newer("1.3.5", 2, "1.3.5", 1).unwrap());
+    }
+
+    #[test]
+    fn public_release_version_still_takes_priority() {
+        assert!(oxide_release_is_newer("1.3.5", 99, "1.3.6", 1).unwrap());
+        assert!(!oxide_release_is_newer("1.3.6", 1, "1.3.5", 999).unwrap());
+    }
 }
 
 fn installed_updater_helper(install_dir: &Path) -> Result<PathBuf, String> {

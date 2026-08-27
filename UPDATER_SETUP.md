@@ -47,6 +47,17 @@ oxide-latest-linux-x86_64.json
 
 Keep `latest.json` available for older Windows installs even after B1.3.2 is released.
 
+### Build-aware release identity
+
+Oxide does not treat the public SemVer string as the whole release identity. Platform feeds publish both:
+
+```text
+release_version: 1.3.5
+build: 3
+```
+
+The editor compares release version first, then build number when the public version is equal. Therefore `1.3.5 Build 3` is newer than `1.3.5 Build 2`. Build 3 also requests updater feeds with no-cache headers and publishes each internal build as a distinct GitHub Release tag so GitHub's `releases/latest/download/...` route cannot remain pinned to an older same-version release.
+
 ## Package verification
 
 The main application uses the Rust `tauri-plugin-updater` API for release discovery and downloading. The package signature is verified against Oxide's embedded public key before the downloaded bytes are handed to Oxide's own installer logic.
@@ -65,30 +76,19 @@ The styled Windows Update Service is copied to a temporary directory, backs up t
 
 ## Linux package updates
 
-The Linux automatic-update path initially targets **AppImage** installations.
-
-Linux packages contain:
+Linux release packages contain both supported installation payloads:
 
 ```text
 oxide-editor.AppImage
+oxide-editor.deb
 update-package.json
 ```
 
-Oxide copies its small Linux update helper out of the running AppImage, downloads and verifies the signed ZIP, and then exits. The helper:
-
-1. validates and extracts the package;
-2. waits for the old Oxide process to finish;
-3. keeps the original AppImage as a rollback copy;
-4. replaces it with the new AppImage;
-5. restores executable permissions;
-6. relaunches Oxide;
-7. restores the backup if replacement/relaunch fails.
+For AppImage installs, Oxide copies its small Linux update helper out of the running AppImage, downloads and verifies the signed ZIP, and then exits. The helper validates the package, waits for the old process, keeps a rollback copy, replaces the AppImage, restores executable permissions, and relaunches Oxide.
 
 ### `.deb` installations
 
-The `.deb` package is intended for users who prefer normal Debian/Ubuntu/Pop!_OS package installation. B1.3.2 intentionally does not modify root-owned `.deb` files behind the package manager's back.
-
-A `.deb` installation can detect a newer release, but Oxide will ask the user to install the new `.deb` manually. The AppImage is the Linux distribution with automatic Oxide package updates in B1.3.2.
+Debian/Ubuntu/Pop!_OS installs use the operating system's normal privilege boundary. Oxide downloads and verifies the signed package as the user, exits, then the Linux helper invokes `pkexec` so the desktop's Polkit agent can authorize `dpkg --install`. Oxide never displays a password box and never receives the user's password.
 
 ## GitHub Actions
 
@@ -103,14 +103,16 @@ Then use:
 
 **Repository → Actions → Build and publish Oxide → Run workflow**
 
-or push a matching SemVer tag:
+or push the build-specific release tag produced by the release workflow convention:
 
 ```powershell
-git tag v1.3.5
-git push origin v1.3.5
+git tag v1.3.5-b3
+git push origin v1.3.5-b3
 ```
 
-The release pipeline runs separate Windows and Linux jobs after creating the shared GitHub Release.
+The public Oxide version is still `1.3.5`; the `-b3` tag makes each internal build a distinct GitHub Release so `releases/latest/download/...` advances for Build 1 → Build 2 → Build 3 updates. The platform feed remains authoritative and carries both `release_version` and `build`.
+
+The pipeline creates the build-specific release as a **draft**, runs the Windows and Linux jobs, uploads and validates both platform feeds, and only then publishes the release. If either platform job fails, the incomplete draft does not replace the previous working `releases/latest` target.
 
 ### Windows job
 

@@ -1244,7 +1244,8 @@ html, body, #app {
    ================================================================ */
 
 .oxide-shell {
-  --build-height: clamp(130px, 23vh, 210px);
+  --build-height-default: clamp(130px, 23vh, 210px);
+  --build-height: var(--build-height-user, var(--build-height-default));
   grid-template-rows: 54px 36px 52px minmax(0, 1fr) var(--build-height) 28px;
   overflow: hidden;
 }
@@ -1361,7 +1362,7 @@ html, body, #app {
   .diagnostic-banner { height: 27px; min-height: 27px; max-height: 27px; padding-inline: 8px; gap: 7px; }
   .diagnostic-banner-more { display: none; }
   .oxide-shell {
-    --build-height: 155px;
+    --build-height-default: 155px;
     grid-template-rows: 48px 34px 46px minmax(0, 1fr) var(--build-height) 24px;
   }
   .brand-mark { width: 30px; height: 30px; }
@@ -1385,7 +1386,7 @@ html, body, #app {
 
 @media (max-height: 700px) {
   .oxide-shell {
-    --build-height: 120px;
+    --build-height-default: 120px;
     grid-template-rows: 44px 32px 42px minmax(0, 1fr) var(--build-height) 22px;
   }
   .brand-copy span { display: none; }
@@ -1536,3 +1537,283 @@ html, body, #app {
 .breakpoint-form p { margin: 0; color: #72776f; font: 10px/1.45 sans-serif; }
 .breakpoint-actions { margin: 2px -13px -13px !important; }
 .metal-button.danger { color: #c88477; }
+
+/* ================================================================
+   Oxide B1.3.5 Build 3 — forged-workbench polish + resizable Build Bay
+   The structure stays Oxide: this pass tightens hierarchy, edges, spacing,
+   and control consistency without turning the IDE into a different product.
+   ================================================================ */
+:root {
+  --forge-black: #0b0d0c;
+  --forge-deep: #101210;
+  --forge-panel: #171917;
+  --forge-raised: #20221f;
+  --forge-raised-2: #292b27;
+  --forge-line: #30332f;
+  --forge-line-hot: #70402b;
+  --forge-text: #d6d0c7;
+  --forge-muted: #747871;
+  --console-head-height: 30px;
+  --build-resize-handle: 7px;
+}
+
+body.build-bay-resizing,
+body.build-bay-resizing * { cursor: row-resize !important; user-select: none !important; }
+
+.oxide-shell {
+  background:
+    radial-gradient(circle at 18% -10%, rgba(216,121,65,.055), transparent 30%),
+    linear-gradient(90deg, rgba(255,255,255,.012) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(rgba(255,255,255,.008) 1px, transparent 1px) 0 0 / 32px 32px,
+    #121412;
+}
+
+.brandbar {
+  border-top: 1px solid #30332f;
+  background: linear-gradient(#252824, #171a18 72%, #141614);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), inset 0 -1px 0 #050605;
+}
+.brand-mark {
+  box-shadow: inset 0 0 0 1px rgba(255,220,194,.13), 0 0 0 1px #080908, 0 2px 8px rgba(0,0,0,.35);
+}
+.brand-copy strong { color: #e9e1d7; text-shadow: 0 1px 0 #000; }
+.brand-copy span { color: #777a73; }
+
+.menu-bar { background: linear-gradient(#1d201d, #151715); box-shadow: inset 0 1px 0 #292c28, inset 0 -1px 0 #070807; }
+.menu-trigger { min-width: 58px; color: #aaa8a1; }
+.menu-trigger:hover, .menu-trigger.active {
+  background: linear-gradient(#45271d, #2e1c17);
+  border-color: #5d3323;
+  box-shadow: inset 0 -2px 0 #b7653d;
+}
+.profile-switch { border: 1px solid #090a09; box-shadow: inset 0 0 0 1px #333630; }
+.profile { border: 0; box-shadow: none; background: #1c1f1c; }
+.profile + .profile { border-left: 1px solid #090a09; }
+.profile.active { color: #f0d9cb; background: linear-gradient(#713c27,#48271d); box-shadow: inset 0 -2px 0 #d27745; }
+
+.command-deck {
+  gap: 7px;
+  padding: 7px 11px;
+  background: linear-gradient(#222520, #171917);
+  border-top: 1px solid #2a2d29;
+  box-shadow: inset 0 -1px 0 #080908;
+}
+.command-button {
+  height: 35px;
+  min-width: 86px;
+  border-color: #080908;
+  color: #c9c6be;
+  background: linear-gradient(#31342f, #222520 58%, #1c1e1b);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.075), inset 0 -1px 0 rgba(0,0,0,.75), 0 1px 2px rgba(0,0,0,.28);
+  text-shadow: 0 1px 0 #000;
+}
+.command-button:hover:not(:disabled) {
+  color: #eee5db;
+  background: linear-gradient(#3a3d37, #292c27 58%, #20221f);
+  border-color: #151714;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), inset 0 -2px 0 #74402b;
+}
+.command-readout { color: #676c65; }
+
+.workspace { border-top: 1px solid #050605; border-bottom-color: #050605; background: #0e100f; }
+.panel {
+  background: #171917;
+  border-right-color: #070807;
+  box-shadow: inset -1px 0 0 rgba(255,255,255,.025);
+}
+.panel-head, .console-head {
+  position: relative;
+  padding-left: 12px;
+  color: #c9c5bd;
+  background: linear-gradient(#292c28, #20231f 58%, #1c1e1b);
+  border-top: 1px solid #343732;
+  border-bottom: 1px solid #080908;
+  box-shadow: inset 0 -1px 0 #30332e;
+  text-shadow: 0 1px 0 #000;
+}
+.panel-head::before, .console-head::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: #9d5938;
+  box-shadow: 1px 0 0 #3c2319;
+}
+.panel-head small, .console-head small { color: #70746d; font-weight: 700; }
+
+.project-tree { padding: 5px 4px 8px; background: linear-gradient(90deg,#151715,#171917); }
+.tree-entry {
+  min-height: 25px;
+  border: 1px solid transparent;
+  border-left-width: 2px;
+  color: #b6b4ad;
+}
+.tree-entry.file:hover { color: #e5ded5; background: #20231f; border-color: #2c302b; }
+.tree-entry.file.active-file {
+  color: #eee3d8;
+  background: linear-gradient(90deg,#34231c,#211c19 72%,#1a1b19);
+  border-color: #4b2e22;
+  border-left-color: #c06a40;
+}
+.tree-entry.folder { color: #aaa095; }
+.tree-icon { color: #6f746d; }
+
+.tab-rail { background: #181b18; border-top: 1px solid #282b27; box-shadow: inset 0 -1px 0 #050605; }
+.file-tab {
+  background: linear-gradient(#1d201d,#171917);
+  border-right-color: #080908;
+  color: #838780;
+}
+.file-tab:hover { background: linear-gradient(#262925,#1d201c); color: #c7c4bc; }
+.file-tab.active {
+  color: #e7dfd5;
+  background: linear-gradient(#191b19,#121412);
+  border-top-color: #d07845;
+  box-shadow: inset 0 2px 0 #8d4a2e, inset 0 -1px 0 #121412;
+}
+.save-button { color: #aaa69f; background: linear-gradient(#292c28,#1c1f1c); }
+.save-button:not(:disabled):hover { color: #edd9ca; box-shadow: inset 0 -2px 0 #a15b39; }
+
+.editor-wrap, .syntax-layer, .code-editor { background-color: #101210; }
+.line-numbers { background: #0c0e0d; border-right-color: #252823; color: #4e554f; }
+.code-editor { caret-color: #e79a69; }
+.code-editor::selection { background: #59301f; }
+
+.cargo-panel { border-left-color: #080908; }
+.cargo-inspector { padding: 9px; background: linear-gradient(90deg,#141614,#171917); scrollbar-gutter: stable; }
+.manifest-block {
+  position: relative;
+  margin-bottom: 8px;
+  padding: 10px;
+  background: linear-gradient(#1c1f1b,#151715);
+  border: 1px solid #080908;
+  box-shadow: inset 0 0 0 1px #30332d, 0 1px 0 rgba(255,255,255,.018);
+}
+.manifest-block::before {
+  content: '';
+  position: absolute;
+  left: -1px; top: 7px; bottom: 7px; width: 2px;
+  background: #765038;
+}
+.manifest-label { margin-bottom: 8px; color: #b77a53; font-size: 9px; letter-spacing: .14em; }
+.manifest-block > strong { color: #ddd4c9; font-size: 12px; }
+.manifest-block dl { margin-top: 10px; }
+.manifest-block dl div { padding: 6px 1px; border-top-color: #2b2e29; }
+.manifest-block dt { color: #6f746d; }
+.manifest-block dd { color: #c2beb5; }
+.manifest-row { min-height: 24px; }
+.tiny-button {
+  height: 23px;
+  color: #d09570;
+  background: linear-gradient(#302a25,#211d1a);
+  border-color: #120d0b;
+}
+.tiny-button:hover:not(:disabled) { color: #f0b187; background: linear-gradient(#423126,#2a211c); }
+.dependency-list { gap: 3px; }
+.dependency-item {
+  min-height: 39px;
+  padding: 6px 6px 6px 8px;
+  background: #111310;
+  border-color: #292c27;
+  box-shadow: inset 2px 0 0 #403026;
+  transition: background .08s ease, border-color .08s ease;
+}
+.dependency-item:hover { background: #191c18; border-color: #3a3e37; box-shadow: inset 2px 0 0 #a45f3d; }
+.dependency-item strong { color: #d7d0c7; font-size: 10.5px; }
+.dependency-item small { color: #6e746c; line-height: 1.35; }
+.remove-dependency { border-left: 1px solid transparent; color: #785a50; }
+.remove-dependency:hover { color: #d47b68; background: #2b1b18; border-left-color: #4b2922; }
+
+/* Build Bay splitter: top-edge drag target with a compact forged grip. */
+.build-console {
+  display: grid;
+  grid-template-rows: var(--build-resize-handle) var(--console-head-height) minmax(0, 1fr);
+  border-top: 0;
+  background: #0d0f0e;
+  box-shadow: 0 -1px 0 #050605;
+}
+.build-resizer {
+  grid-row: 1;
+  position: relative;
+  z-index: 8;
+  height: var(--build-resize-handle);
+  cursor: row-resize;
+  outline: none;
+  background: linear-gradient(#20231f,#121412);
+  border-top: 1px solid #3a3e37;
+  border-bottom: 1px solid #070807;
+}
+.build-resizer::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 1px;
+  height: 1px;
+  background: rgba(216,121,65,.16);
+}
+.build-resizer-grip {
+  position: absolute;
+  left: 50%; top: 2px;
+  width: 54px; height: 2px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(90deg,#6e4937 0 5px,#252824 5px 9px);
+  box-shadow: 0 1px 0 #070807;
+}
+.build-resizer:hover, .build-resizer:focus-visible, .build-bay-resizing .build-resizer {
+  background: linear-gradient(#33251f,#171917);
+  border-top-color: #70442f;
+}
+.build-resizer:hover .build-resizer-grip,
+.build-resizer:focus-visible .build-resizer-grip,
+.build-bay-resizing .build-resizer-grip { background: repeating-linear-gradient(90deg,#d07947 0 5px,#3b2b24 5px 9px); }
+.build-console > .console-head { grid-row: 2; height: var(--console-head-height); }
+.build-console > .console-pane { grid-row: 3; height: auto !important; min-height: 0; }
+.console-head::before { top: 7px; bottom: 7px; }
+.enhanced-console-head { padding-right: 0; }
+.console-tab {
+  color: #7d817a;
+  background: linear-gradient(#282b27,#1d201d);
+  border-color: #080908;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+.console-tab:hover:not(:disabled) { color: #d8d0c7; background: linear-gradient(#31342f,#232621); }
+.console-tab.active {
+  color: #eadbcf;
+  background: #1b1e1b;
+  box-shadow: inset 0 -2px 0 #c56d41, inset 0 1px 0 #343832;
+}
+.build-output { padding: 8px 12px 10px; background: #0b0d0c; }
+.output-line { color: #9da19a; }
+.output-line.stage { color: #d2c9bf; }
+.output-line.runline { color: #83A6B8; }
+
+.status-rail {
+  color: #666c65;
+  background: linear-gradient(#121412,#0e100f);
+  border-top-color: #2b2e29;
+  box-shadow: inset 0 1px 0 #050605;
+}
+
+/* Keep scrollbars visually part of the workbench instead of browser chrome. */
+.project-tree, .cargo-inspector, .build-output, .problems-list, .debug-list, .debug-output,
+.completion-list, .completion-detail, .tutorial-panel-body, .browser-list {
+  scrollbar-width: thin;
+  scrollbar-color: #4c3930 #101210;
+}
+.project-tree::-webkit-scrollbar, .cargo-inspector::-webkit-scrollbar, .build-output::-webkit-scrollbar,
+.problems-list::-webkit-scrollbar, .debug-list::-webkit-scrollbar, .debug-output::-webkit-scrollbar,
+.completion-list::-webkit-scrollbar, .completion-detail::-webkit-scrollbar, .tutorial-panel-body::-webkit-scrollbar,
+.browser-list::-webkit-scrollbar { width: 8px; height: 8px; }
+.project-tree::-webkit-scrollbar-track, .cargo-inspector::-webkit-scrollbar-track, .build-output::-webkit-scrollbar-track,
+.problems-list::-webkit-scrollbar-track, .debug-list::-webkit-scrollbar-track, .debug-output::-webkit-scrollbar-track,
+.completion-list::-webkit-scrollbar-track, .completion-detail::-webkit-scrollbar-track, .tutorial-panel-body::-webkit-scrollbar-track,
+.browser-list::-webkit-scrollbar-track { background: #101210; }
+.project-tree::-webkit-scrollbar-thumb, .cargo-inspector::-webkit-scrollbar-thumb, .build-output::-webkit-scrollbar-thumb,
+.problems-list::-webkit-scrollbar-thumb, .debug-list::-webkit-scrollbar-thumb, .debug-output::-webkit-scrollbar-thumb,
+.completion-list::-webkit-scrollbar-thumb, .completion-detail::-webkit-scrollbar-thumb, .tutorial-panel-body::-webkit-scrollbar-thumb,
+.browser-list::-webkit-scrollbar-thumb { background: #46372f; border: 2px solid #101210; }
+
+@media (max-height: 820px) {
+  :root { --console-head-height: 28px; --build-resize-handle: 6px; }
+}
