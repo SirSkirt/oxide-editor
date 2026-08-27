@@ -20,7 +20,7 @@ function Invoke-NativeChecked {
 }
 
 Write-Host ''
-Write-Host 'OXIDE PACKAGE UPDATER SETUP' -ForegroundColor DarkYellow
+Write-Host 'RIVET PACKAGE UPDATER SETUP' -ForegroundColor DarkYellow
 Write-Host '--------------------'
 Write-Host "Key location: $KeyPath"
 Write-Host ''
@@ -72,5 +72,5 @@ Write-Host 'If you gave the key a password, also add:'
 Write-Host '  Secret name: TAURI_SIGNING_PRIVATE_KEY_PASSWORD'
 Write-Host ''
 Write-Host 'BACK UP THE PRIVATE KEY.' -ForegroundColor Red
-Write-Host 'Installed copies of Oxide trust this keypair. Losing it means those copies cannot accept future automatic updates signed by a replacement key.'
+Write-Host 'Installed copies of Rivet trust this keypair. Losing it means those copies cannot accept future automatic updates signed by a replacement key.'
 Write-Host ''

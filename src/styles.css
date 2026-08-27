@@ -19,6 +19,21 @@
   --amber: #c49a52;
   --red: #b65d50;
   --steel: #7290a2;
+
+  /* Semantic Readability Colors are semantic roles. Each theme remaps these
+     roles while rust-analyzer continues to provide the same token meaning. */
+  --syntax-keyword: #D87941;
+  --syntax-ident: #83A6B8;
+  --syntax-string: #8FAF72;
+  --syntax-number: #D3A95F;
+  --syntax-type: #C4A45F;
+  --syntax-macro: #E99A62;
+  --syntax-function: #DDD0BF;
+  --syntax-comment: #70786E;
+  --syntax-operator: #d7d1c8;
+  --syntax-bracket-border: rgba(211, 169, 95, .72);
+  --syntax-bracket-bg: rgba(211, 169, 95, .12);
+  --syntax-bracket-shadow: rgba(211, 169, 95, .34);
 }
 
 * { box-sizing: border-box; }
@@ -103,6 +118,17 @@ button:disabled { cursor: not-allowed; }
 .menu-popup kbd { color: #777971; font: 9px Consolas, monospace; }
 .menu-separator { height: 1px; margin: 4px 5px; background: #0c0d0c; box-shadow: 0 1px 0 #353733; }
 .menu-check { display: inline-block; width: 14px; color: var(--rust-hot); font-style: normal; }
+.menu-section-label {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 9px 2px;
+  color: #686b65;
+  font: 800 8px Consolas, monospace;
+  letter-spacing: .12em;
+}
+.menu-section-label span { color: var(--rust-hot); letter-spacing: .08em; }
 .menu-project-readout {
   min-width: 0; margin-left: auto; max-width: 36vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: #6f716b; font: 9px Consolas, monospace; letter-spacing: .08em;
@@ -203,17 +229,18 @@ button:disabled { cursor: not-allowed; }
 .code-editor::selection { background: #60321f; }
 
 /* Semantic Readability Colors — lexical fallback + rust-analyzer semantic overlay.
-   Red is deliberately excluded from source categories so it stays reserved for errors/problems. */
-.syntax-keyword { color: #D87941; font-weight: 700; }
-.syntax-variable, .syntax-ident, .syntax-parameter, .syntax-property { color: #83A6B8; }
-.syntax-string, .syntax-character { color: #8FAF72; }
-.syntax-number, .syntax-boolean { color: #D3A95F; }
-.syntax-type, .syntax-struct, .syntax-enum, .syntax-trait, .syntax-type-alias, .syntax-type-parameter { color: #C4A45F; }
-.syntax-macro, .syntax-derive, .syntax-attribute { color: #E99A62; font-weight: 700; }
-.syntax-function, .syntax-method { color: #DDD0BF; }
-.syntax-comment { color: #70786E; font-style: italic; }
-.syntax-namespace, .syntax-enum-member, .syntax-constant, .syntax-lifetime { color: #83A6B8; }
-.syntax-operator, .syntax-punctuation { color: #d7d1c8; }
+   Token meaning stays stable; the active B1.3.6 theme supplies the palette.
+   Red is deliberately excluded from normal source categories; it belongs to problems/errors. */
+.syntax-keyword { color: var(--syntax-keyword); font-weight: 700; }
+.syntax-variable, .syntax-ident, .syntax-parameter, .syntax-property { color: var(--syntax-ident); }
+.syntax-string, .syntax-character { color: var(--syntax-string); }
+.syntax-number, .syntax-boolean { color: var(--syntax-number); }
+.syntax-type, .syntax-struct, .syntax-enum, .syntax-trait, .syntax-type-alias, .syntax-type-parameter { color: var(--syntax-type); }
+.syntax-macro, .syntax-derive, .syntax-attribute { color: var(--syntax-macro); font-weight: 700; }
+.syntax-function, .syntax-method { color: var(--syntax-function); }
+.syntax-comment { color: var(--syntax-comment); font-style: italic; }
+.syntax-namespace, .syntax-enum-member, .syntax-constant, .syntax-lifetime { color: var(--syntax-ident); }
+.syntax-operator, .syntax-punctuation { color: var(--syntax-operator); }
 
 
 /* Rust Code Analyzer/Completer ------------------------------------------------ */
@@ -1824,9 +1851,9 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
   z-index: 5;
   pointer-events: none;
   box-sizing: border-box;
-  border: 1px solid rgba(211, 169, 95, .72);
-  background: rgba(211, 169, 95, .12);
-  box-shadow: inset 0 -2px 0 rgba(211, 169, 95, .34);
+  border: 1px solid var(--syntax-bracket-border);
+  background: var(--syntax-bracket-bg);
+  box-shadow: inset 0 -2px 0 var(--syntax-bracket-shadow);
 }
 .bracket-match-marker[hidden] { display: none; }
 
@@ -1904,4 +1931,838 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
   margin: 0;
   color: #7d8078;
   font: 10px/1.5 Consolas, monospace;
+}
+
+
+/* ==========================================================================
+   Oxide B1.3.6 Build 1 — Theme Engine
+   Themes change material/presentation only. They do not alter grid geometry,
+   panel placement, commands, project structure, or editor functionality.
+   ========================================================================== */
+
+/* OXIDE — the existing B1.3.5 forged-workbench look remains the default. */
+:root[data-theme="oxide"] {
+  color-scheme: dark;
+  --syntax-keyword: #D87941;
+  --syntax-ident: #83A6B8;
+  --syntax-string: #8FAF72;
+  --syntax-number: #D3A95F;
+  --syntax-type: #C4A45F;
+  --syntax-macro: #E99A62;
+  --syntax-function: #DDD0BF;
+  --syntax-comment: #70786E;
+  --syntax-operator: #d7d1c8;
+}
+
+/* METALLIC — machined charcoal/steel. The orange remains Oxide's accent, but
+   edges are colder, brighter, and more reflective than the default material. */
+:root[data-theme="metallic"] {
+  color-scheme: dark;
+  --iron-0: #0d0f10;
+  --iron-1: #121517;
+  --iron-2: #191d20;
+  --iron-3: #252a2e;
+  --iron-4: #343a3f;
+  --edge-dark: #050607;
+  --edge-light: #626970;
+  --rust: #b96134;
+  --rust-hot: #dd8048;
+  --copper: #a67c52;
+  --paper: #dce0e2;
+  --muted: #8e9599;
+  --steel: #87a9bb;
+
+  --syntax-keyword: #E0844C;
+  --syntax-ident: #8FB5C9;
+  --syntax-string: #95B77D;
+  --syntax-number: #DEB565;
+  --syntax-type: #D2B46B;
+  --syntax-macro: #F0A06A;
+  --syntax-function: #E8D9C7;
+  --syntax-comment: #78847D;
+  --syntax-operator: #D9DEE1;
+  --syntax-bracket-border: rgba(222,181,101,.72);
+  --syntax-bracket-bg: rgba(222,181,101,.12);
+  --syntax-bracket-shadow: rgba(222,181,101,.34);
+
+  --t-ui-font: Consolas, "Cascadia Code", monospace;
+  --t-text: #d9dde0;
+  --t-muted: #8a9297;
+  --t-faint: #5d656a;
+  --t-border: #343a3e;
+  --t-border-strong: #090b0c;
+  --t-accent: #c96f3e;
+  --t-accent-hot: #e58b55;
+  --t-accent-wash: #30241f;
+  --t-accent-border: #6b4938;
+  --t-accent-faint: rgba(229,139,85,.20);
+  --t-focus-ring: rgba(229,139,85,.55);
+  --t-shell: radial-gradient(circle at 18% -12%, rgba(222,128,72,.07), transparent 31%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, rgba(0,0,0,.012) 1px 3px),
+    #111416;
+  --t-brand: linear-gradient(#303539, #202427 55%, #171a1c);
+  --t-menu: linear-gradient(#262a2d, #181b1d);
+  --t-command: linear-gradient(#292e31, #191d1f);
+  --t-panel: #171a1c;
+  --t-panel-alt: #121517;
+  --t-head: linear-gradient(#3b4145, #292e31 52%, #222629);
+  --t-editor: #101315;
+  --t-gutter: #0b0e10;
+  --t-tabbar: #171a1c;
+  --t-tab: linear-gradient(#252a2d, #1a1e20);
+  --t-tab-hover: linear-gradient(#30363a, #202528);
+  --t-tab-active: linear-gradient(#202427, #111416);
+  --t-button: linear-gradient(#43494d, #2b3033 52%, #222629);
+  --t-button-hover: linear-gradient(#52595e, #343a3e 52%, #292e31);
+  --t-button-active: linear-gradient(#2a2f32, #3c4246);
+  --t-tree-hover: #252a2d;
+  --t-tree-active: linear-gradient(90deg,#3b2b24,#252224 70%,#1b1e20);
+  --t-card: linear-gradient(#202427,#171a1c);
+  --t-card-hover: #22272a;
+  --t-console: #0c0f11;
+  --t-input: #0e1113;
+  --t-dialog: #1a1e21;
+  --t-status: linear-gradient(#15191b,#0e1113);
+  --t-scroll-track: #0f1214;
+  --t-scroll-thumb: #455057;
+  --t-selection: rgba(127, 69, 42, .72);
+  --t-caret: #ef9c6a;
+  --t-shadow: inset 0 1px 0 rgba(255,255,255,.11), inset 0 -1px 0 rgba(0,0,0,.8);
+  --t-marker: #ca7548;
+  --t-brand-mark: linear-gradient(145deg,#5c6470,#343a40 44%,#15191c 46%,#a64e2d 100%);
+}
+
+/* RUST — the Metallic construction, weathered into oxidized iron. */
+:root[data-theme="rust"] {
+  color-scheme: dark;
+  --iron-0: #110d0b;
+  --iron-1: #18120f;
+  --iron-2: #211813;
+  --iron-3: #30221b;
+  --iron-4: #443127;
+  --edge-dark: #090604;
+  --edge-light: #674a3a;
+  --rust: #a84f28;
+  --rust-hot: #d46c34;
+  --copper: #9a6845;
+  --paper: #d9cdc1;
+  --muted: #93867c;
+  --steel: #849fa9;
+
+  --syntax-keyword: #D8753F;
+  --syntax-ident: #89A8B4;
+  --syntax-string: #96AA70;
+  --syntax-number: #D0A65B;
+  --syntax-type: #C59A58;
+  --syntax-macro: #E58D50;
+  --syntax-function: #DEC8B1;
+  --syntax-comment: #777D6F;
+  --syntax-operator: #D2C7BB;
+  --syntax-bracket-border: rgba(208,166,91,.72);
+  --syntax-bracket-bg: rgba(208,166,91,.12);
+  --syntax-bracket-shadow: rgba(208,166,91,.34);
+
+  --t-ui-font: Consolas, "Cascadia Code", monospace;
+  --t-text: #d8ccc0;
+  --t-muted: #8f8278;
+  --t-faint: #5f5149;
+  --t-border: #493126;
+  --t-border-strong: #080504;
+  --t-accent: #b5572d;
+  --t-accent-hot: #df7540;
+  --t-accent-wash: #352018;
+  --t-accent-border: #673821;
+  --t-accent-faint: rgba(223,117,64,.20);
+  --t-focus-ring: rgba(223,117,64,.55);
+  --t-shell: radial-gradient(circle at 13% 8%, rgba(150,58,25,.19), transparent 21%),
+    radial-gradient(circle at 78% 36%, rgba(106,44,24,.12), transparent 18%),
+    radial-gradient(circle at 42% 90%, rgba(179,73,28,.09), transparent 22%),
+    repeating-linear-gradient(102deg, rgba(255,205,160,.012) 0 1px, rgba(0,0,0,.025) 1px 4px),
+    #17110e;
+  --t-brand: linear-gradient(#36261f, #221813 58%, #17100d);
+  --t-menu: linear-gradient(#2c1f19,#19110e);
+  --t-command: linear-gradient(#30231c,#1c1410);
+  --t-panel: #1c1511;
+  --t-panel-alt: #15100d;
+  --t-head: linear-gradient(#473129,#30221b 50%,#251a16);
+  --t-editor: #130f0d;
+  --t-gutter: #0d0a08;
+  --t-tabbar: #1b1411;
+  --t-tab: linear-gradient(#2b1f19,#1c1511);
+  --t-tab-hover: linear-gradient(#3a291f,#241a15);
+  --t-tab-active: linear-gradient(#251912,#130f0d);
+  --t-button: linear-gradient(#493329,#30221b 55%,#251a15);
+  --t-button-hover: linear-gradient(#5b3b2d,#3b281f 55%,#2c1e18);
+  --t-button-active: linear-gradient(#291b15,#443027);
+  --t-tree-hover: #291d18;
+  --t-tree-active: linear-gradient(90deg,#4a2618,#2c1b14 68%,#1d1511);
+  --t-card: linear-gradient(#261b16,#18120f);
+  --t-card-hover: #2b1e18;
+  --t-console: #0e0a08;
+  --t-input: #110c09;
+  --t-dialog: #211711;
+  --t-status: linear-gradient(#18110e,#0f0b09);
+  --t-scroll-track: #110d0a;
+  --t-scroll-thumb: #58372a;
+  --t-selection: rgba(117, 50, 26, .72);
+  --t-caret: #ef8956;
+  --t-shadow: inset 0 1px 0 rgba(255,210,175,.07), inset 0 -1px 0 rgba(0,0,0,.85);
+  --t-marker: #a84d28;
+  --t-brand-mark: radial-gradient(circle at 28% 25%,#cc6a36 0 5%,transparent 6%),
+    linear-gradient(145deg,#6f3522,#3a2118 48%,#8d3f22 52%,#25140f);
+}
+
+/* MODERN DARK — same Oxide controls/layout, conventional IDE presentation. */
+:root[data-theme="modern-dark"] {
+  color-scheme: dark;
+  --iron-0: #111317;
+  --iron-1: #17191f;
+  --iron-2: #1e2128;
+  --iron-3: #292d35;
+  --iron-4: #383d47;
+  --edge-dark: #0d0f12;
+  --edge-light: #3b404a;
+  --rust: #c66d3f;
+  --rust-hot: #e0824c;
+  --copper: #a77a5f;
+  --paper: #d7dbe0;
+  --muted: #8b929c;
+  --steel: #77a7c6;
+
+  --syntax-keyword: #D98A56;
+  --syntax-ident: #7FAFCB;
+  --syntax-string: #8FB978;
+  --syntax-number: #D7B25E;
+  --syntax-type: #D1B56C;
+  --syntax-macro: #E69A65;
+  --syntax-function: #E2D5C5;
+  --syntax-comment: #78837C;
+  --syntax-operator: #CDD3DA;
+  --syntax-bracket-border: rgba(215,178,94,.72);
+  --syntax-bracket-bg: rgba(215,178,94,.12);
+  --syntax-bracket-shadow: rgba(215,178,94,.34);
+
+  --t-ui-font: Inter, "Segoe UI", system-ui, sans-serif;
+  --t-text: #d8dce2;
+  --t-muted: #8e959f;
+  --t-faint: #5f6670;
+  --t-border: #2d3139;
+  --t-border-strong: #121419;
+  --t-accent: #cc7141;
+  --t-accent-hot: #e48751;
+  --t-accent-wash: #302721;
+  --t-accent-border: #654838;
+  --t-accent-faint: rgba(228,135,81,.20);
+  --t-focus-ring: rgba(228,135,81,.55);
+  --t-shell: #15171b;
+  --t-brand: #1f2228;
+  --t-menu: #1b1e23;
+  --t-command: #202329;
+  --t-panel: #1a1d22;
+  --t-panel-alt: #16191d;
+  --t-head: #24282e;
+  --t-editor: #121418;
+  --t-gutter: #0f1115;
+  --t-tabbar: #171a1f;
+  --t-tab: #1d2026;
+  --t-tab-hover: #262a31;
+  --t-tab-active: #121418;
+  --t-button: #292d34;
+  --t-button-hover: #343941;
+  --t-button-active: #22262c;
+  --t-tree-hover: #24282e;
+  --t-tree-active: #2a2524;
+  --t-card: #1d2025;
+  --t-card-hover: #25292f;
+  --t-console: #101216;
+  --t-input: #111318;
+  --t-dialog: #202329;
+  --t-status: #17191e;
+  --t-scroll-track: #15181c;
+  --t-scroll-thumb: #3b414b;
+  --t-selection: rgba(106, 76, 60, .66);
+  --t-caret: #ef9a69;
+  --t-shadow: none;
+  --t-marker: #d27848;
+  --t-brand-mark: #c86e40;
+}
+
+/* MODERN LIGHT — same Oxide layout with a conventional light IDE surface. */
+:root[data-theme="modern-light"] {
+  color-scheme: light;
+  color: #24272c;
+  background: #f1f3f5;
+  --iron-0: #f1f3f5;
+  --iron-1: #f6f7f8;
+  --iron-2: #eceff1;
+  --iron-3: #dfe3e6;
+  --iron-4: #cbd1d6;
+  --edge-dark: #b7bdc3;
+  --edge-light: #ffffff;
+  --rust: #aa552e;
+  --rust-hot: #c66534;
+  --copper: #8d694e;
+  --paper: #272b30;
+  --muted: #69717a;
+  --green: #5d7d4c;
+  --amber: #a67927;
+  --red: #b0473e;
+  --steel: #3e748f;
+
+  --syntax-keyword: #A95328;
+  --syntax-ident: #3D748F;
+  --syntax-string: #587B46;
+  --syntax-number: #986F21;
+  --syntax-type: #8A6A20;
+  --syntax-macro: #B96130;
+  --syntax-function: #665441;
+  --syntax-comment: #6C776E;
+  --syntax-operator: #3C4249;
+  --syntax-bracket-border: rgba(152,111,33,.62);
+  --syntax-bracket-bg: rgba(152,111,33,.10);
+  --syntax-bracket-shadow: rgba(152,111,33,.26);
+
+  --t-ui-font: Inter, "Segoe UI", system-ui, sans-serif;
+  --t-text: #272b30;
+  --t-muted: #6b737c;
+  --t-faint: #9299a1;
+  --t-border: #d0d5da;
+  --t-border-strong: #b7bdc3;
+  --t-accent: #b75d31;
+  --t-accent-hot: #ca6a38;
+  --t-accent-wash: #f7e9e1;
+  --t-accent-border: #d4a084;
+  --t-accent-faint: rgba(202,106,56,.18);
+  --t-focus-ring: rgba(183,93,49,.35);
+  --t-shell: #eef1f3;
+  --t-brand: #f7f8f9;
+  --t-menu: #f0f2f4;
+  --t-command: #f5f6f7;
+  --t-panel: #f8f9fa;
+  --t-panel-alt: #f1f3f5;
+  --t-head: #e9ecef;
+  --t-editor: #ffffff;
+  --t-gutter: #f4f5f6;
+  --t-tabbar: #eceff1;
+  --t-tab: #e5e8eb;
+  --t-tab-hover: #f4f5f6;
+  --t-tab-active: #ffffff;
+  --t-button: #f2f4f5;
+  --t-button-hover: #ffffff;
+  --t-button-active: #e2e6e9;
+  --t-tree-hover: #edf0f2;
+  --t-tree-active: #f5e7df;
+  --t-card: #ffffff;
+  --t-card-hover: #f5f7f8;
+  --t-console: #ffffff;
+  --t-input: #ffffff;
+  --t-dialog: #ffffff;
+  --t-status: #eceff1;
+  --t-scroll-track: #f0f2f4;
+  --t-scroll-thumb: #c1c7cd;
+  --t-selection: rgba(197, 117, 71, .25);
+  --t-caret: #a84f29;
+  --t-shadow: none;
+  --t-marker: #b85e32;
+  --t-brand-mark: #b85e32;
+}
+
+/* Shared non-default theme material application. Keeping this in one layer is
+   deliberate: every theme uses the exact same DOM/layout and only remaps the
+   presentation tokens below. */
+:root[data-theme]:not([data-theme="oxide"]) body,
+:root[data-theme]:not([data-theme="oxide"]) #app {
+  color: var(--t-text);
+  background: var(--t-shell);
+}
+:root[data-theme]:not([data-theme="oxide"]) .oxide-shell { background: var(--t-shell); }
+:root[data-theme]:not([data-theme="oxide"]) .brandbar {
+  color: var(--t-text);
+  background: var(--t-brand);
+  border-color: var(--t-border-strong);
+  box-shadow: var(--t-shadow);
+}
+:root[data-theme]:not([data-theme="oxide"]) .brand-mark {
+  color: #fff4eb;
+  background: var(--t-brand-mark);
+  border-color: var(--t-accent-hot);
+  outline-color: var(--t-border-strong);
+  box-shadow: var(--t-shadow), 0 1px 5px rgba(0,0,0,.2);
+}
+:root[data-theme]:not([data-theme="oxide"]) .brand-copy strong { color: var(--t-text); text-shadow: none; }
+:root[data-theme]:not([data-theme="oxide"]) .brand-copy span,
+:root[data-theme]:not([data-theme="oxide"]) .toolchain-lamps,
+:root[data-theme]:not([data-theme="oxide"]) .command-readout,
+:root[data-theme]:not([data-theme="oxide"]) .menu-project-readout { color: var(--t-muted); }
+
+:root[data-theme]:not([data-theme="oxide"]) .menu-bar {
+  background: var(--t-menu);
+  border-color: var(--t-border-strong);
+  box-shadow: var(--t-shadow);
+}
+:root[data-theme]:not([data-theme="oxide"]) .menu-trigger {
+  color: var(--t-muted);
+  font-family: var(--t-ui-font);
+}
+:root[data-theme]:not([data-theme="oxide"]) .menu-trigger:hover,
+:root[data-theme]:not([data-theme="oxide"]) .menu-trigger.active {
+  color: var(--t-text);
+  background: var(--t-accent-wash);
+  border-color: var(--t-accent-border);
+  box-shadow: inset 0 -2px 0 var(--t-accent);
+}
+:root[data-theme]:not([data-theme="oxide"]) .menu-popup {
+  color: var(--t-text);
+  background: var(--t-dialog);
+  border-color: var(--t-border-strong);
+  box-shadow: inset 0 0 0 1px var(--t-border), 6px 9px 18px rgba(0,0,0,.24);
+}
+:root[data-theme]:not([data-theme="oxide"]) .menu-popup button {
+  color: var(--t-text);
+  font-family: var(--t-ui-font);
+}
+:root[data-theme]:not([data-theme="oxide"]) .menu-popup button:hover:not(:disabled),
+:root[data-theme]:not([data-theme="oxide"]) .menu-popup button:focus-visible:not(:disabled) {
+  color: var(--t-text);
+  background: var(--t-accent-wash);
+  outline-color: var(--t-accent-border);
+}
+:root[data-theme]:not([data-theme="oxide"]) .menu-popup kbd,
+:root[data-theme]:not([data-theme="oxide"]) .menu-section-label { color: var(--t-muted); }
+:root[data-theme]:not([data-theme="oxide"]) .menu-section-label span,
+:root[data-theme]:not([data-theme="oxide"]) .menu-check { color: var(--t-accent-hot); }
+:root[data-theme]:not([data-theme="oxide"]) .menu-separator {
+  background: var(--t-border-strong);
+  box-shadow: 0 1px 0 var(--t-border);
+}
+
+:root[data-theme]:not([data-theme="oxide"]) .command-deck {
+  background: var(--t-command);
+  border-color: var(--t-border);
+  box-shadow: var(--t-shadow);
+}
+:root[data-theme]:not([data-theme="oxide"]) .metal-button,
+:root[data-theme]:not([data-theme="oxide"]) .command-button,
+:root[data-theme]:not([data-theme="oxide"]) .profile,
+:root[data-theme]:not([data-theme="oxide"]) .save-button,
+:root[data-theme]:not([data-theme="oxide"]) .tiny-button,
+:root[data-theme]:not([data-theme="oxide"]) .console-tab,
+:root[data-theme]:not([data-theme="oxide"]) .debug-tool,
+:root[data-theme]:not([data-theme="oxide"]) .terminal-head-button,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-small-button {
+  color: var(--t-text);
+  background: var(--t-button);
+  border-color: var(--t-border-strong);
+  box-shadow: var(--t-shadow);
+  text-shadow: none;
+  font-family: var(--t-ui-font);
+}
+:root[data-theme]:not([data-theme="oxide"]) .metal-button:hover:not(:disabled),
+:root[data-theme]:not([data-theme="oxide"]) .command-button:hover:not(:disabled),
+:root[data-theme]:not([data-theme="oxide"]) .profile:hover:not(:disabled),
+:root[data-theme]:not([data-theme="oxide"]) .save-button:hover:not(:disabled),
+:root[data-theme]:not([data-theme="oxide"]) .tiny-button:hover:not(:disabled),
+:root[data-theme]:not([data-theme="oxide"]) .console-tab:hover:not(:disabled),
+:root[data-theme]:not([data-theme="oxide"]) .debug-tool:hover:not(:disabled),
+:root[data-theme]:not([data-theme="oxide"]) .terminal-head-button:hover:not(:disabled),
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-small-button:hover {
+  color: var(--t-text);
+  background: var(--t-button-hover);
+  border-color: var(--t-border);
+}
+:root[data-theme]:not([data-theme="oxide"]) .metal-button.primary,
+:root[data-theme]:not([data-theme="oxide"]) .profile.active,
+:root[data-theme]:not([data-theme="oxide"]) .debug-tool.primary {
+  color: #fff4ec;
+  background: linear-gradient(var(--t-accent-hot), var(--t-accent));
+  border-color: var(--t-accent-border);
+}
+:root[data-theme]:not([data-theme="oxide"]) .command-button span,
+:root[data-theme]:not([data-theme="oxide"]) .command-button.build span { color: var(--t-accent-hot); }
+
+:root[data-theme]:not([data-theme="oxide"]) .workspace {
+  background: var(--t-panel-alt);
+  border-color: var(--t-border-strong);
+}
+:root[data-theme]:not([data-theme="oxide"]) .panel,
+:root[data-theme]:not([data-theme="oxide"]) .editor-stack {
+  color: var(--t-text);
+  background: var(--t-panel);
+  border-color: var(--t-border-strong);
+  box-shadow: none;
+}
+:root[data-theme]:not([data-theme="oxide"]) .panel-head,
+:root[data-theme]:not([data-theme="oxide"]) .console-head,
+:root[data-theme]:not([data-theme="oxide"]) .dialog-head,
+:root[data-theme]:not([data-theme="oxide"]) .terminal-window-head {
+  color: var(--t-text);
+  background: var(--t-head);
+  border-color: var(--t-border-strong);
+  box-shadow: var(--t-shadow);
+  text-shadow: none;
+  font-family: var(--t-ui-font);
+}
+:root[data-theme]:not([data-theme="oxide"]) .panel-head::before,
+:root[data-theme]:not([data-theme="oxide"]) .console-head::before { background: var(--t-marker); box-shadow: none; }
+:root[data-theme]:not([data-theme="oxide"]) .panel-head small,
+:root[data-theme]:not([data-theme="oxide"]) .console-head small,
+:root[data-theme]:not([data-theme="oxide"]) .terminal-window-head small { color: var(--t-muted); }
+
+:root[data-theme]:not([data-theme="oxide"]) .project-tree,
+:root[data-theme]:not([data-theme="oxide"]) .cargo-inspector {
+  color: var(--t-text);
+  background: var(--t-panel);
+}
+:root[data-theme]:not([data-theme="oxide"]) .tree-entry { color: var(--t-text); }
+:root[data-theme]:not([data-theme="oxide"]) .tree-entry.folder,
+:root[data-theme]:not([data-theme="oxide"]) .tree-icon { color: var(--t-muted); }
+:root[data-theme]:not([data-theme="oxide"]) .tree-entry.file:hover {
+  color: var(--t-text);
+  background: var(--t-tree-hover);
+  border-color: var(--t-border);
+}
+:root[data-theme]:not([data-theme="oxide"]) .tree-entry.file.active-file {
+  color: var(--t-text);
+  background: var(--t-tree-active);
+  border-color: var(--t-accent-border);
+  border-left-color: var(--t-accent);
+}
+
+:root[data-theme]:not([data-theme="oxide"]) .tab-rail { background: var(--t-tabbar); border-color: var(--t-border-strong); box-shadow: none; }
+:root[data-theme]:not([data-theme="oxide"]) .file-tab {
+  color: var(--t-muted);
+  background: var(--t-tab);
+  border-color: var(--t-border-strong);
+}
+:root[data-theme]:not([data-theme="oxide"]) .file-tab:hover { color: var(--t-text); background: var(--t-tab-hover); }
+:root[data-theme]:not([data-theme="oxide"]) .file-tab.active {
+  color: var(--t-text);
+  background: var(--t-tab-active);
+  border-top-color: var(--t-accent);
+  box-shadow: inset 0 2px 0 var(--t-accent);
+}
+
+:root[data-theme]:not([data-theme="oxide"]) .editor-wrap,
+:root[data-theme]:not([data-theme="oxide"]) .syntax-layer,
+:root[data-theme]:not([data-theme="oxide"]) .code-editor { background-color: var(--t-editor); }
+:root[data-theme]:not([data-theme="oxide"]) .code-editor {
+  color: var(--t-text);
+  caret-color: var(--t-caret);
+}
+:root[data-theme]:not([data-theme="oxide"]) .code-editor::selection,
+:root[data-theme]:not([data-theme="oxide"]) .code-editor.syntax-active::selection { background: var(--t-selection); }
+:root[data-theme]:not([data-theme="oxide"]) .line-numbers {
+  color: var(--t-faint);
+  background: var(--t-gutter);
+  border-color: var(--t-border);
+}
+:root[data-theme]:not([data-theme="oxide"]) .diagnostic-banner { border-color: var(--t-border); }
+
+:root[data-theme]:not([data-theme="oxide"]) .manifest-block,
+:root[data-theme]:not([data-theme="oxide"]) .dependency-item,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-course-card,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-lesson-card,
+:root[data-theme]:not([data-theme="oxide"]) .welcome-action,
+:root[data-theme]:not([data-theme="oxide"]) .intelligence-result {
+  color: var(--t-text);
+  background: var(--t-card);
+  border-color: var(--t-border);
+  box-shadow: none;
+}
+:root[data-theme]:not([data-theme="oxide"]) .dependency-item:hover,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-lesson-card:hover,
+:root[data-theme]:not([data-theme="oxide"]) .welcome-action:hover,
+:root[data-theme]:not([data-theme="oxide"]) .intelligence-result:hover {
+  color: var(--t-text);
+  background: var(--t-card-hover);
+  border-color: var(--t-accent-border);
+}
+:root[data-theme]:not([data-theme="oxide"]) .manifest-block::before { background: var(--t-accent); }
+:root[data-theme]:not([data-theme="oxide"]) .manifest-label,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-objective-block span { color: var(--t-accent); }
+:root[data-theme]:not([data-theme="oxide"]) .manifest-block > strong,
+:root[data-theme]:not([data-theme="oxide"]) .manifest-block dd,
+:root[data-theme]:not([data-theme="oxide"]) .dependency-item strong { color: var(--t-text); }
+:root[data-theme]:not([data-theme="oxide"]) .manifest-block dt,
+:root[data-theme]:not([data-theme="oxide"]) .dependency-item small { color: var(--t-muted); }
+
+:root[data-theme]:not([data-theme="oxide"]) .build-console,
+:root[data-theme]:not([data-theme="oxide"]) .build-output,
+:root[data-theme]:not([data-theme="oxide"]) .problems-pane,
+:root[data-theme]:not([data-theme="oxide"]) .debug-pane,
+:root[data-theme]:not([data-theme="oxide"]) .debug-output {
+  color: var(--t-text);
+  background: var(--t-console);
+}
+:root[data-theme]:not([data-theme="oxide"]) .build-resizer {
+  background: var(--t-head);
+  border-color: var(--t-border);
+}
+:root[data-theme]:not([data-theme="oxide"]) .build-resizer::before { background: var(--t-accent-faint); }
+:root[data-theme]:not([data-theme="oxide"]) .build-resizer-grip {
+  background: repeating-linear-gradient(90deg,var(--t-accent) 0 5px,var(--t-border) 5px 9px);
+  box-shadow: none;
+}
+:root[data-theme]:not([data-theme="oxide"]) .console-tab.active {
+  color: var(--t-text);
+  background: var(--t-tab-active);
+  box-shadow: inset 0 -2px 0 var(--t-accent);
+}
+:root[data-theme]:not([data-theme="oxide"]) .output-line { color: var(--t-muted); }
+:root[data-theme]:not([data-theme="oxide"]) .output-line.stage { color: var(--t-text); }
+:root[data-theme]:not([data-theme="oxide"]) .debug-toolbar,
+:root[data-theme]:not([data-theme="oxide"]) .debug-column,
+:root[data-theme]:not([data-theme="oxide"]) .debug-section-head,
+:root[data-theme]:not([data-theme="oxide"]) .debug-watch-form { border-color: var(--t-border); }
+:root[data-theme]:not([data-theme="oxide"]) .debug-toolbar,
+:root[data-theme]:not([data-theme="oxide"]) .debug-section-head { background: var(--t-panel-alt); }
+:root[data-theme]:not([data-theme="oxide"]) .debug-section-head,
+:root[data-theme]:not([data-theme="oxide"]) .debug-empty,
+:root[data-theme]:not([data-theme="oxide"]) .debug-frame span,
+:root[data-theme]:not([data-theme="oxide"]) .debug-variable small,
+:root[data-theme]:not([data-theme="oxide"]) .debug-watch small { color: var(--t-muted); }
+:root[data-theme]:not([data-theme="oxide"]) .debug-frame,
+:root[data-theme]:not([data-theme="oxide"]) .debug-variable,
+:root[data-theme]:not([data-theme="oxide"]) .debug-watch { color: var(--t-text); border-color: var(--t-border); }
+:root[data-theme]:not([data-theme="oxide"]) .debug-frame:hover,
+:root[data-theme]:not([data-theme="oxide"]) .debug-frame.active { background: var(--t-tree-hover); }
+:root[data-theme]:not([data-theme="oxide"]) .debug-frame.active { box-shadow: inset 2px 0 var(--t-accent); }
+
+:root[data-theme]:not([data-theme="oxide"]) .oxide-dialog {
+  color: var(--t-text);
+  background: var(--t-dialog);
+  border-color: var(--t-border-strong);
+  box-shadow: 0 18px 50px rgba(0,0,0,.28);
+}
+:root[data-theme]:not([data-theme="oxide"]) .oxide-dialog label { color: var(--t-muted); }
+:root[data-theme]:not([data-theme="oxide"]) .oxide-dialog input,
+:root[data-theme]:not([data-theme="oxide"]) .oxide-dialog select,
+:root[data-theme]:not([data-theme="oxide"]) .debug-watch-form input,
+:root[data-theme]:not([data-theme="oxide"]) .debug-console-form input,
+:root[data-theme]:not([data-theme="oxide"]) .terminal-input-row input {
+  color: var(--t-text);
+  background: var(--t-input);
+  border-color: var(--t-border);
+  box-shadow: none;
+}
+:root[data-theme]:not([data-theme="oxide"]) .oxide-dialog input:focus,
+:root[data-theme]:not([data-theme="oxide"]) .debug-watch-form input:focus,
+:root[data-theme]:not([data-theme="oxide"]) .debug-console-form input:focus {
+  border-color: var(--t-accent);
+  box-shadow: 0 0 0 1px var(--t-focus-ring);
+}
+:root[data-theme]:not([data-theme="oxide"]) .dialog-actions { background: var(--t-panel-alt); border-color: var(--t-border); }
+
+:root[data-theme]:not([data-theme="oxide"]) .code-completer {
+  color: var(--t-text);
+  background: var(--t-dialog);
+  border-color: var(--t-border-strong);
+  box-shadow: 0 12px 32px rgba(0,0,0,.26), inset 0 0 0 1px var(--t-border);
+}
+:root[data-theme]:not([data-theme="oxide"]) .completion-list,
+:root[data-theme]:not([data-theme="oxide"]) .completion-detail { background: var(--t-panel); border-color: var(--t-border); }
+:root[data-theme]:not([data-theme="oxide"]) .completion-item { color: var(--t-text); border-color: var(--t-border); }
+:root[data-theme]:not([data-theme="oxide"]) .completion-item:hover,
+:root[data-theme]:not([data-theme="oxide"]) .completion-item.selected {
+  color: var(--t-text);
+  background: var(--t-tree-active);
+}
+:root[data-theme]:not([data-theme="oxide"]) .completion-detail-head strong { color: var(--t-text); }
+:root[data-theme]:not([data-theme="oxide"]) .completion-detail-head span,
+:root[data-theme]:not([data-theme="oxide"]) .completion-detail > code { color: var(--t-accent-hot); }
+:root[data-theme]:not([data-theme="oxide"]) .completion-detail > code { background: var(--t-input); border-color: var(--t-border); }
+:root[data-theme]:not([data-theme="oxide"]) .completion-detail-docs,
+:root[data-theme]:not([data-theme="oxide"]) .completion-type { color: var(--t-muted); }
+
+:root[data-theme]:not([data-theme="oxide"]) .welcome-screen,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-home,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-panel-body,
+:root[data-theme]:not([data-theme="oxide"]) .intelligence-list,
+:root[data-theme]:not([data-theme="oxide"]) .browser-files-panel,
+:root[data-theme]:not([data-theme="oxide"]) .browser-roots-panel { background: var(--t-panel); color: var(--t-text); }
+:root[data-theme]:not([data-theme="oxide"]) .welcome-plate,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-home-intro,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-capability-summary,
+:root[data-theme]:not([data-theme="oxide"]) .intelligence-empty { background: var(--t-card); border-color: var(--t-border); color: var(--t-text); }
+:root[data-theme]:not([data-theme="oxide"]) .welcome-eyebrow,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-course-head span { color: var(--t-accent); }
+:root[data-theme]:not([data-theme="oxide"]) .welcome-plate h1,
+:root[data-theme]:not([data-theme="oxide"]) .welcome-action strong,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-course-head span { text-shadow: none; }
+:root[data-theme]:not([data-theme="oxide"]) .welcome-plate > p,
+:root[data-theme]:not([data-theme="oxide"]) .welcome-action small,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-home-intro p,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-course-card > p,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-lesson-copy small,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-topic-list div { color: var(--t-muted); }
+
+:root[data-theme]:not([data-theme="oxide"]) .terminal-window {
+  color: var(--t-text);
+  background: var(--t-panel);
+  border-color: var(--t-border-strong);
+  box-shadow: 0 18px 50px rgba(0,0,0,.28);
+}
+:root[data-theme]:not([data-theme="oxide"]) .terminal-screen,
+:root[data-theme]:not([data-theme="oxide"]) .terminal-pane,
+:root[data-theme]:not([data-theme="oxide"]) .terminal-input-row { background: var(--t-console); border-color: var(--t-border); }
+:root[data-theme]:not([data-theme="oxide"]) .terminal-stdout { color: var(--t-text); }
+:root[data-theme]:not([data-theme="oxide"]) .terminal-muted { color: var(--t-muted); }
+:root[data-theme]:not([data-theme="oxide"]) .terminal-system { color: var(--t-accent-hot); }
+
+:root[data-theme]:not([data-theme="oxide"]) .status-rail {
+  color: var(--t-muted);
+  background: var(--t-status);
+  border-color: var(--t-border);
+  box-shadow: none;
+}
+
+/* Keep native controls and selection coherent with Modern themes. */
+:root[data-theme="modern-dark"] .menu-trigger,
+:root[data-theme="modern-dark"] .command-button,
+:root[data-theme="modern-dark"] .metal-button,
+:root[data-theme="modern-dark"] .panel-head,
+:root[data-theme="modern-dark"] .console-head,
+:root[data-theme="modern-dark"] .console-tab,
+:root[data-theme="modern-light"] .menu-trigger,
+:root[data-theme="modern-light"] .command-button,
+:root[data-theme="modern-light"] .metal-button,
+:root[data-theme="modern-light"] .panel-head,
+:root[data-theme="modern-light"] .console-head,
+:root[data-theme="modern-light"] .console-tab {
+  letter-spacing: .035em;
+}
+:root[data-theme="modern-dark"] .brand-mark,
+:root[data-theme="modern-light"] .brand-mark {
+  clip-path: none;
+  border-radius: 3px;
+  outline: 0;
+}
+:root[data-theme="modern-dark"] .metal-button,
+:root[data-theme="modern-dark"] .command-button,
+:root[data-theme="modern-dark"] .profile-switch,
+:root[data-theme="modern-dark"] .profile,
+:root[data-theme="modern-dark"] .save-button,
+:root[data-theme="modern-dark"] .tiny-button,
+:root[data-theme="modern-light"] .metal-button,
+:root[data-theme="modern-light"] .command-button,
+:root[data-theme="modern-light"] .profile-switch,
+:root[data-theme="modern-light"] .profile,
+:root[data-theme="modern-light"] .save-button,
+:root[data-theme="modern-light"] .tiny-button {
+  border-radius: 3px;
+}
+
+/* Light mode needs a few explicit foreground resets because older Oxide
+   components predate the theme-token layer and intentionally hard-coded their
+   dark-workbench text. */
+:root[data-theme="modern-light"] .brand-copy strong,
+:root[data-theme="modern-light"] .panel-head,
+:root[data-theme="modern-light"] .console-head,
+:root[data-theme="modern-light"] .file-tab.active,
+:root[data-theme="modern-light"] .tree-entry.file.active-file,
+:root[data-theme="modern-light"] .manifest-block > strong,
+:root[data-theme="modern-light"] .manifest-block dd,
+:root[data-theme="modern-light"] .dependency-item strong,
+:root[data-theme="modern-light"] .welcome-plate h1,
+:root[data-theme="modern-light"] .welcome-action,
+:root[data-theme="modern-light"] .tutorial-course-head span,
+:root[data-theme="modern-light"] .tutorial-lesson-copy strong,
+:root[data-theme="modern-light"] .debug-frame,
+:root[data-theme="modern-light"] .debug-variable code,
+:root[data-theme="modern-light"] .debug-watch code,
+:root[data-theme="modern-light"] .completion-detail-head strong,
+:root[data-theme="modern-light"] .update-status-message strong { color: #272b30; }
+
+:root[data-theme="modern-light"] .brand-copy span,
+:root[data-theme="modern-light"] .panel-head small,
+:root[data-theme="modern-light"] .console-head small,
+:root[data-theme="modern-light"] .file-tab,
+:root[data-theme="modern-light"] .tree-entry.folder,
+:root[data-theme="modern-light"] .manifest-block dt,
+:root[data-theme="modern-light"] .dependency-item small,
+:root[data-theme="modern-light"] .welcome-plate > p,
+:root[data-theme="modern-light"] .welcome-action small,
+:root[data-theme="modern-light"] .debug-empty,
+:root[data-theme="modern-light"] .completion-detail-docs,
+:root[data-theme="modern-light"] .update-release-date,
+:root[data-theme="modern-light"] .update-progress-text { color: #6b737c; }
+
+:root[data-theme="modern-light"] .update-body,
+:root[data-theme="modern-light"] .update-notes,
+:root[data-theme="modern-light"] .update-version-row,
+:root[data-theme="modern-light"] .browser-workspace,
+:root[data-theme="modern-light"] .browser-location,
+:root[data-theme="modern-light"] .browser-footer,
+:root[data-theme="modern-light"] .run-body { background: #fff; color: #272b30; border-color: #d0d5da; }
+:root[data-theme="modern-light"] .update-notes { border-color: #d0d5da; }
+:root[data-theme="modern-light"] .update-version-row b,
+:root[data-theme="modern-light"] .update-version-row strong,
+:root[data-theme="modern-light"] .update-notes-title { color: #a9552d; }
+
+/* Theme-aware scrollbars. */
+:root[data-theme]:not([data-theme="oxide"]) .project-tree,
+:root[data-theme]:not([data-theme="oxide"]) .cargo-inspector,
+:root[data-theme]:not([data-theme="oxide"]) .build-output,
+:root[data-theme]:not([data-theme="oxide"]) .problems-list,
+:root[data-theme]:not([data-theme="oxide"]) .debug-list,
+:root[data-theme]:not([data-theme="oxide"]) .debug-output,
+:root[data-theme]:not([data-theme="oxide"]) .completion-list,
+:root[data-theme]:not([data-theme="oxide"]) .completion-detail,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-panel-body,
+:root[data-theme]:not([data-theme="oxide"]) .browser-list {
+  scrollbar-color: var(--t-scroll-thumb) var(--t-scroll-track);
+}
+:root[data-theme]:not([data-theme="oxide"]) .project-tree::-webkit-scrollbar-track,
+:root[data-theme]:not([data-theme="oxide"]) .cargo-inspector::-webkit-scrollbar-track,
+:root[data-theme]:not([data-theme="oxide"]) .build-output::-webkit-scrollbar-track,
+:root[data-theme]:not([data-theme="oxide"]) .problems-list::-webkit-scrollbar-track,
+:root[data-theme]:not([data-theme="oxide"]) .debug-list::-webkit-scrollbar-track,
+:root[data-theme]:not([data-theme="oxide"]) .debug-output::-webkit-scrollbar-track,
+:root[data-theme]:not([data-theme="oxide"]) .completion-list::-webkit-scrollbar-track,
+:root[data-theme]:not([data-theme="oxide"]) .completion-detail::-webkit-scrollbar-track,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-panel-body::-webkit-scrollbar-track,
+:root[data-theme]:not([data-theme="oxide"]) .browser-list::-webkit-scrollbar-track { background: var(--t-scroll-track); }
+:root[data-theme]:not([data-theme="oxide"]) .project-tree::-webkit-scrollbar-thumb,
+:root[data-theme]:not([data-theme="oxide"]) .cargo-inspector::-webkit-scrollbar-thumb,
+:root[data-theme]:not([data-theme="oxide"]) .build-output::-webkit-scrollbar-thumb,
+:root[data-theme]:not([data-theme="oxide"]) .problems-list::-webkit-scrollbar-thumb,
+:root[data-theme]:not([data-theme="oxide"]) .debug-list::-webkit-scrollbar-thumb,
+:root[data-theme]:not([data-theme="oxide"]) .debug-output::-webkit-scrollbar-thumb,
+:root[data-theme]:not([data-theme="oxide"]) .completion-list::-webkit-scrollbar-thumb,
+:root[data-theme]:not([data-theme="oxide"]) .completion-detail::-webkit-scrollbar-thumb,
+:root[data-theme]:not([data-theme="oxide"]) .tutorial-panel-body::-webkit-scrollbar-thumb,
+:root[data-theme]:not([data-theme="oxide"]) .browser-list::-webkit-scrollbar-thumb {
+  background: var(--t-scroll-thumb);
+  border-color: var(--t-scroll-track);
+}
+
+/* Rivet B1.3.6 Build 2 — branding layer.
+   Theme names and workspace materials remain independent from the product logo. */
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: none;
+  border-radius: 8px;
+  background: #111;
+}
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+}
+.about-logo {
+  padding: 0;
+  object-fit: cover;
+  border-radius: 12px;
+  clip-path: none;
+}
+:root[data-theme]:not([data-theme="oxide"]) .brand-mark {
+  background: #111;
+}
+@media (max-height: 820px) {
+  .brand-mark { width: 30px; height: 30px; border-radius: 6px; }
 }

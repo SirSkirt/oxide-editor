@@ -1,7 +1,7 @@
 [package]
 name = "oxide-updater-linux"
-version = "1.3.5"
-description = "Oxide Editor Linux AppImage update helper"
+version = "1.3.6"
+description = "Rivet Linux AppImage update helper"
 edition = "2021"
 
 [[bin]]

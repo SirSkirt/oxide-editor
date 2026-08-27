@@ -8,9 +8,9 @@ fn main() {
         .join("package.json");
 
     let package_text = fs::read_to_string(&package_path)
-        .expect("Oxide package.json should be readable during the Rust build");
+        .expect("Rivet package.json should be readable during the Rust build");
     let package: serde_json::Value =
-        serde_json::from_str(&package_text).expect("Oxide package.json should contain valid JSON");
+        serde_json::from_str(&package_text).expect("Rivet package.json should contain valid JSON");
 
     let build_number = package
         .get("buildNumber")

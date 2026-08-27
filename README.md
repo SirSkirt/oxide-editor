@@ -1,50 +1,67 @@
-# Oxide Editor B1.3.5 · Build 4
+# Rivet B1.3.6 · Build 2
 
-B1.3.5 Build 4 is the **Rust Intelligence & Editing build**. It expands Oxide's existing persistent rust-analyzer connection into traditional IDE navigation/refactoring features while keeping the Rust-heavy architecture and normal Cargo project model.
 
-Build 4 adds **Go to Definition (F12), Find References (Shift+F12), Semantic Rename (F2), and Code Actions / Quick Fixes (Ctrl+.)**. It also repairs the Rust Code Analyzer/Completer UX: the popup stays below the line being typed, Escape dismisses it for the remainder of the current word, and completion is allowed again when the next word starts. Auto-close pairs and bracket matching add a smaller typing-quality pass.
+**Rivet** is the product name; **Rust Development Environment** is its tagline. The default presentation theme remains named **Oxide**.
+B1.3.6 Build 2 carries the B1.3.6 theme engine forward under the new **Rivet** product name. Build 1 introduced the presentation-layer theme engine; Build 2 changes branding without moving or restructuring the IDE's existing layout or functionality.
 
-The resizable Build Bay, Build 3 workbench-polish preview, Semantic Readability Colors, LLDB/DAP debugger, and Windows/Linux `(release_version, build)` updater behavior remain intact.
-Oxide is a Rust-first desktop IDE built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, language intelligence, debugging, and update orchestration are handled by Rust.
+The default **Oxide** theme preserves the current forged-workbench appearance. **Metallic** makes the same interface feel more like machined/forged steel, **Rust** applies a weathered rusted-iron treatment, and **Modern (Dark)** / **Modern (Light)** provide conventional IDE presentations for users who prefer a less industrial look.
 
-B1.3.5 Build 3 is a **workbench-polish and reliability build**. It keeps Oxide's existing forged-metal layout and workflow, but tightens the visual hierarchy of panels, tabs, command controls, project rows, Cargo/dependency cards, the editor chrome, and the Build Bay. It does not replace the current UI with a new layout.
+Theme selection lives under **View → Theme**, persists between sessions, and is restored before the workbench renders.
+
+**Semantic Readability Colors are theme-aware in B1.3.6.** rust-analyzer still supplies semantic meaning; each active theme supplies its own readability palette for variables, functions, types, macros, strings, numbers, comments, keywords, and punctuation.
+
+Rivet is a Rust-first desktop IDE built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, language intelligence, debugging, and update orchestration are handled by Rust.
+
+B1.3.5 Build 3 is a **workbench-polish and reliability build**. It keeps Rivet's existing forged-metal layout and workflow, but tightens the visual hierarchy of panels, tabs, command controls, project rows, Cargo/dependency cards, the editor chrome, and the Build Bay. It does not replace the current UI with a new layout.
 
 The **Build Bay is now vertically resizable** from its forged top-edge grip. Its height is clamped so the output remains usable without swallowing the editor, is remembered between sessions, and can be reset by double-clicking the grip, pressing Home while it is focused, or using View → Reset Layout.
 
-Build 3 also hardens **Windows and Linux automatic updates around Oxide's real identity: `(release_version, build)`**. A machine on B1.3.5 Build 1 can therefore see B1.3.5 Build 2/3 even though the public SemVer is still `1.3.5`. Update requests bypass stale cache reuse, release feeds are validated before publication, every build gets its own GitHub Release tag such as `v1.3.5-b3`, and the release stays draft until both Windows and Linux assets are ready.
+Build 3 also hardens **Windows and Linux automatic updates around Rivet's real identity: `(release_version, build)`**. A machine on B1.3.5 Build 1 can therefore see B1.3.5 Build 2/3 even though the public SemVer is still `1.3.5`. Update requests bypass stale cache reuse, release feeds are validated before publication, every build gets its own GitHub Release tag such as `v1.3.5-b3`, and the release stays draft until both Windows and Linux assets are ready.
 
 The B1.3.5 Build 2 LLDB/DAP debugger expansion and **Semantic Readability Colors** remain intact. Semantic colors use rust-analyzer tokens when available with the lexical highlighter as fallback; ordinary variables/identifiers stay steel blue, and red remains reserved for actual errors/problems.
 
+## Themes
+
+All B1.3.6 themes use the **same DOM, grid, controls, commands, panel locations, and workflows**. A theme is not a workspace preset.
+
+- **Oxide** — existing/default forged-workbench material
+- **Metallic** — cleaner machined metal and stronger steel depth
+- **Rust** — oxidized/weathered iron based on Metallic
+- **Modern (Dark)** — conventional dark IDE material
+- **Modern (Light)** — conventional light IDE material
+
+The active theme is stored locally as `oxide.appearance.theme`.
+
 ## Windows + Linux
 
-Supported release targets in B1.3.5:
+Supported release targets in B1.3.6:
 
-- **Windows x86_64** — NSIS installer plus Oxide's signed native ZIP update packages
-- **Linux x86_64 AppImage** — portable build with Oxide automatic package updates
+- **Windows x86_64** — NSIS installer plus Rivet's signed native ZIP update packages
+- **Linux x86_64 AppImage** — portable build with Rivet automatic package updates
 - **Linux x86_64 .deb** — native Debian/Ubuntu/Pop!_OS package with Polkit-authorized automatic updates
 
 The Linux CI build runs on Ubuntu 22.04 so the produced binaries target a reasonably old WebKitGTK/glibc baseline instead of accidentally requiring the newest Ubuntu release.
 
 ### Linux Rust toolchain discovery
 
-Linux desktop launchers do not necessarily inherit PATH additions from `.bashrc`, `.profile`, or other interactive shell configuration. Oxide now resolves Rust tools from PATH **and** the standard rustup location:
+Linux desktop launchers do not necessarily inherit PATH additions from `.bashrc`, `.profile`, or other interactive shell configuration. Rivet now resolves Rust tools from PATH **and** the standard rustup location:
 
 ```text
 ~/.cargo/bin/cargo
 ~/.cargo/bin/rustc
 ```
 
-This prevents a desktop-launched Oxide from reporting that Cargo is missing when it works normally in a terminal.
+This prevents a desktop-launched Rivet from reporting that Cargo is missing when it works normally in a terminal.
 
 ### Linux path handling
 
-Oxide now treats Linux paths as case-sensitive. Files such as `Thing.rs` and `thing.rs` are no longer normalized as though they were the same file.
+Rivet now treats Linux paths as case-sensitive. Files such as `Thing.rs` and `thing.rs` are no longer normalized as though they were the same file.
 
-## Oxide Package Update System
+## Rivet Package Update System
 
-B1.3.5 continues to use the platform-specific signed update packages introduced in B1.3.2.
+B1.3.6 continues to use the platform-specific signed update packages introduced in B1.3.2.
 
-Oxide checks:
+Rivet checks:
 
 ```text
 oxide-latest-{{target}}-{{arch}}.json
@@ -57,37 +74,37 @@ oxide-latest-windows-x86_64.json
 oxide-latest-linux-x86_64.json
 ```
 
-The downloaded package is still cryptographically verified with Oxide's existing Tauri updater signing key before Oxide hands it to its own updater logic.
+The downloaded package is still cryptographically verified with Rivet's existing Tauri updater signing key before Rivet hands it to its own updater logic.
 
 ### Windows update package
 
 ```text
-oxide-update-windows-x86_64-1.3.5-b3.zip
+oxide-update-windows-x86_64-1.3.6-b1.zip
 ├── oxide-editor.exe
 ├── oxide-updater.exe
 └── update-package.json
 ```
 
-The temporary Oxide Update Service backs up the installed runtime, replaces it, rolls back on failure, and restarts Oxide.
+The temporary Rivet Update Service backs up the installed runtime, replaces it, rolls back on failure, and restarts Rivet.
 
 ### Linux update package
 
 ```text
-oxide-update-linux-x86_64-1.3.5-b3.zip
+oxide-update-linux-x86_64-1.3.6-b1.zip
 ├── oxide-editor.AppImage
 ├── oxide-editor.deb
 └── update-package.json
 ```
 
-For AppImage installs, Oxide downloads and verifies the package, launches the Linux update helper, exits, replaces the original AppImage with rollback protection, restores executable permissions, and relaunches Oxide.
+For AppImage installs, Rivet downloads and verifies the package, launches the Linux update helper, exits, replaces the original AppImage with rollback protection, restores executable permissions, and relaunches Rivet.
 
-For `.deb` installs, Oxide first verifies the same signed package as the normal user. After Oxide exits, the Linux helper invokes `pkexec` to ask the desktop's registered Polkit authentication agent for permission, then runs `dpkg --install` on the staged `.deb`. Oxide never receives or stores the user's password. After the package manager succeeds, the helper relaunches Oxide.
+For `.deb` installs, Rivet first verifies the same signed package as the normal user. After Rivet exits, the Linux helper invokes `pkexec` to ask the desktop's registered Polkit authentication agent for permission, then runs `dpkg --install` on the staged `.deb`. Rivet never receives or stores the user's password. After the package manager succeeds, the helper relaunches Rivet.
 
 Unpackaged development builds deliberately do not self-install system packages.
 
 ### Compatibility bridge
 
-`latest.json` is still published for B1.3.1 and older updater-enabled **Windows** builds. It points to the signed NSIS installer so older installations can cross the bridge into B1.3.2. B1.3.2 and newer use the platform-specific Oxide package feeds above.
+`latest.json` is still published for B1.3.1 and older updater-enabled **Windows** builds. It points to the signed NSIS installer so older installations can cross the bridge into B1.3.2. B1.3.2 and newer use the platform-specific Rivet package feeds above.
 
 ## Compact-screen / laptop layout
 
@@ -106,27 +123,27 @@ Linux x64 verification (Ubuntu 22.04 / Pop!_OS baseline)
 
 A release produces both Windows and Linux assets in the same GitHub Release.
 
-Typical B1.3.5 assets:
+Typical B1.3.6 assets:
 
 ```text
 Windows
-├── Oxide Editor ... setup.exe
-├── oxide-update-windows-x86_64-1.3.5-b3.zip
-├── oxide-update-windows-x86_64-1.3.5-b3.zip.sig
+├── Rivet ... setup.exe
+├── oxide-update-windows-x86_64-1.3.6-b1.zip
+├── oxide-update-windows-x86_64-1.3.6-b1.zip.sig
 ├── oxide-latest-windows-x86_64.json
 └── latest.json
 
 Linux
-├── Oxide Editor ... amd64.deb
-├── Oxide Editor ... amd64.AppImage
-├── oxide-update-linux-x86_64-1.3.5-b3.zip
-├── oxide-update-linux-x86_64-1.3.5-b3.zip.sig
+├── Rivet ... amd64.deb
+├── Rivet ... amd64.AppImage
+├── oxide-update-linux-x86_64-1.3.6-b1.zip
+├── oxide-update-linux-x86_64-1.3.6-b1.zip.sig
 └── oxide-latest-linux-x86_64.json
 ```
 
 ## Linux development on Pop!_OS / Ubuntu
 
-Run the included helper once (it also installs LLDB for the B1.3.5 debugger and the rust-analyzer rustup component when rustup is available):
+Run the included helper once (it also installs LLDB for Rivet debugging and the rust-analyzer rustup component when rustup is available):
 
 ```bash
 ./scripts/setup-linux.sh
@@ -164,13 +181,13 @@ Release-style Windows bundle:
 npm run tauri build -- --bundles nsis
 ```
 
-Windows release builds use the GUI subsystem, so Oxide does not leave a background Command Prompt open.
+Windows release builds use the GUI subsystem, so Rivet does not leave a background Command Prompt open.
 
 ## Rust Code Analyzer/Completer
 
-Oxide includes its own Visual Studio-style Rust completion experience, backed by the real **rust-analyzer** language server.
+Rivet includes its own Visual Studio-style Rust completion experience, backed by the real **rust-analyzer** language server.
 
-As you type Rust, Oxide requests context-aware suggestions from rust-analyzer and filters/ranks them against the current prefix. The popup can include local variables, functions, methods, fields, modules, structs, enums, traits, associated items, macros, and Rust keywords. A detail pane shows the symbol kind, signature/detail text, and documentation when rust-analyzer provides it.
+As you type Rust, Rivet requests context-aware suggestions from rust-analyzer and filters/ranks them against the current prefix. The popup can include local variables, functions, methods, fields, modules, structs, enums, traits, associated items, macros, and Rust keywords. A detail pane shows the symbol kind, signature/detail text, and documentation when rust-analyzer provides it.
 
 Controls:
 
@@ -182,7 +199,7 @@ Enter / Tab       accept
 Escape            dismiss
 ```
 
-Function-call signature help is also requested while entering arguments. Oxide applies rust-analyzer's replacement edits and additional import edits when they are supplied.
+Function-call signature help is also requested while entering arguments. Rivet applies rust-analyzer's replacement edits and additional import edits when they are supplied.
 
 Install/verify the analyzer with:
 
@@ -191,9 +208,11 @@ rustup component add rust-analyzer
 rust-analyzer --version
 ```
 
-Oxide starts one persistent rust-analyzer session per active Cargo project instead of spawning a new process for every keystroke. The same session now supplies semantic tokens for **Semantic Readability Colors**, while Oxide keeps its lexical Rust highlighter as a fallback during analyzer startup. The status rail reports **ANALYZER: READY**, **NOT FOUND**, or **ERROR**.
+Rivet starts one persistent rust-analyzer session per active Cargo project instead of spawning a new process for every keystroke. The same session supplies semantic tokens for **Semantic Readability Colors**, while Rivet keeps its lexical Rust highlighter as a fallback during analyzer startup. In B1.3.6 the semantic category and its presentation color are separated: rust-analyzer supplies meaning and the active theme supplies the palette. The status rail reports **ANALYZER: READY**, **NOT FOUND**, or **ERROR**.
 
 ### Semantic Readability Colors
+
+The following is the **Oxide theme** palette. Metallic, Rust, Modern (Dark), and Modern (Light) remap the same semantic roles for readability within their own materials.
 
 ```text
 Rust keywords          #D87941  rust orange
@@ -207,7 +226,7 @@ Comments               #70786E  muted gray-green
 Operators/punctuation  neutral light gray/off-white
 ```
 
-Red is not used as an ordinary source-code category; Oxide keeps it reserved for actual errors/problems.
+Red is not used as an ordinary source-code category; Rivet keeps it reserved for actual errors/problems.
 
 ## Interactive Rust Tutorial
 
@@ -218,7 +237,7 @@ The Beginner course contains **26 real Cargo lessons / 81 hands-on activities**,
 - Strings, vectors, structs, enums, and `match`
 - ownership, borrowing, string slices, and mutable references
 - methods, `Option`, `Result`, `HashMap`, and modules
-- real interactive stdin through Oxide's Run Terminal
+- real interactive stdin through Rivet's Run Terminal
 - combined mini-projects including Calculator and Scoreboard
 
 Tutorial teaching follows:
@@ -230,13 +249,14 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 ## Core editor highlights
 
 - no-project onboarding with **New Project**, **Open Project**, and **Tutorial**
-- Oxide-native project/file browser
+- Rivet-native project/file browser
 - normal Cargo project creation with version `0.0.1` by default
 - multi-file tabs with independent dirty/cursor/scroll state
 - automatic brace-aware indentation
 - **Rust Code Analyzer/Completer** powered by rust-analyzer/LSP
-- **Oxide Debugger** powered by LLDB/DAP with target/thread selection, conditional/log breakpoints, stepping/restart, expandable stack/locals, watches, and Debug Console
+- **Rivet Debugger** powered by LLDB/DAP with target/thread selection, conditional/log breakpoints, stepping/restart, expandable stack/locals, watches, and Debug Console
 - **Semantic Readability Colors** backed by rust-analyzer semantic tokens with a lexical fallback
+- five persistent presentation themes: **Oxide, Metallic, Rust, Modern (Dark), Modern (Light)**
 - context-aware completion popup with details and signature help
 - Cargo Check / Build / Run / Test / Clean
 - Cargo.toml package/dependency GUI
@@ -245,20 +265,20 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 - Problems pane and clickable compiler diagnostics
 - floating interactive Run Terminal with real stdin/stdout
 - GUI/native-window run mode
-- signed Oxide-native update packages
+- signed Rivet-native update packages
 
 ## Versioning
 
-- Release version: `1.3.5`
-- User-facing version: **B1.3.5**
-- Current internal build number: **3**
-- Full installed identity: **B1.3.5 · Build 4**
+- Release version: `1.3.6`
+- User-facing version: **B1.3.6**
+- Current internal build number: **1**
+- Full installed identity: **Rivet B1.3.6 · Build 2**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:
 
 ```powershell
-npm run release:version -- 1.3.5 B1.3.5 1
+npm run release:version -- 1.3.6 B1.3.6 1
 ```
 
 The version helper updates the main editor, Windows Update Service, and Linux Update Service together.
@@ -266,17 +286,17 @@ The version helper updates the main editor, Windows Update Service, and Linux Up
 
 ### Build numbers
 
-Oxide keeps the public release version and the internal build number separate. This lets a rebuilt release update an existing installation without forcing a public version bump.
+Rivet keeps the public release version and the internal build number separate. This lets a rebuilt release update an existing installation without forcing a public version bump.
 
 For example:
 
 ```text
-B1.3.5 · Build 2
+B1.3.6 · Build 2
         ↓
-B1.3.5 · Build 4
+B1.3.6 · Build 2
 ```
 
-The signed update feed carries `release_version` plus `build`, and Oxide compares both. GitHub update packages include the build in their filename. Build 3 also gives every build its own release tag (`v1.3.5-b3`, `v1.3.5-b4`, and so on), so GitHub's `releases/latest/download/...` route advances even when the public Oxide version stays the same. For compatibility with older updater-enabled Oxide builds, the feed's required SemVer `version` is a monotonic updater sequence while `release_version` remains the actual Oxide release version.
+The signed update feed carries `release_version` plus `build`, and Rivet compares both. GitHub update packages include the build in their filename. Every internal build gets its own release tag (`v1.3.6-b1`, `v1.3.6-b2`, and so on), so GitHub's `releases/latest/download/...` route advances even when the public Rivet version stays the same. For compatibility with older updater-enabled Rivet builds, the feed's required SemVer `version` is a monotonic updater sequence while `release_version` remains the actual Rivet release version.
 
 To increment only the build number:
 
@@ -287,7 +307,7 @@ npm run release:build
 To begin a new public version, reset the build to 1:
 
 ```powershell
-npm run release:version -- 1.3.5 B1.3.5 1
+npm run release:version -- 1.3.6 B1.3.6 1
 ```
 
 ## Release

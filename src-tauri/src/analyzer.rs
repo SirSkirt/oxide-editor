@@ -247,7 +247,7 @@ fn reader_loop<R: Read + Send + 'static>(
             let Some(id) = message.get("id").and_then(Value::as_u64) else { continue; };
 
             // Requests from rust-analyzer also carry an id. Handle those before
-            // looking in Oxide's pending-response table so equal numeric ids in
+            // looking in Rivet's pending-response table so equal numeric ids in
             // opposite JSON-RPC directions can never be confused.
             if let Some(method) = message.get("method").and_then(Value::as_str) {
                 let result = match method {
@@ -375,8 +375,8 @@ impl AnalyzerSession {
                 },
                 "workspace": { "workspaceFolders": true }
             },
-            "workspaceFolders": [{ "uri": root_uri, "name": project_path.file_name().and_then(|v| v.to_str()).unwrap_or("Oxide Project") }],
-            "clientInfo": { "name": "Oxide Editor", "version": env!("CARGO_PKG_VERSION") }
+            "workspaceFolders": [{ "uri": root_uri, "name": project_path.file_name().and_then(|v| v.to_str()).unwrap_or("Rivet Project") }],
+            "clientInfo": { "name": "Rivet", "version": env!("CARGO_PKG_VERSION") }
         });
 
         let initialize_result = session.request("initialize", initialize, Duration::from_secs(12))?;
@@ -607,7 +607,7 @@ fn workspace_edit_view(value: &Value) -> WorkspaceEditView {
                     .or_default()
                     .extend(edits.iter().filter_map(text_edit_view));
             } else {
-                // Create/Rename/Delete file operations are deliberately not applied by Build 4.
+                // Create/Rename/Delete file operations are deliberately not applied automatically.
                 unsupported_operations += 1;
             }
         }
@@ -1006,9 +1006,9 @@ pub fn code_actions(
                 .map(str::to_string)
                 .unwrap_or_else(|| {
                     if action.get("command").is_some() {
-                        "This action requires a rust-analyzer command after its edit; Oxide Build 4 does not execute command actions yet.".to_string()
+                        "This action requires a rust-analyzer command after its edit; Rivet does not execute command actions yet.".to_string()
                     } else if edit.is_none() {
-                        "This rust-analyzer action requires a command that Oxide Build 4 does not apply yet.".to_string()
+                        "This rust-analyzer action requires a command that Rivet does not apply yet.".to_string()
                     } else {
                         String::new()
                     }

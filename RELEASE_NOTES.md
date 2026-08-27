@@ -1,53 +1,36 @@
-# Oxide Editor B1.3.5 · Build 4
+# Rivet B1.3.6 · Build 2
 
-## Rust Intelligence & Editing
+B1.3.6 Build 2 renames **Oxide Editor** to **Rivet**. The product tagline is **Rust Development Environment**. This build is a branding change only: the B1.3.6 theme engine, IDE layout, commands, debugger, tutorial, Build Bay, Cargo integration, and editor functionality remain the same.
 
-Build 4 turns more of Oxide's existing rust-analyzer infrastructure into everyday IDE features.
+## Branding
 
-### Rust Code Analyzer/Completer UX fix
-- Completion suggestions are anchored **below the current typing line** and no longer flip upward over the code being edited.
-- **Escape** dismisses completion for the rest of the current word/token.
-- After a word boundary, completion can appear again when the next word begins.
-- Escape also cancels pending completion requests so a popup cannot reappear immediately after being dismissed.
-- Ctrl+Space still manually requests completion.
+- Product name: **Rivet**
+- Tagline: **Rust Development Environment**
+- New Rivet application/logo mark across the main window and application icons.
+- Window titles, About dialog, Run Terminal, file browser, updater UI, tutorial wording, and release presentation now use Rivet branding.
+- The default visual theme is still named **Oxide**. Theme names are presentation choices and are independent of the product name.
 
-### Go to Definition
-- **F12** or Tools → Go to Definition.
-- Uses rust-analyzer's real `textDocument/definition` result.
-- Opens the target file and selects/scrolls to the returned symbol range.
+## Themes
 
-### Find References
-- **Shift+F12** or Tools → Find References.
-- Uses rust-analyzer reference data, including the declaration.
-- Results appear in an Oxide-styled reference browser and are clickable.
+The five B1.3.6 themes remain unchanged:
 
-### Semantic Rename
-- **F2** or Tools → Rename Symbol.
-- Uses rust-analyzer prepare-rename + semantic rename rather than blind text replacement.
-- Oxide shows the number of edits/files before applying the rename.
-- Multi-file text edits are applied through Oxide's normal file backend and open tabs are refreshed afterward.
+- **Oxide** — default forged-workbench appearance.
+- **Metallic** — machined/forged metal treatment.
+- **Rust** — weathered rusted-iron treatment.
+- **Modern (Light)** — conventional light IDE presentation.
+- **Modern (Dark)** — conventional dark IDE presentation.
 
-### Code Actions / Quick Fixes
-- **Ctrl+.** or Tools → Code Actions / Quick Fixes.
-- Requests rust-analyzer code actions at the caret and resolves edits where rust-analyzer supports it.
-- Preferred actions are visually identified.
-- Build 4 applies text-edit based actions. File create/rename/delete resource operations and command-only actions are intentionally reported as unavailable rather than guessed at.
+Semantic Readability Colors remain theme-aware and continue to preserve semantic category distinctions within every theme.
 
-### Editing polish
-- Auto-close pairs for `()`, `[]`, `{}`, and double quotes.
-- Typing an existing closing pair advances over it instead of duplicating it.
-- Selecting text and typing an opening pair wraps the selection.
-- Matching `()`, `[]`, and `{}` are highlighted around the caret.
-- Single quotes are deliberately not auto-paired in this pass so Rust lifetimes such as `'a` are not disrupted.
+## Upgrade compatibility
 
-## Preserved from Build 3
-- Vertically resizable Build Bay with persisted height and reset behavior.
-- B1.3.6 visual-direction preview / forged-workbench polish without changing Oxide's core layout.
-- Windows and Linux automatic updates compare `(release_version, build)` and publish each build under a distinct release tag.
-- Semantic Readability Colors.
-- LLDB/DAP debugger, breakpoint management, watches, variables, call stack, Debug Console, and target selection.
+Existing installations must be able to update into Rivet rather than becoming a separate product installation. For that reason, several legacy implementation identifiers intentionally remain unchanged in Build 2, including the `com.oxide.editor` application identifier, `oxide-editor` executable/package slug, `oxide-*` update feed/artifact names, updater command channels, and updater signing identity. These are compatibility details, not user-facing branding.
+
+The existing application-data folder is also retained so tutorial progress and other persisted data are not orphaned by the rename.
 
 ## Version
-- Public release: `1.3.5` / `B1.3.5`
-- Internal build: `4`
-- Full identity: **B1.3.5 · Build 4**
+
+- Release version: `1.3.6`
+- Display version: **B1.3.6**
+- Build: **2**
+- Full identity: **Rivet B1.3.6 · Build 2**

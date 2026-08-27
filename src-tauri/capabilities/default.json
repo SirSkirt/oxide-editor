@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
-  "description": "Core capabilities used by the Oxide main window.",
+  "description": "Core capabilities used by the Rivet main window.",
   "windows": [
     "main"
   ],

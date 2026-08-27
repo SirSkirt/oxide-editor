@@ -247,7 +247,7 @@ pub fn status() -> DebuggerStatus {
         adapter: adapter.file_name().and_then(|name| name.to_str()).unwrap_or("lldb-dap").into(),
         path: adapter.to_string_lossy().to_string(),
         version,
-        message: "Oxide Debugger ready.".into(),
+        message: "Rivet Debugger ready.".into(),
     }
 }
 
@@ -487,12 +487,12 @@ fn build_debug_binary(app: &AppHandle, project_path: &Path, target: Option<&Debu
     });
 
     if !status.success() {
-        return Err("The project did not compile, so Oxide could not start debugging.".into());
+        return Err("The project did not compile, so Rivet could not start debugging.".into());
     }
     match executables.len() {
         0 => Err("Cargo built successfully, but no runnable binary target was produced.".into()),
         1 => Ok(executables.remove(0)),
-        _ => Err("This project has multiple runnable binaries. Choose a target in Oxide's Debug Target picker.".into()),
+        _ => Err("This project has multiple runnable binaries. Choose a target in Rivet's Debug Target picker.".into()),
     }
 }
 
@@ -582,7 +582,7 @@ pub fn start(
 
     let initialization = request(runtime, "initialize", json!({
         "clientID": "oxide-editor",
-        "clientName": "Oxide Editor",
+        "clientName": "Rivet",
         "adapterID": "lldb",
         "locale": "en-US",
         "linesStartAt1": true,

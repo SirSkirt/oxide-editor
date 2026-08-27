@@ -39,7 +39,7 @@ struct PlatformInfo {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct OxideUpdateInfo {
+struct RivetUpdateInfo {
     version: String,
     display_version: String,
     build_number: u64,
@@ -54,7 +54,7 @@ struct OxideUpdateInfo {
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct OxideUpdateDownloadEvent {
+struct RivetUpdateDownloadEvent {
     event: String,
     downloaded: usize,
     content_length: Option<u64>,
@@ -62,7 +62,7 @@ struct OxideUpdateDownloadEvent {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct OxideUpdateStageResult {
+struct RivetUpdateStageResult {
     version: String,
     build_number: u64,
     helper_started: bool,
@@ -337,13 +337,13 @@ fn linux_update_capability() -> (bool, String, Option<String>) {
         return (
             false,
             "deb-package".to_string(),
-            Some("This .deb installation can update automatically when polkit/pkexec and dpkg are available. Install the missing system tools or update Oxide through your package manager.".to_string()),
+            Some("This .deb installation can update automatically when polkit/pkexec and dpkg are available. Install the missing system tools or update Rivet through your package manager.".to_string()),
         );
     }
     (
         false,
         "linux-development".to_string(),
-        Some("Automatic installation is disabled for unpackaged Linux development builds. Use the AppImage or .deb release build to test Oxide updates.".to_string()),
+        Some("Automatic installation is disabled for unpackaged Linux development builds. Use the AppImage or .deb release build to test Rivet updates.".to_string()),
     )
 }
 
@@ -621,7 +621,7 @@ fn validate_project_name(name: &str) -> Result<String, String> {
         .chars()
         .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
     {
-        return Err("Rust package names in Oxide may contain only letters, numbers, '-' and '_'.".into());
+        return Err("Rust package names in Rivet may contain only letters, numbers, '-' and '_'.".into());
     }
     Ok(trimmed.to_string())
 }
@@ -1149,12 +1149,12 @@ fn terminal_start(
     {
         let mut preparing = terminal.preparing.lock().map_err(|_| "Terminal preparation state is unavailable.".to_string())?;
         if *preparing {
-            return Err("Oxide is already preparing a program to run.".into());
+            return Err("Rivet is already preparing a program to run.".into());
         }
         let mut child_guard = terminal.child.lock().map_err(|_| "Terminal state is unavailable.".to_string())?;
         if let Some(child) = child_guard.as_mut() {
             if child.try_wait().map_err(|error| error.to_string())?.is_none() {
-                return Err("A program is already running in the Oxide Terminal.".into());
+                return Err("A program is already running in the Rivet Terminal.".into());
             }
         }
         *child_guard = None;
@@ -1344,9 +1344,9 @@ fn terminal_start(
         let Some(executable_path) = executable_path else {
             set_preparing(false);
             let detail = if executable_by_name.is_empty() {
-                "Cargo built the project, but Oxide could not find a runnable binary target.".to_string()
+                "Cargo built the project, but Rivet could not find a runnable binary target.".to_string()
             } else {
-                "This project has multiple runnable binary targets. Oxide needs target selection before it can launch one.".to_string()
+                "This project has multiple runnable binary targets. Rivet needs target selection before it can launch one.".to_string()
             };
             let _ = app.emit("terminal-state", TerminalEvent { state: "build-failed".into(), detail, exit_code: None });
             return;
@@ -1369,7 +1369,7 @@ fn terminal_start(
             Ok(child) => child,
             Err(error) => {
                 set_preparing(false);
-                let detail = format!("The project built, but Oxide could not launch the executable: {error}");
+                let detail = format!("The project built, but Rivet could not launch the executable: {error}");
                 let _ = app.emit("terminal-state", TerminalEvent { state: "build-failed".into(), detail, exit_code: None });
                 return;
             }
@@ -1543,7 +1543,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                         ("\"Hello, world!\"", "is the text to print"),
                         (";", "ends the statement"),
                     ],
-                    "Now you try: press Run, choose Run in Oxide Terminal, and make the program print Hello, world!",
+                    "Now you try: press Run, choose Run in Rivet Terminal, and make the program print Hello, world!",
                     "println! is a Rust macro from the standard library. The exclamation mark shows that it is a macro invocation rather than a normal function call. The text inside the parentheses is a string literal, and the semicolon completes the statement.",
                     true,
                 ),
@@ -1553,7 +1553,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "Text inside double quotes is a string literal.",
                     "println!(\"example\");",
                     vec![("\"example\"", "is the string value being printed")],
-                    "Now you try: change the message to Hello, Oxide! and run the program again.",
+                    "Now you try: change the message to Hello, Rivet! and run the program again.",
                     "A string literal is text written directly into source code between double quotes. Here it becomes the value passed to println!, so changing the literal changes what the program prints.",
                     true,
                 ),
@@ -1599,8 +1599,8 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "run-name",
                     "Run what you wrote",
                     "Running the program proves that the code behaves the way you expect.",
-                    "Run the program in the Oxide Terminal and make sure Quinn appears in the output.",
-                    "Oxide builds the same real project used by the editor, then launches the resulting executable. The Run Terminal receives only your program's stdout and stderr, while Cargo information stays in Build Bay.",
+                    "Run the program in the Rivet Terminal and make sure Quinn appears in the output.",
+                    "Rivet builds the same real project used by the editor, then launches the resulting executable. The Run Terminal receives only your program's stdout and stderr, while Cargo information stays in Build Bay.",
                     true,
                 ),
                 tutorial_step(
@@ -1678,7 +1678,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "break-mut",
                     "Break it on purpose",
                     "Without mut, Rust will reject code that tries to assign a new value to score.",
-                    "Remove mut from let mut score = 10; and wait for Oxide's Rust check to report the immutability error.",
+                    "Remove mut from let mut score = 10; and wait for Rivet's Rust check to report the immutability error.",
                     "Because Rust bindings are immutable by default, the second assignment to score violates the binding's rules. rustc reports E0384 so you can see the rule enforced by the real compiler.",
                     false,
                 ),
@@ -1763,7 +1763,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "Challenge: make another one",
                     "Reuse the function pattern without another worked example.",
                     "Create another function that prints You can do this!, call it from main, and Run the program. You choose the function name.",
-                    "This challenge asks you to transfer the same structure to a new function instead of copying a new worked answer. That gradual reduction in guidance is how later Oxide lessons will build independence.",
+                    "This challenge asks you to transfer the same structure to a new function instead of copying a new worked answer. That gradual reduction in guidance is how later Rivet lessons will build independence.",
                     true,
                 ),
             ],
@@ -1947,9 +1947,9 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "append-string",
                     "Add more text",
                     "push_str appends text to the end of a String.",
-                    "message.push_str(\", Oxide!\");",
+                    "message.push_str(\", Rivet!\");",
                     vec![(".", "calls a method on message"), ("push_str", "adds text to the end")],
-                    "Now you try: append , Oxide! to message.",
+                    "Now you try: append , Rivet! to message.",
                     "Methods are functions associated with a value or type and are commonly called with dot syntax. push_str mutates the existing String rather than creating a completely separate one.",
                     false,
                 ),
@@ -1959,7 +1959,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "A String can be formatted by println! just like the values you used earlier.",
                     "println!(\"{message}\");",
                     vec![("{message}", "inserts the current String contents")],
-                    "Now you try: print message and Run until the terminal says Hello, Oxide!",
+                    "Now you try: print message and Run until the terminal says Hello, Rivet!",
                     "String implements Rust's Display formatting trait, so println! knows how to represent its contents as normal text.",
                     true,
                 ),
@@ -2103,7 +2103,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "Assigning a String to another variable moves that owned value by default.",
                     "let moved_name = name;",
                     vec![("name", "gives its owned String to moved_name"), ("moved_name", "becomes the new owner")],
-                    "Now you try: Run the starter program and confirm it prints Oxide through moved_name.",
+                    "Now you try: Run the starter program and confirm it prints Rivet through moved_name.",
                     "String owns heap-allocated text, so Rust does not silently duplicate it during ordinary assignment. Moving the value transfers responsibility for that allocation to the new binding.",
                     true,
                 ),
@@ -2113,7 +2113,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "After a move, using the old variable makes rustc report a moved-value error.",
                     "println!(\"Original: {name}\");",
                     vec![("name", "tries to use the value after ownership moved away")],
-                    "Now you try: add that println! after the move and wait for Oxide to show rustc error E0382.",
+                    "Now you try: add that println! after the move and wait for Rivet to show rustc error E0382.",
                     "E0382 prevents use-after-move bugs. Rust knows name no longer owns the String, so it rejects later access instead of risking two owners freeing or mutating the same resource incorrectly.",
                     false,
                 ),
@@ -2142,7 +2142,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "& creates a reference so code can use a value without taking ownership.",
                     "show_name(&name);",
                     vec![("&name", "borrows name instead of moving its String")],
-                    "Now you try: call the provided show_name function with &name, then Run until Borrowed: Oxide appears.",
+                    "Now you try: call the provided show_name function with &name, then Run until Borrowed: Rivet appears.",
                     "A shared reference gives temporary read access to a value. The owner remains responsible for the String and can continue using it after the borrowed access ends.",
                     true,
                 ),
@@ -2162,7 +2162,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "A value can be borrowed again whenever the borrowing rules allow it.",
                     "fn show_twice(name: &String) {\n    println!(\"{name} {name}\");\n}",
                     vec![("&String", "accepts a shared reference to a String")],
-                    "Now you try: create show_twice(name: &String), call it with &name, and Run until Oxide Oxide appears.",
+                    "Now you try: create show_twice(name: &String), call it with &name, and Run until Rivet Rivet appears.",
                     "Shared references are cheap handles to existing data. Rust tracks their lifetimes so the referenced value cannot disappear while a valid reference still needs it.",
                     true,
                 ),
@@ -2181,7 +2181,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "&str is a borrowed view of string text.",
                     "fn show_label(label: &str) {\n    println!(\"Label: {label}\");\n}",
                     vec![("&str", "borrows string text without taking ownership"), ("label", "is the borrowed text inside the function")],
-                    "Now you try: create show_label(label: &str), call it with &label, and Run until Label: Oxide appears.",
+                    "Now you try: create show_label(label: &str), call it with &label, and Run until Label: Rivet appears.",
                     "A string slice does not own the text it points at. It describes a valid region of UTF-8 string data for as long as that data remains available. Functions that only need to read text often accept &str because both String values and string literals can be borrowed as slices.",
                     true,
                 ),
@@ -2465,9 +2465,9 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                 tutorial_step(
                     "input-run",
                     "Have a conversation",
-                    "The Oxide Run Terminal sends your typed input to the real program's stdin.",
+                    "The Rivet Run Terminal sends your typed input to the real program's stdin.",
                     "Run the program, type Quinn into the Run Terminal, press Enter, and make it print Hello, Quinn!.",
-                    "Oxide's terminal is connected to the child process's real stdin/stdout pipes. The tutorial is not simulating the interaction; your compiled executable receives the characters you type.",
+                    "Rivet's terminal is connected to the child process's real stdin/stdout pipes. The tutorial is not simulating the interaction; your compiled executable receives the characters you type.",
                     true,
                 ),
             ],
@@ -2512,7 +2512,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "Challenge: add subtraction",
                     "Use the same two values to calculate another result without another worked example.",
                     "Also print Difference: -2 when the inputs are 4 and 6, then Run it again.",
-                    "The challenge deliberately gives you the desired behavior rather than the exact code. At this point you already know variables, arithmetic expressions, and println!, so Oxide can reduce the scaffolding.",
+                    "The challenge deliberately gives you the desired behavior rather than the exact code. At this point you already know variables, arithmetic expressions, and println!, so Rivet can reduce the scaffolding.",
                     true,
                 ),
             ],
@@ -2528,9 +2528,9 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "add-player",
                     "Grow the roster",
                     "A Vec can store several values of the same struct type.",
-                    "players.push(Player { name: String::from(\"Oxide\"), score: 20 });",
+                    "players.push(Player { name: String::from(\"Rivet\"), score: 20 });",
                     vec![("players.push(...) ", "adds another Player to the vector")],
-                    "Now you try: make players mutable, then add an Oxide player with score 20 to the provided players vector.",
+                    "Now you try: make players mutable, then add a Rivet player with score 20 to the provided players vector.",
                     "Because every item is a Player, Rust guarantees that each vector entry has the same fields and field types. That makes later iteration predictable.",
                     false,
                 ),
@@ -2548,7 +2548,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "scoreboard-run",
                     "Run the scoreboard",
                     "The program should now turn structured data into visible output.",
-                    "Run until the terminal contains both Quinn: 10 and Oxide: 20.",
+                    "Run until the terminal contains both Quinn: 10 and Rivet: 20.",
                     "This is a small but real data flow: values are grouped into structs, stored in a vector, borrowed by a loop, and formatted for the user.",
                     true,
                 ),
@@ -2556,7 +2556,7 @@ fn tutorial_lessons() -> Vec<TutorialLesson> {
                     "scoreboard-challenge",
                     "Challenge: mark the winner",
                     "Use a condition inside the loop to react to a player's score.",
-                    "Make the program also print Winner: Oxide for the player whose score is 20, then Run it.",
+                    "Make the program also print Winner: Rivet for the player whose score is 20, then Run it.",
                     "You now have enough pieces to solve this without a worked answer: field access gives you player.score, an if expression can test it, and player.name can be printed when the condition is true.",
                     true,
                 ),
@@ -2581,9 +2581,9 @@ fn tutorial_initial_source(lesson_id: &str) -> Option<&'static str> {
         "vectors" => Some("fn main() {\n\n}\n"),
         "structs" => Some("fn main() {\n\n}\n"),
         "enums-match" => Some("fn main() {\n\n}\n"),
-        "ownership" => Some("fn main() {\n    let name = String::from(\"Oxide\");\n    let moved_name = name;\n    println!(\"{moved_name}\");\n}\n"),
-        "borrowing" => Some("fn show_name(name: &String) {\n    println!(\"Borrowed: {name}\");\n}\n\nfn main() {\n    let name = String::from(\"Oxide\");\n\n}\n"),
-        "string-slices" => Some("fn main() {\n    let label = String::from(\"Oxide\");\n    println!(\"{label}\");\n}\n"),
+        "ownership" => Some("fn main() {\n    let name = String::from(\"Rivet\");\n    let moved_name = name;\n    println!(\"{moved_name}\");\n}\n"),
+        "borrowing" => Some("fn show_name(name: &String) {\n    println!(\"Borrowed: {name}\");\n}\n\nfn main() {\n    let name = String::from(\"Rivet\");\n\n}\n"),
+        "string-slices" => Some("fn main() {\n    let label = String::from(\"Rivet\");\n    println!(\"{label}\");\n}\n"),
         "mutable-references" => Some("fn main() {\n    let score = 10;\n    println!(\"Score: {score}\");\n}\n"),
         "methods" => Some("struct Counter {\n    value: i32,\n}\n\nfn main() {\n    let counter = Counter { value: 3 };\n    println!(\"Count: {}\", counter.value);\n}\n"),
         "option" => Some("fn main() {\n    let score = Some(10);\n\n    match score {\n        Some(value) => println!(\"Score: {value}\"),\n        None => println!(\"No score\"),\n    }\n}\n"),
@@ -2607,7 +2607,7 @@ fn oxide_data_dir() -> Result<PathBuf, String> {
     if let Some(path) = env::var_os("HOME") {
         return Ok(PathBuf::from(path).join(".local").join("share").join("oxide-editor"));
     }
-    Err("Oxide could not determine a writable application-data folder.".into())
+    Err("Rivet could not determine a writable application-data folder.".into())
 }
 
 fn tutorial_progress_path() -> Result<PathBuf, String> {
@@ -2676,7 +2676,7 @@ fn tutorial_prepare_lesson(lesson_id: String, reset: bool) -> Result<String, Str
     let lesson = tutorial_lessons()
         .into_iter()
         .find(|lesson| lesson.id == lesson_id)
-        .ok_or_else(|| "Unknown Oxide tutorial lesson.".to_string())?;
+        .ok_or_else(|| "Unknown Rivet tutorial lesson.".to_string())?;
     let source = tutorial_initial_source(&lesson.id)
         .ok_or_else(|| "This lesson does not have a project template yet.".to_string())?;
 
@@ -2746,7 +2746,7 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
 
     let complete = match (request.lesson_id.as_str(), request.step_index) {
         ("hello-world", 0) => ran_ok && output_lower.contains("hello, world!"),
-        ("hello-world", 1) => compact.contains("println!(\"Hello,Oxide!\");") && ran_ok && output_lower.contains("hello, oxide!"),
+        ("hello-world", 1) => compact.contains("println!(\"Hello,Rivet!\");") && ran_ok && output_lower.contains("hello, rivet!"),
         ("variables", 0) => compact.contains("letname") && compact.contains("=\"Quinn\";"),
         ("variables", 1) => {
             compact.contains("println!(\"{name}\");")
@@ -2794,7 +2794,7 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
         ("functions", 1) => compact.contains("greet();") && ran_ok && output_lower.contains("hello!"),
         ("functions", 2) => {
             // Challenge steps are outcome-first: require the concept (a second function)
-            // and the expected behavior, but do not require Oxide's suggested identifier.
+            // and the expected behavior, but do not require Rivet's suggested identifier.
             compact.matches("fn").count() >= 2
                 && ran_ok
                 && output_lower.contains("you can do this!")
@@ -2856,8 +2856,8 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
                 && output_lower.contains("number: 6")
         }
         ("strings", 0) => compact.contains("letmutmessage=String::from(\"Hello\");"),
-        ("strings", 1) => compact.contains("message.push_str(\",Oxide!\");"),
-        ("strings", 2) => ran_ok && output_lower.contains("hello, oxide!"),
+        ("strings", 1) => compact.contains("message.push_str(\",Rivet!\");"),
+        ("strings", 2) => ran_ok && output_lower.contains("hello, rivet!"),
         ("vectors", 0) => compact.contains("letscores=vec![10,20,30];") || compact.contains("letmutscores=vec![10,20,30];"),
         ("vectors", 1) => compact.contains("scores[0]") && ran_ok && output_compact_lower.contains("first:10"),
         ("vectors", 2) => {
@@ -2893,7 +2893,7 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
                 && output_lower.contains("going left")
         }
         ("enums-match", 3) => compact.contains("match") && ran_ok && output_lower.contains("going right"),
-        ("ownership", 0) => ran_ok && output_lower.contains("oxide"),
+        ("ownership", 0) => ran_ok && output_lower.contains("rivet"),
         ("ownership", 1) => {
             compact.contains("letmoved_name=name;")
                 && compact.contains("println!(\"Original:{name}\");")
@@ -2904,26 +2904,26 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
                 && compact.contains("println!(\"Original:{name}\");")
                 && !has_level("error")
                 && ran_ok
-                && output_lower.contains("oxide")
+                && output_lower.contains("rivet")
         }
-        ("borrowing", 0) => compact.contains("show_name(&name);") && ran_ok && output_lower.contains("borrowed: oxide"),
+        ("borrowing", 0) => compact.contains("show_name(&name);") && ran_ok && output_lower.contains("borrowed: rivet"),
         ("borrowing", 1) => {
             compact.contains("println!(\"Stillmine:{name}\");")
                 && ran_ok
-                && output_lower.contains("borrowed: oxide")
-                && output_lower.contains("still mine: oxide")
+                && output_lower.contains("borrowed: rivet")
+                && output_lower.contains("still mine: rivet")
         }
         ("borrowing", 2) => {
             compact.contains("&String")
                 && compact.matches("fn").count() >= 2
                 && ran_ok
-                && output_lower.contains("oxide oxide")
+                && output_lower.contains("rivet rivet")
         }
         ("string-slices", 0) => {
             compact.contains("fnshow_label(label:&str){")
                 && compact.contains("show_label(&label);")
                 && ran_ok
-                && output_lower.contains("label: oxide")
+                && output_lower.contains("label: rivet")
         }
         ("string-slices", 1) => compact.contains("show_label(\"Rust\");") && ran_ok && output_lower.contains("label: rust"),
         ("string-slices", 2) => {
@@ -3028,7 +3028,7 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
         ("mini-scoreboard", 0) => {
             compact.contains("letmutplayers=vec![")
                 && compact.contains("players.push(Player{")
-                && compact.contains("name:String::from(\"Oxide\")")
+                && compact.contains("name:String::from(\"Rivet\")")
                 && compact.contains("score:20")
         }
         ("mini-scoreboard", 1) => {
@@ -3039,10 +3039,10 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
         ("mini-scoreboard", 2) => {
             ran_ok
                 && output_compact_lower.contains("quinn:10")
-                && output_compact_lower.contains("oxide:20")
+                && output_compact_lower.contains("rivet:20")
         }
         ("mini-scoreboard", 3) => {
-            ran_ok && output_lower.contains("winner: oxide")
+            ran_ok && output_lower.contains("winner: rivet")
         }
         _ => false
     };
@@ -3054,7 +3054,7 @@ fn tutorial_evaluate(request: TutorialEvaluationRequest) -> TutorialEvaluationRe
         } else if request.source.trim().is_empty() {
             "The editor is empty. Try the current activity when you're ready.".into()
         } else {
-            "Keep experimenting. Oxide will recognize the objective when the code reaches it.".into()
+            "Keep experimenting. Rivet will recognize the objective when the code reaches it.".into()
         },
     }
 }
@@ -3103,11 +3103,11 @@ fn oxide_release_is_newer(
     remote_build: u64,
 ) -> Result<bool, String> {
     let current = semver::Version::parse(current_version.trim_start_matches('v'))
-        .map_err(|error| format!("Oxide's installed version '{current_version}' is invalid: {error}"))?;
+        .map_err(|error| format!("Rivet's installed version '{current_version}' is invalid: {error}"))?;
     let remote = semver::Version::parse(remote_version.trim_start_matches('v'))
-        .map_err(|error| format!("The Oxide release feed has an invalid release_version '{remote_version}': {error}"))?;
+        .map_err(|error| format!("The Rivet release feed has an invalid release_version '{remote_version}': {error}"))?;
 
-    // Oxide releases are ordered by the pair (release version, build number).
+    // Rivet releases are ordered by the pair (release version, build number).
     // A higher public release always wins. For the same release, a higher
     // build number is a real update even though Cargo/Tauri SemVer is equal.
     Ok(remote > current || (remote == current && remote_build > current_build))
@@ -3125,10 +3125,10 @@ fn remote_oxide_is_newer(update: &tauri_plugin_updater::Update) -> Result<bool, 
 
 async fn raw_oxide_update(app: &AppHandle) -> Result<Option<tauri_plugin_updater::Update>, String> {
     // Tauri's default comparator only understands SemVer and would normally
-    // reject an equal 1.3.5 before Oxide could notice Build 1 -> Build 2.
+    // reject an equal 1.3.5 before Rivet could notice Build 1 -> Build 2.
     // Always retrieve the signed feed, then compare (release_version, build)
     // ourselves. Explicit no-cache headers also prevent a same-release feed
-    // from being reused after a newer Oxide build is published.
+    // from being reused after a newer Rivet build is published.
     let updater = app
         .updater_builder()
         .version_comparator(|_, _| true)
@@ -3137,12 +3137,12 @@ async fn raw_oxide_update(app: &AppHandle) -> Result<Option<tauri_plugin_updater
         .header("Pragma", "no-cache")
         .map_err(|error| format!("Could not configure updater cache control: {error}"))?
         .build()
-        .map_err(|error| format!("Could not initialize the Oxide update service: {error}"))?;
+        .map_err(|error| format!("Could not initialize the Rivet update service: {error}"))?;
 
     updater
         .check()
         .await
-        .map_err(|error| format!("Could not check the Oxide release feed: {error}"))
+        .map_err(|error| format!("Could not check the Rivet release feed: {error}"))
 }
 
 async fn available_oxide_update(app: &AppHandle) -> Result<Option<tauri_plugin_updater::Update>, String> {
@@ -3158,7 +3158,7 @@ async fn available_oxide_update(app: &AppHandle) -> Result<Option<tauri_plugin_u
 }
 
 #[tauri::command]
-async fn oxide_update_check(app: AppHandle) -> Result<Option<OxideUpdateInfo>, String> {
+async fn oxide_update_check(app: AppHandle) -> Result<Option<RivetUpdateInfo>, String> {
     let update = available_oxide_update(&app).await?;
 
     Ok(update.map(|update| {
@@ -3171,7 +3171,7 @@ async fn oxide_update_check(app: AppHandle) -> Result<Option<OxideUpdateInfo>, S
         #[cfg(not(any(target_os = "windows", target_os = "linux")))]
         let (install_supported, install_hint, update_mode) = (false, Some("Automatic package updates are not implemented for this platform yet.".to_string()), "unsupported".to_string());
 
-        OxideUpdateInfo {
+        RivetUpdateInfo {
             version: updater_release_version(&update),
             display_version: updater_display_version(&update),
             build_number: updater_build_number(&update),
@@ -3215,7 +3215,7 @@ fn installed_updater_helper(install_dir: &Path) -> Result<PathBuf, String> {
     }
 
     let mut candidates = fs::read_dir(install_dir)
-        .map_err(|error| format!("Could not inspect the Oxide install directory: {error}"))?
+        .map_err(|error| format!("Could not inspect the Rivet install directory: {error}"))?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| {
@@ -3229,11 +3229,11 @@ fn installed_updater_helper(install_dir: &Path) -> Result<PathBuf, String> {
     candidates
         .into_iter()
         .next()
-        .ok_or_else(|| "Oxide Update Service was not found beside the installed editor. Install B1.3.2 once with the normal installer before package updates can take over.".to_string())
+        .ok_or_else(|| "Rivet Update Service was not found beside the installed editor. Install B1.3.2 once with the normal installer before package updates can take over.".to_string())
 }
 
 #[tauri::command]
-async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64) -> Result<OxideUpdateStageResult, String> {
+async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64) -> Result<RivetUpdateStageResult, String> {
     let update = available_oxide_update(&app)
         .await?
         .ok_or_else(|| "The selected update is no longer available.".to_string())?;
@@ -3254,7 +3254,7 @@ async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64
                 downloaded = downloaded.saturating_add(chunk_length);
                 let _ = progress_app.emit(
                     "oxide-update-download",
-                    OxideUpdateDownloadEvent {
+                    RivetUpdateDownloadEvent {
                         event: "progress".into(),
                         downloaded,
                         content_length,
@@ -3266,7 +3266,7 @@ async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64
                 move || {
                     let _ = finished_app.emit(
                         "oxide-update-download",
-                        OxideUpdateDownloadEvent {
+                        RivetUpdateDownloadEvent {
                             event: "finished".into(),
                             downloaded: 0,
                             content_length: None,
@@ -3279,10 +3279,10 @@ async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64
         .map_err(|error| format!("The update package could not be downloaded or its signature was rejected: {error}"))?;
 
     let current_exe = env::current_exe()
-        .map_err(|error| format!("Could not locate the running Oxide executable: {error}"))?;
+        .map_err(|error| format!("Could not locate the running Rivet executable: {error}"))?;
     let install_dir = current_exe
         .parent()
-        .ok_or_else(|| "Could not determine the Oxide install directory.".to_string())?
+        .ok_or_else(|| "Could not determine the Rivet install directory.".to_string())?
         .to_path_buf();
     let helper = installed_updater_helper(&install_dir)?;
 
@@ -3303,17 +3303,17 @@ async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64
     let helper_name = if cfg!(windows) { "oxide-updater.exe" } else { "oxide-updater" };
     let temp_helper = work_dir.join(helper_name);
     fs::copy(&helper, &temp_helper)
-        .map_err(|error| format!("Could not prepare the Oxide Update Service: {error}"))?;
+        .map_err(|error| format!("Could not prepare the Rivet Update Service: {error}"))?;
 
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let mut permissions = fs::metadata(&temp_helper)
-            .map_err(|error| format!("Could not inspect the Oxide Update Service: {error}"))?
+            .map_err(|error| format!("Could not inspect the Rivet Update Service: {error}"))?
             .permissions();
         permissions.set_mode(0o755);
         fs::set_permissions(&temp_helper, permissions)
-            .map_err(|error| format!("Could not make the Oxide Update Service executable: {error}"))?;
+            .map_err(|error| format!("Could not make the Rivet Update Service executable: {error}"))?;
     }
 
     #[cfg(target_os = "windows")]
@@ -3321,7 +3321,7 @@ async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64
         let app_exe_name = current_exe
             .file_name()
             .and_then(|name| name.to_str())
-            .ok_or_else(|| "Could not determine the Oxide executable name.".to_string())?
+            .ok_or_else(|| "Could not determine the Rivet executable name.".to_string())?
             .to_string();
 
         Command::new(&temp_helper)
@@ -3336,7 +3336,7 @@ async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64
             .arg("--build")
             .arg(build_number.to_string())
             .spawn()
-            .map_err(|error| format!("Could not launch the Oxide Update Service: {error}"))?;
+            .map_err(|error| format!("Could not launch the Rivet Update Service: {error}"))?;
     }
 
     #[cfg(target_os = "linux")]
@@ -3345,7 +3345,7 @@ async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64
             let appimage = env::var_os("APPIMAGE")
                 .map(PathBuf::from)
                 .filter(|path| path.is_file())
-                .ok_or_else(|| "The running Oxide AppImage could not be located.".to_string())?;
+                .ok_or_else(|| "The running Rivet AppImage could not be located.".to_string())?;
 
             Command::new(&temp_helper)
                 .arg("--mode")
@@ -3361,7 +3361,7 @@ async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64
                 .arg("--pid")
                 .arg(std::process::id().to_string())
                 .spawn()
-                .map_err(|error| format!("Could not launch the Linux Oxide Update Service: {error}"))?;
+                .map_err(|error| format!("Could not launch the Linux Rivet Update Service: {error}"))?;
         } else if linux_is_deb_install() {
             if !linux_deb_update_tools_available() {
                 return Err("This .deb installation needs polkit/pkexec and dpkg for automatic updates.".into());
@@ -3381,16 +3381,16 @@ async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64
                 .arg("--pid")
                 .arg(std::process::id().to_string())
                 .spawn()
-                .map_err(|error| format!("Could not launch the Linux Oxide Update Service: {error}"))?;
+                .map_err(|error| format!("Could not launch the Linux Rivet Update Service: {error}"))?;
         } else {
-            return Err("Automatic Linux installation is available for Oxide AppImage and .deb release builds. This appears to be an unpackaged/development build.".into());
+            return Err("Automatic Linux installation is available for Rivet AppImage and .deb release builds. This appears to be an unpackaged/development build.".into());
         }
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "linux")))]
-    return Err("Oxide package updates are not implemented for this operating system yet.".into());
+    return Err("Rivet package updates are not implemented for this operating system yet.".into());
 
-    Ok(OxideUpdateStageResult {
+    Ok(RivetUpdateStageResult {
         version,
         build_number,
         helper_started: true,
@@ -3738,5 +3738,5 @@ pub fn run() {
             quit_app,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Oxide Editor");
+        .expect("error while running Rivet");
 }

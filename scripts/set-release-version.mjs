@@ -2,11 +2,11 @@ import fs from 'node:fs';
 
 const [internalVersion, displayVersion, requestedBuild] = process.argv.slice(2);
 if (!internalVersion) {
-  console.error('Usage: npm run release:version -- 1.3.5 B1.3.5 [buildNumber]');
+  console.error('Usage: npm run release:version -- 1.3.6 B1.3.6 [buildNumber]');
   process.exit(1);
 }
 if (!displayVersion) {
-  console.error('A user-facing display version is required, for example B1.3.5.');
+  console.error('A user-facing display version is required, for example B1.3.6.');
   process.exit(1);
 }
 
@@ -38,10 +38,10 @@ for (const cargoPath of ['src-tauri/Cargo.toml', 'updater/src-tauri/Cargo.toml',
 
 const mainPath = 'src/main.js';
 let main = fs.readFileSync(mainPath, 'utf8');
-main = main.replace(/OXIDE EDITOR · B\d+\.\d+\.\d+(?: · BUILD \d+)?/g, `OXIDE EDITOR · ${displayVersion} · BUILD ${buildNumber}`);
-main = main.replace(/OXIDE B\d+\.\d+\.\d+(?: · BUILD \d+)?/g, `OXIDE ${displayVersion} · BUILD ${buildNumber}`);
+main = main.replace(/(?:OXIDE EDITOR|RIVET) · B\d+\.\d+\.\d+(?: · BUILD \d+)?/g, `RIVET · ${displayVersion} · BUILD ${buildNumber}`);
+main = main.replace(/(?:OXIDE|RIVET) B\d+\.\d+\.\d+(?: · BUILD \d+)?/g, `RIVET ${displayVersion} · BUILD ${buildNumber}`);
 main = main.replace(/Beta B\d+\.\d+\.\d+(?: · Build \d+)?/g, `Beta ${displayVersion} · Build ${buildNumber}`);
 main = main.replace(/CURRENT B\d+\.\d+\.\d+/g, `CURRENT ${displayVersion}`);
 fs.writeFileSync(mainPath, main);
 
-console.log(`Oxide release version updated: internal ${internalVersion}, display ${displayVersion}, build ${buildNumber}`);
+console.log(`Rivet release version updated: internal ${internalVersion}, display ${displayVersion}, build ${buildNumber}`);

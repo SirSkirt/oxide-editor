@@ -151,7 +151,7 @@ fn extract_package(package: &Path, staging: &Path) -> Result<PackageManifest, St
         .map_err(|e| format!("The update package manifest is invalid: {e}"))?;
 
     if manifest.format != 1 {
-        return Err(format!("Unsupported Oxide update package format {}.", manifest.format));
+        return Err(format!("Unsupported Rivet update package format {}.", manifest.format));
     }
     if !staging.join("oxide-editor.exe").is_file() {
         return Err("The update package does not contain oxide-editor.exe.".into());
@@ -216,7 +216,7 @@ fn replace_one_with_retry(source: &Path, target: &Path) -> Result<(), String> {
     }
 
     Err(format!(
-        "Could not replace {} after waiting for Oxide to close: {}",
+        "Could not replace {} after waiting for Rivet to close: {}",
         target.display(),
         last_error.unwrap_or_else(|| "unknown file error".into())
     ))
@@ -242,7 +242,7 @@ fn perform_update(app: AppHandle, args: UpdateArgs) -> Result<(), String> {
     let staging = work_dir.join("staging");
     let backup = work_dir.join("backup");
 
-    emit(&app, "VERIFYING PACKAGE", "Opening the signed Oxide package…", 8);
+    emit(&app, "VERIFYING PACKAGE", "Opening the signed Rivet package…", 8);
     let manifest = extract_package(&args.package, &staging)?;
     let package_release_version = manifest
         .release_version
@@ -268,15 +268,15 @@ fn perform_update(app: AppHandle, args: UpdateArgs) -> Result<(), String> {
         return Err("The update package contains no runtime files.".into());
     }
 
-    emit(&app, "BACKING UP", "Creating a rollback copy of the current Oxide files…", 38);
+    emit(&app, "BACKING UP", "Creating a rollback copy of the current Rivet files…", 38);
     backup_files(&staging, &args.install_dir, &backup, &files)?;
 
-    emit(&app, "INSTALLING", "Waiting for Oxide Editor to release its program files…", 48);
+    emit(&app, "INSTALLING", "Waiting for Rivet to release its program files…", 48);
     for (index, relative) in files.iter().enumerate() {
         let source = staging.join(relative);
         let target = args.install_dir.join(relative);
         if let Err(error) = replace_one_with_retry(&source, &target) {
-            emit(&app, "ROLLING BACK", "The update failed. Restoring the previous Oxide build…", 88);
+            emit(&app, "ROLLING BACK", "The update failed. Restoring the previous Rivet build…", 88);
             restore_backup(&backup, &args.install_dir);
             return Err(error);
         }
@@ -288,14 +288,14 @@ fn perform_update(app: AppHandle, args: UpdateArgs) -> Result<(), String> {
     let app_path = args.install_dir.join(&args.app_exe);
     if !app_path.is_file() {
         restore_backup(&backup, &args.install_dir);
-        return Err(format!("Updated Oxide executable was not found at {}.", app_path.display()));
+        return Err(format!("Updated Rivet executable was not found at {}.", app_path.display()));
     }
 
-    emit(&app, "UPDATE COMPLETE", format!("{} Build {} is installed. Restarting Oxide…", manifest.display_version, manifest.build), 100);
+    emit(&app, "UPDATE COMPLETE", format!("{} Build {} is installed. Restarting Rivet…", manifest.display_version, manifest.build), 100);
     thread::sleep(Duration::from_millis(650));
     Command::new(&app_path)
         .spawn()
-        .map_err(|e| format!("Oxide updated successfully, but could not restart: {e}"))?;
+        .map_err(|e| format!("Rivet updated successfully, but could not restart: {e}"))?;
     thread::sleep(Duration::from_millis(300));
     app.exit(0);
     Ok(())
@@ -310,7 +310,7 @@ fn main() {
     let args = match parse_args() {
         Ok(args) => args,
         Err(error) => {
-            eprintln!("Oxide updater could not start: {error}");
+            eprintln!("Rivet updater could not start: {error}");
             return;
         }
     };
@@ -334,5 +334,5 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running Oxide Update Service");
+        .expect("error while running Rivet Update Service");
 }

@@ -88,7 +88,7 @@ fn parse_args() -> Result<Args, String> {
 
 fn log(message: impl AsRef<str>) {
     let message = message.as_ref();
-    eprintln!("[Oxide Update Service] {message}");
+    eprintln!("[Rivet Update Service] {message}");
     if let Ok(path) = env::var("OXIDE_UPDATE_LOG") {
         if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
             let _ = writeln!(file, "{message}");
@@ -128,7 +128,7 @@ fn extract_package(package: &Path, staging: &Path) -> Result<PackageManifest, St
     let manifest: PackageManifest = serde_json::from_str(&manifest_text)
         .map_err(|e| format!("The update package manifest is invalid: {e}"))?;
     if manifest.format != 1 {
-        return Err(format!("Unsupported Oxide update package format {}.", manifest.format));
+        return Err(format!("Unsupported Rivet update package format {}.", manifest.format));
     }
     if !manifest.platform.starts_with("linux-") {
         return Err(format!("This update package targets {}, not Linux.", manifest.platform));
@@ -144,7 +144,7 @@ fn wait_for_process(pid: u32) -> Result<(), String> {
         }
         thread::sleep(Duration::from_millis(250));
     }
-    Err("Oxide Editor did not close in time, so the update was cancelled.".into())
+    Err("Rivet did not close in time, so the update was cancelled.".into())
 }
 
 fn sibling_with_suffix(path: &Path, suffix: &str) -> Result<PathBuf, String> {
@@ -214,7 +214,7 @@ fn install_appimage(staging: &Path, appimage: &Path, display_version: &str) -> R
     if let Err(error) = Command::new(appimage).spawn() {
         let _ = fs::remove_file(appimage);
         let _ = fs::rename(&backup, appimage);
-        return Err(format!("The update was installed but Oxide could not restart: {error}"));
+        return Err(format!("The update was installed but Rivet could not restart: {error}"));
     }
 
     let _ = fs::remove_file(&backup);
@@ -241,19 +241,19 @@ fn install_deb(staging: &Path, app_exe: &Path, display_version: &str) -> Result<
     match status.code() {
         Some(0) => {}
         Some(126) => return Err("Linux update authorization was cancelled by the user.".into()),
-        Some(127) => return Err("Linux could not authorize the Oxide package update.".into()),
-        Some(code) => return Err(format!("dpkg could not install the Oxide update (exit code {code}).")),
-        None => return Err("The privileged Oxide package installer ended unexpectedly.".into()),
+        Some(127) => return Err("Linux could not authorize the Rivet package update.".into()),
+        Some(code) => return Err(format!("dpkg could not install the Rivet update (exit code {code}).")),
+        None => return Err("The privileged Rivet package installer ended unexpectedly.".into()),
     }
 
     if !app_exe.is_file() {
-        return Err(format!("Oxide was updated, but the installed executable was not found at {}.", app_exe.display()));
+        return Err(format!("Rivet was updated, but the installed executable was not found at {}.", app_exe.display()));
     }
 
-    log("Package manager update complete. Restarting Oxide...");
+    log("Package manager update complete. Restarting Rivet...");
     Command::new(app_exe)
         .spawn()
-        .map_err(|e| format!("Oxide updated successfully, but could not restart: {e}"))?;
+        .map_err(|e| format!("Rivet updated successfully, but could not restart: {e}"))?;
     Ok(())
 }
 
@@ -277,7 +277,7 @@ fn install(args: Args) -> Result<(), String> {
         ));
     }
 
-    log(format!("{} Build {} verified. Waiting for Oxide to close...", manifest.display_version, manifest.build));
+    log(format!("{} Build {} verified. Waiting for Rivet to close...", manifest.display_version, manifest.build));
     wait_for_process(args.pid)?;
 
     match &args.mode {

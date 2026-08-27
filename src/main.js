@@ -1,10 +1,35 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import './styles.css';
+import rivetLogo from './assets/rivet-logo.png';
 
 const app = document.querySelector('#app');
 
+const THEME_STORAGE_KEY = 'oxide.appearance.theme';
+const THEME_CATALOG = Object.freeze({
+  oxide: { label: 'Oxide', menuLabel: 'OXIDE' },
+  metallic: { label: 'Metallic', menuLabel: 'METALLIC' },
+  rust: { label: 'Rust', menuLabel: 'RUST' },
+  'modern-light': { label: 'Modern (Light)', menuLabel: 'MODERN LIGHT' },
+  'modern-dark': { label: 'Modern (Dark)', menuLabel: 'MODERN DARK' },
+});
+
+function loadStoredTheme() {
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    return Object.hasOwn(THEME_CATALOG, stored) ? stored : 'oxide';
+  } catch {
+    return 'oxide';
+  }
+}
+
+const initialTheme = loadStoredTheme();
+// Apply the stored material before the main UI is rendered to avoid a flash of
+// the default Oxide theme surface when a different theme was selected previously.
+document.documentElement.dataset.theme = initialTheme;
+
 const state = {
+  theme: initialTheme,
   projectPath: '',
   platform: { os: 'unknown', arch: 'unknown', pathCaseSensitive: false, automaticUpdates: false, updateMode: 'unknown' },
   tabs: [],
@@ -108,15 +133,15 @@ const state = {
 app.innerHTML = `
   <main class="oxide-shell welcome-mode">
     <header class="brandbar">
-      <div class="brand-mark" aria-hidden="true">OX</div>
-      <div class="brand-copy"><strong>OXIDE</strong><span>Rust Workbench</span></div>
+      <div class="brand-mark"><img src="${rivetLogo}" alt="Rivet logo" /></div>
+      <div class="brand-copy"><strong>RIVET</strong><span>Rust Development Environment</span></div>
       <div class="toolchain-lamps" title="Detected Rust toolchain">
         <span class="lamp" id="cargo-lamp"></span><span id="cargo-version">Cargo: unknown</span>
         <span class="lamp" id="rustc-lamp"></span><span id="rustc-version">rustc: unknown</span>
       </div>
     </header>
 
-    <nav class="menu-bar" aria-label="Oxide menu bar">
+    <nav class="menu-bar" aria-label="Rivet menu bar">
       <div class="menu-cluster">
         <div class="menu-host">
           <button class="menu-trigger" data-menu="file">File</button>
@@ -129,7 +154,7 @@ app.innerHTML = `
             <button role="menuitem" data-menu-action="save-project-as"><span>Save Project As…</span><kbd>Ctrl+Shift+S</kbd></button>
             <div class="menu-separator"></div>
             <button role="menuitem" data-menu-action="close-project"><span>Close Project</span></button>
-            <button role="menuitem" data-menu-action="exit"><span>Exit Oxide</span></button>
+            <button role="menuitem" data-menu-action="exit"><span>Exit Rivet</span></button>
           </div>
         </div>
         <div class="menu-host">
@@ -196,6 +221,13 @@ app.innerHTML = `
             <button role="menuitem" data-menu-action="show-terminal"><span>Run Terminal Window</span></button>
             <button role="menuitem" data-menu-action="show-problems"><span>Problems</span></button>
             <div class="menu-separator"></div>
+            <div class="menu-section-label">THEME <span id="theme-menu-current">OXIDE</span></div>
+            <button role="menuitem" data-menu-action="theme-oxide"><span><i class="menu-check" data-theme-check="oxide">✓</i> Oxide</span></button>
+            <button role="menuitem" data-menu-action="theme-metallic"><span><i class="menu-check" data-theme-check="metallic"></i> Metallic</span></button>
+            <button role="menuitem" data-menu-action="theme-rust"><span><i class="menu-check" data-theme-check="rust"></i> Rust</span></button>
+            <button role="menuitem" data-menu-action="theme-modern-light"><span><i class="menu-check" data-theme-check="modern-light"></i> Modern (Light)</span></button>
+            <button role="menuitem" data-menu-action="theme-modern-dark"><span><i class="menu-check" data-theme-check="modern-dark"></i> Modern (Dark)</span></button>
+            <div class="menu-separator"></div>
             <button role="menuitem" data-menu-action="reset-layout"><span>Reset Layout</span></button>
           </div>
         </div>
@@ -205,7 +237,7 @@ app.innerHTML = `
             <button role="menuitem" data-menu-action="shortcuts"><span>Keyboard Shortcuts</span></button>
             <button role="menuitem" data-menu-action="check-updates"><span>Check for Updates…</span></button>
             <div class="menu-separator"></div>
-            <button role="menuitem" data-menu-action="about"><span>About Oxide</span></button>
+            <button role="menuitem" data-menu-action="about"><span>About Rivet</span></button>
           </div>
         </div>
       </div>
@@ -228,8 +260,8 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">OXIDE EDITOR · B1.3.5 · BUILD 4</div>
-        <h1>Welcome to the Oxide Editor</h1>
+        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 2</div>
+        <h1>Welcome to Rivet</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
           <button type="button" id="welcome-new" class="welcome-action">
@@ -301,7 +333,7 @@ app.innerHTML = `
             <div id="tutorial-example-parts" class="tutorial-example-parts"></div>
           </div>
           <div class="tutorial-objective-block"><span>NOW YOU TRY</span><strong id="tutorial-objective"></strong></div>
-          <div id="tutorial-feedback" class="tutorial-feedback">Oxide is watching the real project for this objective.</div>
+          <div id="tutorial-feedback" class="tutorial-feedback">Rivet is watching the real project for this objective.</div>
           <div id="tutorial-experiment-note" class="tutorial-experiment-note" hidden>You’ve moved away from the lesson objective. That’s okay — experiment as much as you want.</div>
           <button type="button" id="tutorial-learn-more" class="tutorial-small-button">LEARN MORE</button>
           <div id="tutorial-learn-more-text" class="tutorial-learn-more-text" hidden></div>
@@ -375,12 +407,12 @@ app.innerHTML = `
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>OXIDE B1.3.5 · BUILD 4</span>
+      <span>RIVET B1.3.6 · BUILD 2</span>
     </footer>
   </main>
 
   <dialog id="file-browser-dialog" class="oxide-dialog browser-dialog">
-    <div class="dialog-head browser-dialog-head"><div><span id="browser-title">OPEN PROJECT</span><small>OXIDE FILE BROWSER</small></div><button type="button" id="browser-close" class="dialog-close" aria-label="Close">×</button></div>
+    <div class="dialog-head browser-dialog-head"><div><span id="browser-title">OPEN PROJECT</span><small>RIVET FILE BROWSER</small></div><button type="button" id="browser-close" class="dialog-close" aria-label="Close">×</button></div>
     <div class="browser-location browser-location-expanded">
       <button type="button" id="browser-up" class="metal-button browser-nav">↑ UP</button>
       <input id="browser-path" spellcheck="false" aria-label="Current folder" />
@@ -422,9 +454,9 @@ app.innerHTML = `
   <dialog id="run-dialog" class="oxide-dialog run-dialog">
     <div class="dialog-head"><span>RUN PROJECT</span><button type="button" id="run-close" class="dialog-close">×</button></div>
     <div class="run-body">
-      <div class="run-question">How should Oxide run <strong id="run-project-name">this project</strong>?</div>
+      <div class="run-question">How should Rivet run <strong id="run-project-name">this project</strong>?</div>
       <div id="run-detection" class="run-detection"></div>
-      <button type="button" class="run-choice" data-run-mode="terminal"><span class="run-choice-icon">›_</span><span><strong>RUN IN OXIDE TERMINAL</strong><small>For command-line programs. Supports stdin, prompts, and interactive text input.</small></span></button>
+      <button type="button" class="run-choice" data-run-mode="terminal"><span class="run-choice-icon">›_</span><span><strong>RUN IN RIVET TERMINAL</strong><small>For command-line programs. Supports stdin, prompts, and interactive text input.</small></span></button>
       <button type="button" class="run-choice" data-run-mode="gui"><span class="run-choice-icon">▣</span><span><strong>RUN AS GUI / NATIVE WINDOW</strong><small>For Tauri, egui, iced, winit, and other projects that create their own window.</small></span></button>
     </div>
     <div class="dialog-actions"><button type="button" id="run-cancel" class="metal-button">CANCEL</button></div>
@@ -435,7 +467,7 @@ app.innerHTML = `
     <div class="tutorial-home">
       <div class="tutorial-home-intro">
         <strong>Write code first. Read only when it helps.</strong>
-        <p>Lessons use Oxide's real editor, Cargo projects, rustc diagnostics, Build Bay, and Run Terminal. There is no tutorial-only compiler hiding behind the curtain. Challenge steps accept multiple valid solutions when they demonstrate the requested concept and result.</p>
+        <p>Lessons use Rivet's real editor, Cargo projects, rustc diagnostics, Build Bay, and Run Terminal. There is no tutorial-only compiler hiding behind the curtain. Challenge steps accept multiple valid solutions when they demonstrate the requested concept and result.</p>
       </div>
       <div class="tutorial-course-grid">
         <section class="tutorial-course-card">
@@ -456,7 +488,7 @@ app.innerHTML = `
 
   <dialog id="debug-target-dialog" class="oxide-dialog debug-target-dialog">
     <div class="dialog-head"><div><span>DEBUG TARGET</span><small>MULTI-BINARY CARGO PROJECT</small></div><button type="button" id="debug-target-close" class="dialog-close">×</button></div>
-    <div class="debug-target-body"><p>Choose the Cargo binary Oxide should debug.</p><div id="debug-target-list" class="debug-target-list"></div></div>
+    <div class="debug-target-body"><p>Choose the Cargo binary Rivet should debug.</p><div id="debug-target-list" class="debug-target-list"></div></div>
     <div class="dialog-actions"><button type="button" id="debug-target-cancel" class="metal-button">CANCEL</button></div>
   </dialog>
 
@@ -492,16 +524,16 @@ app.innerHTML = `
     <div class="dialog-actions intelligence-actions"><button type="button" id="code-actions-done" class="metal-button">CLOSE</button></div>
   </dialog>
 
-  <section id="terminal-window" class="terminal-window" hidden aria-label="Oxide Run Terminal">
+  <section id="terminal-window" class="terminal-window" hidden aria-label="Rivet Run Terminal">
     <header id="terminal-drag-handle" class="terminal-window-head">
-      <div><span>OXIDE RUN TERMINAL</span><small id="terminal-window-project">NO PROJECT</small></div>
+      <div><span>RIVET RUN TERMINAL</span><small id="terminal-window-project">NO PROJECT</small></div>
       <div class="terminal-window-actions">
         <button type="button" id="terminal-window-stop" class="terminal-head-button stop" disabled>STOP</button>
         <button type="button" id="terminal-window-clear" class="terminal-head-button">CLEAR</button>
         <button type="button" id="terminal-window-close" class="terminal-head-button close" aria-label="Hide terminal">×</button>
       </div>
     </header>
-    <div id="terminal-screen" class="terminal-screen" tabindex="0" aria-live="polite"><span class="terminal-muted">Oxide Run Terminal ready.</span></div>
+    <div id="terminal-screen" class="terminal-screen" tabindex="0" aria-live="polite"><span class="terminal-muted">Rivet Run Terminal ready.</span></div>
     <form id="terminal-form" class="terminal-input-row">
       <span class="terminal-prompt">›</span>
       <input id="terminal-input" autocomplete="off" spellcheck="false" placeholder="Program input…" disabled />
@@ -510,12 +542,12 @@ app.innerHTML = `
   </section>
 
   <dialog id="message-dialog" class="oxide-dialog message-dialog">
-    <div class="dialog-head" id="message-title">OXIDE</div><div class="message-body" id="message-body"></div>
+    <div class="dialog-head" id="message-title">RIVET</div><div class="message-body" id="message-body"></div>
     <div class="dialog-actions message-actions"><button type="button" id="message-cancel" class="metal-button">CANCEL</button><button type="button" id="message-confirm" class="metal-button primary">OK</button></div>
   </dialog>
 
   <dialog id="update-dialog" class="oxide-dialog update-dialog">
-    <div class="dialog-head"><div><span>OXIDE UPDATE</span><small>OXIDE PACKAGE UPDATE SERVICE</small></div><button type="button" id="update-close" class="dialog-close" aria-label="Close">×</button></div>
+    <div class="dialog-head"><div><span>RIVET UPDATE</span><small>RIVET PACKAGE UPDATE SERVICE</small></div><button type="button" id="update-close" class="dialog-close" aria-label="Close">×</button></div>
     <div class="update-body">
       <div class="update-version-row"><span id="update-current-version">CURRENT 1.3.0</span><b>→</b><strong id="update-new-version">NEW VERSION</strong></div>
       <div id="update-release-date" class="update-release-date"></div>
@@ -534,7 +566,7 @@ app.innerHTML = `
   </dialog>
 
   <dialog id="info-dialog" class="oxide-dialog info-dialog">
-    <div class="dialog-head"><span id="info-title">OXIDE</span><button type="button" id="info-close-x" class="dialog-close">×</button></div>
+    <div class="dialog-head"><span id="info-title">RIVET</span><button type="button" id="info-close-x" class="dialog-close">×</button></div>
     <div class="info-body" id="info-body"></div><div class="dialog-actions message-actions"><button type="button" id="info-close" class="metal-button primary">CLOSE</button></div>
   </dialog>
 `;
@@ -726,7 +758,7 @@ async function detectPlatform() {
     state.platform = info;
     document.documentElement.dataset.oxideOs = info.os || 'unknown';
   } catch (error) {
-    console.warn('Could not detect Oxide platform information:', error);
+    console.warn('Could not detect Rivet platform information:', error);
   }
 }
 
@@ -738,6 +770,29 @@ function setLamp(element, ok) {
 function closeMenus() {
   document.querySelectorAll('.menu-popup.open').forEach((popup) => popup.classList.remove('open'));
   document.querySelectorAll('.menu-trigger.active').forEach((button) => button.classList.remove('active'));
+}
+
+function applyTheme(themeId, { persist = true } = {}) {
+  const next = Object.hasOwn(THEME_CATALOG, themeId) ? themeId : 'oxide';
+  state.theme = next;
+  document.documentElement.dataset.theme = next;
+
+  const definition = THEME_CATALOG[next];
+  const current = document.querySelector('#theme-menu-current');
+  if (current) current.textContent = definition.menuLabel;
+
+  document.querySelectorAll('[data-theme-check]').forEach((check) => {
+    check.textContent = check.dataset.themeCheck === next ? '✓' : '';
+  });
+
+  if (persist) {
+    try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch { /* non-fatal in restricted webviews */ }
+  }
+
+  // Semantic tokens represent meaning, not color. The CSS palette bound to
+  // the active theme changes instantly without asking rust-analyzer to
+  // recompute token classifications.
+  syncSyntaxHighlight();
 }
 
 const BUILD_BAY_HEIGHT_KEY = 'oxide.layout.buildBayHeight';
@@ -890,6 +945,11 @@ function updateMenuAvailability() {
   document.querySelectorAll('[data-check="completer"]').forEach((check) => {
     check.textContent = state.completer.enabled ? '✓' : '';
   });
+  document.querySelectorAll('[data-theme-check]').forEach((check) => {
+    check.textContent = check.dataset.themeCheck === state.theme ? '✓' : '';
+  });
+  const themeReadout = document.querySelector('#theme-menu-current');
+  if (themeReadout) themeReadout.textContent = THEME_CATALOG[state.theme]?.menuLabel || 'OXIDE';
   document.querySelectorAll('[data-menu-action="trigger-completion"]').forEach((button) => {
     button.disabled = !projectLoaded || !fileLoaded || !state.completer.available || !state.completer.enabled;
   });
@@ -1023,7 +1083,7 @@ async function openProjectPath(projectPath, { keepBrowserOpen = false, created =
   }
   if (hasDirtyTabs() && !await oxideConfirm('UNSAVED FILES', `Discard unsaved changes in ${dirtyTabCount()} open file${dirtyTabCount() === 1 ? '' : 's'} before opening another project?`, 'DISCARD')) return false;
   if (state.terminalRunning) {
-    if (!await oxideConfirm('PROGRAM RUNNING', 'A program is still running in the Oxide Run Terminal. Stop it before switching projects?', 'STOP & OPEN')) return false;
+    if (!await oxideConfirm('PROGRAM RUNNING', 'A program is still running in the Rivet Run Terminal. Stop it before switching projects?', 'STOP & OPEN')) return false;
     try { await invoke('terminal_stop'); } catch { /* process may have just exited */ }
     hideTerminalWindow();
   }
@@ -1333,7 +1393,7 @@ async function closeProject() {
   if (!state.projectPath) return;
   if (hasDirtyTabs() && !await oxideConfirm('CLOSE PROJECT', `Discard unsaved changes in ${dirtyTabCount()} file${dirtyTabCount() === 1 ? '' : 's'} and close this project?`, 'CLOSE PROJECT')) return;
   if (state.terminalRunning) {
-    if (!await oxideConfirm('PROGRAM RUNNING', 'A program is still running in the Oxide Terminal. Stop it and close the project?', 'STOP & CLOSE')) return;
+    if (!await oxideConfirm('PROGRAM RUNNING', 'A program is still running in the Rivet Terminal. Stop it and close the project?', 'STOP & CLOSE')) return;
     try { await invoke('terminal_stop'); } catch { /* terminal may already have exited */ }
   }
   if (state.debugger.running) {
@@ -1982,10 +2042,10 @@ function requestRun() {
   if (!state.projectPath || state.buildRunning || state.terminalRunning || state.debugger.running) return;
   els.runProjectName.textContent = state.manifest?.package_name || pathBase(state.projectPath);
   if (state.tutorial.active && currentTutorialStep()?.run_required) {
-    els.runDetection.innerHTML = '<span class="lamp ok"></span><span>This tutorial activity expects the Oxide Run Terminal so it can verify the real program output.</span>';
+    els.runDetection.innerHTML = '<span class="lamp ok"></span><span>This tutorial activity expects the Rivet Run Terminal so it can verify the real program output.</span>';
   } else {
     els.runDetection.innerHTML = projectLikelyGui()
-      ? '<span class="lamp ok"></span><span>Oxide found a GUI-oriented dependency. GUI / Native Window may be the right choice.</span>'
+      ? '<span class="lamp ok"></span><span>Rivet found a GUI-oriented dependency. GUI / Native Window may be the right choice.</span>'
       : '<span class="lamp"></span><span>Choose Terminal for console programs or GUI / Native Window if your program creates its own window.</span>';
   }
   els.runDialog.showModal();
@@ -2322,7 +2382,7 @@ async function refreshDebugThreads(preferredThreadId = null) {
 async function startDebugging() {
   if (!state.projectPath || state.debugger.running || state.buildRunning || state.terminalRunning) return;
   if (!state.debugger.available) {
-    showInfo('DEBUGGER NOT FOUND', `<p>${escapeHtml(state.debugger.message || 'Oxide could not find lldb-dap.')}</p><p>Oxide uses LLDB's Debug Adapter Protocol for structured Rust debugging.</p>`);
+    showInfo('DEBUGGER NOT FOUND', `<p>${escapeHtml(state.debugger.message || 'Rivet could not find lldb-dap.')}</p><p>Rivet uses LLDB's Debug Adapter Protocol for structured Rust debugging.</p>`);
     return;
   }
   if (!await saveAllDirtyTabs()) return;
@@ -2541,7 +2601,7 @@ async function startTerminalRun() {
     els.stopTerminal.disabled = true;
     els.terminalInput.disabled = true;
     $('.terminal-send').disabled = true;
-    appendTerminalChunk('stderr', `Oxide could not prepare the program: ${error}\n`);
+    appendTerminalChunk('stderr', `Rivet could not prepare the program: ${error}\n`);
     els.buildStatus.textContent = 'PROJECT READY';
     updateMenuAvailability();
   }
@@ -2556,7 +2616,7 @@ async function sendTerminalInput(event) {
   try {
     await invoke('terminal_write', { data: `${value}\n` });
   } catch (error) {
-    appendTerminalChunk('stderr', `Oxide input error: ${error}\n`);
+    appendTerminalChunk('stderr', `Rivet input error: ${error}\n`);
   }
 }
 
@@ -2638,9 +2698,9 @@ async function browseTo(path) {
     if (state.browserMode === 'open') {
       els.browserStatus.textContent = listing.is_cargo_project ? 'Cargo.toml found — this folder can be opened as a project.' : 'Choose a folder containing Cargo.toml.';
     } else if (state.browserMode === 'new-project') {
-      els.browserStatus.textContent = 'Choose the parent folder where Oxide should create the new project.';
+      els.browserStatus.textContent = 'Choose the parent folder where Rivet should create the new project.';
     } else {
-      els.browserStatus.textContent = 'Choose where Oxide should create the project copy.';
+      els.browserStatus.textContent = 'Choose where Rivet should create the project copy.';
     }
     renderBrowserEntries(listing.entries);
   } catch (error) {
@@ -2773,7 +2833,7 @@ function lessonProgress(lessonId) {
 
 function tutorialCapabilitySummary() {
   const completed = (state.tutorial.catalog?.beginner || []).filter((lesson) => lessonProgress(lesson.id).completed);
-  if (!completed.length) return 'Start anywhere. Oxide tracks capabilities, not grades.';
+  if (!completed.length) return 'Start anywhere. Rivet tracks capabilities, not grades.';
   const skills = completed.map((lesson) => lesson.skill);
   return `Comfortable so far: ${skills.join(', ')}.`;
 }
@@ -2799,7 +2859,7 @@ async function openTutorialHome() {
     renderTutorialHome();
     els.tutorialDialog.showModal();
   } catch (error) {
-    showInfo('TUTORIAL ERROR', `<p class="info-error">Oxide could not load the tutorial: ${escapeHtml(String(error))}</p>`);
+    showInfo('TUTORIAL ERROR', `<p class="info-error">Rivet could not load the tutorial: ${escapeHtml(String(error))}</p>`);
   }
 }
 
@@ -2838,10 +2898,10 @@ function renderTutorialPanel() {
   els.tutorialLearnMore.textContent = 'LEARN MORE';
   const flexibleChallenge = step.id.toLowerCase().includes('challenge');
   els.tutorialFeedback.textContent = flexibleChallenge
-    ? '◆ Multiple solutions accepted. Oxide checks the concept and result, not your exact names or layout.'
+    ? '◆ Multiple solutions accepted. Rivet checks the concept and result, not your exact names or layout.'
     : step.run_required
-      ? 'When the code is ready, use Oxide’s normal Run button.'
-      : 'Write directly in the real editor. Oxide will recognize the objective.';
+      ? 'When the code is ready, use Rivet’s normal Run button.'
+      : 'Write directly in the real editor. Rivet will recognize the objective.';
   els.tutorialFeedback.classList.remove('success');
   els.tutorialExperimentNote.hidden = true;
 }
@@ -2944,9 +3004,9 @@ async function evaluateTutorialStep() {
     const step = currentTutorialStep();
     const flexibleChallenge = step.id.toLowerCase().includes('challenge');
     els.tutorialFeedback.textContent = step.run_required && state.tutorial.runSuccess == null
-      ? 'Code is yours to experiment with. Run it when you want Oxide to verify the result.'
+      ? 'Code is yours to experiment with. Run it when you want Rivet to verify the result.'
       : flexibleChallenge
-        ? 'Not quite there yet. Multiple solutions are valid — focus on the requested behavior and concept rather than matching Oxide’s example exactly.'
+        ? 'Not quite there yet. Multiple solutions are valid — focus on the requested behavior and concept rather than matching Rivet’s example exactly.'
         : result.feedback;
     els.tutorialExperimentNote.hidden = els.editor.value === state.tutorial.checkpoint;
   } catch (error) {
@@ -3019,7 +3079,7 @@ async function advanceTutorialStep() {
   state.tutorial.advancing = true;
   if (!await saveCurrentFile({ announce: false })) {
     state.tutorial.advancing = false;
-    els.tutorialFeedback.textContent = 'Oxide could not save the lesson checkpoint. Fix the save problem before continuing.';
+    els.tutorialFeedback.textContent = 'Rivet could not save the lesson checkpoint. Fix the save problem before continuing.';
     return;
   }
   state.tutorial.checkpoint = els.editor.value;
@@ -3203,7 +3263,7 @@ function positionCompletionUi() {
   const usableWidth = Math.max(180, wrap.clientWidth - gutter - (margin * 2));
   const popupWidth = Math.min(650, usableWidth, Math.max(320, wrap.clientWidth * 0.52));
 
-  // Build 4 rule: the completer never flips above or covers the line being typed.
+  // Completer positioning rule: never flip above or cover the line being typed.
   // If the caret is near the bottom, the editor simply clips/shrinks the popup instead.
   const top = Math.max(margin, point.top + 4);
   const below = Math.max(0, wrap.clientHeight - top - margin);
@@ -3618,7 +3678,7 @@ async function refreshProjectTree() {
 async function applyWorkspaceEdit(edit, label = 'Rust edit') {
   if (!edit?.editCount) return false;
   if (edit.unsupportedOperations) {
-    showInfo('ACTION NOT APPLIED', `<p>This action includes ${edit.unsupportedOperations} file create/rename/delete operation${edit.unsupportedOperations === 1 ? '' : 's'} that Oxide B1.3.5 Build 4 deliberately does not apply automatically yet.</p>`);
+    showInfo('ACTION NOT APPLIED', `<p>This action includes ${edit.unsupportedOperations} file create/rename/delete operation${edit.unsupportedOperations === 1 ? '' : 's'} that Rivet does not apply automatically yet.</p>`);
     return false;
   }
   const affected = [];
@@ -3873,22 +3933,22 @@ function resetUpdateDialog() {
 function showUpdatePrompt(update) {
   state.updater.pending = update;
   resetUpdateDialog();
-  els.updateCurrentVersion.textContent = `CURRENT B1.3.5 · BUILD ${update.currentBuildNumber || 1}`;
+  els.updateCurrentVersion.textContent = `CURRENT B1.3.6 · BUILD ${update.currentBuildNumber || 1}`;
   els.updateNewVersion.textContent = `${update.displayVersion || `B${update.version}`} · BUILD ${update.buildNumber || 1}`;
-  els.updateReleaseDate.textContent = update.date ? `Published ${update.date}` : 'A newer Oxide package is available.';
+  els.updateReleaseDate.textContent = update.date ? `Published ${update.date}` : 'A newer Rivet package is available.';
   els.updateNotes.textContent = update.body?.trim() || 'This release does not include update notes.';
 
   if (update.installSupported === false) {
     els.updateInstall.disabled = true;
     els.updateInstall.textContent = 'APPIMAGE AUTO-UPDATE ONLY';
     els.updateError.hidden = false;
-    els.updateError.textContent = update.installHint || 'Automatic installation is not available for this Oxide package type.';
+    els.updateError.textContent = update.installHint || 'Automatic installation is not available for this Rivet package type.';
   }
 
   if (!els.updateDialog.open) els.updateDialog.showModal();
 }
 
-async function checkForOxideUpdates({ manual = false } = {}) {
+async function checkForRivetUpdates({ manual = false } = {}) {
   if (state.updater.checking || state.updater.installing) return;
   if (state.updater.pending) {
     showUpdatePrompt(state.updater.pending);
@@ -3900,15 +3960,15 @@ async function checkForOxideUpdates({ manual = false } = {}) {
     if (update) {
       showUpdatePrompt(update);
     } else if (manual) {
-      showInfo('OXIDE UPDATE', '<div class="update-status-message"><strong>Oxide is up to date.</strong><p>No newer signed Oxide package is available for this installation.</p></div>');
+      showInfo('RIVET UPDATE', '<div class="update-status-message"><strong>Rivet is up to date.</strong><p>No newer signed Rivet package is available for this installation.</p></div>');
     }
   } catch (error) {
     const message = String(error);
-    console.warn('Oxide package update check failed:', message);
+    console.warn('Rivet package update check failed:', message);
     if (manual) {
       const setupHint = /pubkey|public key|signature|not configured/i.test(message)
         ? '<p>The updater signing key has not been configured for this build yet. Run <code>scripts/setup-updater.ps1</code> once before publishing package updates.</p>'
-        : '<p>Oxide could not reach or validate the GitHub package feed. Your editor can continue normally.</p>';
+        : '<p>Rivet could not reach or validate the GitHub package feed. Your editor can continue normally.</p>';
       showInfo('UPDATE CHECK FAILED', `<div class="update-status-message"><strong>Could not check for updates.</strong>${setupHint}<p class="update-error-detail">${escapeHtml(message)}</p></div>`);
     }
   } finally {
@@ -3950,14 +4010,14 @@ async function installPendingUpdate() {
   els.updateProgressBar.classList.add('indeterminate');
   state.updater.downloaded = 0;
   state.updater.contentLength = 0;
-  els.updateProgressText.textContent = 'Contacting the Oxide package feed…';
+  els.updateProgressText.textContent = 'Contacting the Rivet package feed…';
 
   try {
     const result = await invoke('oxide_update_prepare', { version: update.version, buildNumber: update.buildNumber || 1 });
-    if (!result?.helperStarted) throw new Error('Oxide Update Service did not start.');
+    if (!result?.helperStarted) throw new Error('Rivet Update Service did not start.');
     els.updateProgressBar.classList.remove('indeterminate');
     els.updateProgressBar.style.width = '100%';
-    els.updateProgressText.textContent = 'Package signature verified. Oxide will close and apply the update…';
+    els.updateProgressText.textContent = 'Package signature verified. Rivet will close and apply the update…';
     els.updateInstall.textContent = 'STARTING UPDATER…';
     await new Promise((resolve) => setTimeout(resolve, 450));
     await invoke('quit_app');
@@ -3986,7 +4046,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT OXIDE', `<div class="about-mark">OX</div><div class="about-copy"><strong>Oxide Editor</strong><span>Beta B1.3.5 · Build 4</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence with Semantic Readability Colors, LLDB/DAP debugging, signed Oxide package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and an interface designed around explicit Rust workflows.</p></div>`);
+  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 2</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, theme-aware Semantic Readability Colors, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and five presentation themes that preserve the same Rivet workflow.</p></div>`);
 }
 
 function showShortcuts() {
@@ -4054,6 +4114,7 @@ async function handleMenuAction(action) {
   else if (action === 'rename-symbol') await startSemanticRename();
   else if (action === 'code-actions') await showCodeActions();
   else if (action === 'tutorial') await openTutorialHome();
+  else if (action.startsWith('theme-')) applyTheme(action.slice('theme-'.length));
   else if (action === 'toggle-project') setViewPanel('project', !state.view.project);
   else if (action === 'toggle-cargo') setViewPanel('cargo', !state.view.cargo);
   else if (action === 'toggle-build') setViewPanel('build', !state.view.build);
@@ -4062,7 +4123,7 @@ async function handleMenuAction(action) {
   else if (action === 'show-problems') { setViewPanel('build', true); setConsoleView('problems'); }
   else if (action === 'reset-layout') resetLayout();
   else if (action === 'shortcuts') showShortcuts();
-  else if (action === 'check-updates') await checkForOxideUpdates({ manual: true });
+  else if (action === 'check-updates') await checkForRivetUpdates({ manual: true });
   else if (action === 'about') showAbout();
 }
 
@@ -4086,6 +4147,7 @@ function setupMenus() {
 }
 
 setupMenus();
+applyTheme(state.theme, { persist: false });
 
 $('#welcome-new').addEventListener('click', () => openFileBrowser('new-project'));
 $('#welcome-open').addEventListener('click', () => openFileBrowser('open'));
@@ -4107,7 +4169,7 @@ els.editor.addEventListener('scroll', () => { els.lines.scrollTop = els.editor.s
 els.editor.addEventListener('click', updateBracketMatch);
 els.editor.addEventListener('keyup', updateBracketMatch);
 els.editor.addEventListener('select', updateBracketMatch);
-const OXIDE_INDENT = '    ';
+const RIVET_INDENT = '    ';
 
 function currentLineContext(text, position) {
   const lineStart = text.lastIndexOf('\n', Math.max(0, position - 1)) + 1;
@@ -4135,12 +4197,12 @@ function handleSmartEnter(event) {
   const closesBlockNext = context.afterCursor.trimStart().startsWith('}');
 
   if (opensBlock && closesBlockNext && start === end) {
-    const insert = `\n${baseIndent}${OXIDE_INDENT}\n${baseIndent}`;
+    const insert = `\n${baseIndent}${RIVET_INDENT}\n${baseIndent}`;
     els.editor.setRangeText(insert, start, end, 'end');
-    const caret = start + 1 + baseIndent.length + OXIDE_INDENT.length;
+    const caret = start + 1 + baseIndent.length + RIVET_INDENT.length;
     els.editor.setSelectionRange(caret, caret);
   } else {
-    const indent = opensBlock ? `${baseIndent}${OXIDE_INDENT}` : baseIndent;
+    const indent = opensBlock ? `${baseIndent}${RIVET_INDENT}` : baseIndent;
     els.editor.setRangeText(`\n${indent}`, start, end, 'end');
   }
 
@@ -4155,10 +4217,10 @@ function handleClosingBraceIndent(event) {
   const position = els.editor.selectionStart;
   const context = currentLineContext(els.editor.value, position);
   if (context.beforeCursor.trim().length !== 0) return false;
-  if (context.beforeCursor.length < OXIDE_INDENT.length) return false;
+  if (context.beforeCursor.length < RIVET_INDENT.length) return false;
 
   event.preventDefault();
-  const removeFrom = position - Math.min(OXIDE_INDENT.length, context.beforeCursor.length);
+  const removeFrom = position - Math.min(RIVET_INDENT.length, context.beforeCursor.length);
   els.editor.setRangeText('}', removeFrom, position, 'end');
   markEditorChanged();
   return true;
@@ -4172,7 +4234,7 @@ els.editor.addEventListener('keydown', (event) => {
 
   if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
     event.preventDefault();
-    els.editor.setRangeText(OXIDE_INDENT, els.editor.selectionStart, els.editor.selectionEnd, 'end');
+    els.editor.setRangeText(RIVET_INDENT, els.editor.selectionStart, els.editor.selectionEnd, 'end');
     markEditorChanged();
   }
 });
@@ -4312,7 +4374,7 @@ function dismissUpdatePrompt() {
 }
 
 // Update controls are application-level UI. Bind them once during startup so
-// they work whether Oxide is on the welcome screen, editing a file, or has no
+// they work whether Rivet is on the welcome screen, editing a file, or has no
 // project loaded at all.
 els.updateClose.addEventListener('click', dismissUpdatePrompt);
 els.updateLater.addEventListener('click', dismissUpdatePrompt);
@@ -4604,4 +4666,4 @@ resetLayout({ resetBuildBay: false });
 restoreBuildBayHeight();
 setProjectUiState();
 detectPlatform().finally(() => detectToolchain());
-window.setTimeout(() => checkForOxideUpdates({ manual: false }), 1400);
+window.setTimeout(() => checkForRivetUpdates({ manual: false }), 1400);

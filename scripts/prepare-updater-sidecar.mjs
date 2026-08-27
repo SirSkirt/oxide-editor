@@ -7,7 +7,7 @@ const isLinux = process.platform === 'linux';
 const exe = isWindows ? '.exe' : '';
 
 if (!isWindows && !isLinux) {
-  console.error(`Oxide updater sidecar preparation is not implemented for ${process.platform} yet.`);
+  console.error(`Rivet updater sidecar preparation is not implemented for ${process.platform} yet.`);
   process.exit(1);
 }
 
@@ -25,7 +25,7 @@ const targetDir = isWindows
   ? path.join('updater', 'src-tauri', 'target')
   : path.join('linux-updater', 'target');
 
-console.log(`Preparing Oxide updater sidecar for ${target} using ${manifest}...`);
+console.log(`Preparing Rivet updater sidecar for ${target} using ${manifest}...`);
 execFileSync('cargo', [
   'build',
   '--release',

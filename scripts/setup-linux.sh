@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-printf '\nOXIDE LINUX DEVELOPMENT SETUP\n'
+printf '\nRIVET LINUX DEVELOPMENT SETUP\n'
 printf 'Ubuntu / Pop!_OS / Debian-family prerequisites\n\n'
 
 if ! command -v apt-get >/dev/null 2>&1; then
@@ -44,7 +44,7 @@ echo 'Then: npm run tauri dev'
 
 
 if command -v rustup >/dev/null 2>&1; then
-  echo "Installing rust-analyzer component for Oxide Rust Code Analyzer/Completer..."
+  echo "Installing rust-analyzer component for Rivet Rust Code Analyzer/Completer..."
   rustup component add rust-analyzer
 else
   echo "rustup was not found. Install Rust with rustup, then run: rustup component add rust-analyzer"
