@@ -2766,3 +2766,435 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
 @media (max-height: 820px) {
   .brand-mark { width: 30px; height: 30px; border-radius: 6px; }
 }
+
+/* ==========================================================================
+   Rivet B1.3.6 Build 4 — Composable Theme Engine
+
+   Presentation is split into independent components:
+     data-theme-material  -> physical surface / texture / depth
+     data-theme-palette   -> UI colors
+     data-theme-controls  -> controls / edge / interaction treatment
+     data-theme-semantic  -> Semantic Readability Colors
+
+   Built-in and custom themes use these same attributes. No component is
+   allowed to change Rivet's workspace geometry, panel placement, or behavior.
+   ========================================================================== */
+
+/* ------------------------------- PALETTES -------------------------------- */
+:root[data-theme-palette="oxide"] {
+  color-scheme: dark;
+  --iron-0: #111211; --iron-1: #171817; --iron-2: #1e201f; --iron-3: #292b29; --iron-4: #373935;
+  --edge-dark: #0a0b0a; --edge-light: #4d4b43;
+  --rust: #b65f32; --rust-hot: #d27a43; --copper: #8c6a45; --paper: #d8d1c6; --muted: #8d8a82;
+  --green: #7e9e68; --amber: #c49a52; --red: #b65d50; --steel: #7290a2;
+  --t-ui-font: Consolas, "Cascadia Code", monospace;
+  --t-text: #d8d1c6; --t-muted: #8d8a82; --t-faint: #5f615d;
+  --t-border: #353733; --t-border-strong: #090a09;
+  --t-accent: #b65f32; --t-accent-hot: #d27a43; --t-accent-wash: #32231c; --t-accent-border: #68412e;
+  --t-accent-faint: rgba(210,122,67,.20); --t-focus-ring: rgba(210,122,67,.52);
+  --t-shell: #171817; --t-brand: #1d1f1d; --t-menu: #191b19; --t-command: #20221f;
+  --t-panel: #171817; --t-panel-alt: #121311; --t-head: #292b29;
+  --t-editor: #111211; --t-gutter: #0d0e0d; --t-tabbar: #171817;
+  --t-tab: #20221f; --t-tab-hover: #292b29; --t-tab-active: #121311;
+  --t-button: #2c2e2b; --t-button-hover: #393b37; --t-button-active: #252724;
+  --t-tree-hover: #242623; --t-tree-active: #39271f;
+  --t-card: #1e201e; --t-card-hover: #272925; --t-console: #0d0e0d; --t-input: #10110f; --t-dialog: #1d1f1c;
+  --t-status: #121311; --t-scroll-track: #10110f; --t-scroll-thumb: #444740;
+  --t-selection: rgba(112,60,36,.70); --t-caret: #e18b58; --t-marker: #c26a3d;
+  --t-shadow: inset 0 1px rgba(255,255,255,.06), inset 0 -1px rgba(0,0,0,.58); --t-brand-mark: #b65f32;
+}
+
+:root[data-theme-palette="metallic"] {
+  color-scheme: dark;
+  --iron-0: #0d0f10; --iron-1: #121517; --iron-2: #191d20; --iron-3: #252a2e; --iron-4: #343a3f;
+  --edge-dark: #050607; --edge-light: #626970;
+  --rust: #b96134; --rust-hot: #dd8048; --copper: #a67c52; --paper: #dce0e2; --muted: #8e9599;
+  --green: #82a36f; --amber: #d0a557; --red: #bf6255; --steel: #87a9bb;
+  --t-ui-font: Consolas, "Cascadia Code", monospace;
+  --t-text: #d9dde0; --t-muted: #8a9297; --t-faint: #5d656a;
+  --t-border: #343a3e; --t-border-strong: #090b0c;
+  --t-accent: #c96f3e; --t-accent-hot: #e58b55; --t-accent-wash: #30241f; --t-accent-border: #6b4938;
+  --t-accent-faint: rgba(229,139,85,.20); --t-focus-ring: rgba(229,139,85,.55);
+  --t-shell: #111416; --t-brand: #202427; --t-menu: #181b1d; --t-command: #191d1f;
+  --t-panel: #171a1c; --t-panel-alt: #121517; --t-head: #292e31;
+  --t-editor: #101315; --t-gutter: #0b0e10; --t-tabbar: #171a1c;
+  --t-tab: #1a1e20; --t-tab-hover: #252b2e; --t-tab-active: #111416;
+  --t-button: #2b3033; --t-button-hover: #363c40; --t-button-active: #292e31;
+  --t-tree-hover: #252a2d; --t-tree-active: #302620;
+  --t-card: #1c2022; --t-card-hover: #22272a; --t-console: #0c0f11; --t-input: #0e1113; --t-dialog: #1a1e21;
+  --t-status: #0e1113; --t-scroll-track: #0f1214; --t-scroll-thumb: #455057;
+  --t-selection: rgba(127,69,42,.72); --t-caret: #ef9c6a; --t-marker: #ca7548;
+  --t-shadow: inset 0 1px rgba(255,255,255,.11), inset 0 -1px rgba(0,0,0,.8); --t-brand-mark: #485159;
+}
+
+:root[data-theme-palette="rust"] {
+  color-scheme: dark;
+  --iron-0: #110d0b; --iron-1: #18120f; --iron-2: #211813; --iron-3: #30221b; --iron-4: #443127;
+  --edge-dark: #090604; --edge-light: #674a3a;
+  --rust: #a84f28; --rust-hot: #d46c34; --copper: #9a6845; --paper: #d9cdc1; --muted: #93867c;
+  --green: #84966d; --amber: #c7994e; --red: #b45648; --steel: #849fa9;
+  --t-ui-font: Consolas, "Cascadia Code", monospace;
+  --t-text: #d8ccc0; --t-muted: #8f8278; --t-faint: #5f5149;
+  --t-border: #493126; --t-border-strong: #080504;
+  --t-accent: #b5572d; --t-accent-hot: #df7540; --t-accent-wash: #352018; --t-accent-border: #673821;
+  --t-accent-faint: rgba(223,117,64,.20); --t-focus-ring: rgba(223,117,64,.55);
+  --t-shell: #17110e; --t-brand: #221813; --t-menu: #19110e; --t-command: #1c1410;
+  --t-panel: #1c1511; --t-panel-alt: #15100d; --t-head: #30221b;
+  --t-editor: #130f0d; --t-gutter: #0d0a08; --t-tabbar: #1b1411;
+  --t-tab: #1c1511; --t-tab-hover: #2a1e18; --t-tab-active: #130f0d;
+  --t-button: #30221b; --t-button-hover: #3c291f; --t-button-active: #291b15;
+  --t-tree-hover: #291d18; --t-tree-active: #3c2117;
+  --t-card: #1f1712; --t-card-hover: #2b1e18; --t-console: #0e0a08; --t-input: #110c09; --t-dialog: #211711;
+  --t-status: #0f0b09; --t-scroll-track: #110d0a; --t-scroll-thumb: #58372a;
+  --t-selection: rgba(117,50,26,.72); --t-caret: #ef8956; --t-marker: #a84d28;
+  --t-shadow: inset 0 1px rgba(255,210,175,.07), inset 0 -1px rgba(0,0,0,.85); --t-brand-mark: #7a3922;
+}
+
+:root[data-theme-palette="modern-dark"] {
+  color-scheme: dark;
+  --iron-0: #111317; --iron-1: #17191f; --iron-2: #1e2128; --iron-3: #292d35; --iron-4: #383d47;
+  --edge-dark: #0d0f12; --edge-light: #3b404a;
+  --rust: #c66d3f; --rust-hot: #e0824c; --copper: #a77a5f; --paper: #d7dbe0; --muted: #8b929c;
+  --green: #7fa06c; --amber: #cba456; --red: #bd5e56; --steel: #77a7c6;
+  --t-ui-font: Inter, "Segoe UI", system-ui, sans-serif;
+  --t-text: #d8dce2; --t-muted: #8e959f; --t-faint: #5f6670;
+  --t-border: #2d3139; --t-border-strong: #121419;
+  --t-accent: #cc7141; --t-accent-hot: #e48751; --t-accent-wash: #302721; --t-accent-border: #654838;
+  --t-accent-faint: rgba(228,135,81,.20); --t-focus-ring: rgba(228,135,81,.55);
+  --t-shell: #15171b; --t-brand: #1f2228; --t-menu: #1b1e23; --t-command: #202329;
+  --t-panel: #1a1d22; --t-panel-alt: #16191d; --t-head: #24282e;
+  --t-editor: #121418; --t-gutter: #0f1115; --t-tabbar: #171a1f;
+  --t-tab: #1d2026; --t-tab-hover: #262a31; --t-tab-active: #121418;
+  --t-button: #292d34; --t-button-hover: #343941; --t-button-active: #22262c;
+  --t-tree-hover: #24282e; --t-tree-active: #2a2524;
+  --t-card: #1d2025; --t-card-hover: #25292f; --t-console: #101216; --t-input: #111318; --t-dialog: #202329;
+  --t-status: #17191e; --t-scroll-track: #15181c; --t-scroll-thumb: #3b414b;
+  --t-selection: rgba(106,76,60,.66); --t-caret: #ef9a69; --t-marker: #d27848;
+  --t-shadow: none; --t-brand-mark: #c86e40;
+}
+
+:root[data-theme-palette="modern-light"] {
+  color-scheme: light;
+  --iron-0: #f1f3f5; --iron-1: #f6f7f8; --iron-2: #eceff1; --iron-3: #dfe3e6; --iron-4: #cbd1d6;
+  --edge-dark: #b7bdc3; --edge-light: #ffffff;
+  --rust: #aa552e; --rust-hot: #c66534; --copper: #8d694e; --paper: #272b30; --muted: #69717a;
+  --green: #5d7d4c; --amber: #a67927; --red: #b0473e; --steel: #3e748f;
+  --t-ui-font: Inter, "Segoe UI", system-ui, sans-serif;
+  --t-text: #272b30; --t-muted: #6b737c; --t-faint: #9299a1;
+  --t-border: #d0d5da; --t-border-strong: #b7bdc3;
+  --t-accent: #b75d31; --t-accent-hot: #ca6a38; --t-accent-wash: #f7e9e1; --t-accent-border: #d4a084;
+  --t-accent-faint: rgba(202,106,56,.18); --t-focus-ring: rgba(183,93,49,.35);
+  --t-shell: #eef1f3; --t-brand: #f7f8f9; --t-menu: #f0f2f4; --t-command: #f5f6f7;
+  --t-panel: #f8f9fa; --t-panel-alt: #f1f3f5; --t-head: #e9ecef;
+  --t-editor: #ffffff; --t-gutter: #f4f5f6; --t-tabbar: #eceff1;
+  --t-tab: #e5e8eb; --t-tab-hover: #f4f5f6; --t-tab-active: #ffffff;
+  --t-button: #f2f4f5; --t-button-hover: #ffffff; --t-button-active: #e2e6e9;
+  --t-tree-hover: #edf0f2; --t-tree-active: #f5e7df;
+  --t-card: #ffffff; --t-card-hover: #f5f7f8; --t-console: #ffffff; --t-input: #ffffff; --t-dialog: #ffffff;
+  --t-status: #eceff1; --t-scroll-track: #f0f2f4; --t-scroll-thumb: #c1c7cd;
+  --t-selection: rgba(197,117,71,.25); --t-caret: #a84f29; --t-marker: #b85e32;
+  --t-shadow: none; --t-brand-mark: #b85e32;
+}
+
+/* ---------------------- SEMANTIC READABILITY PALETTES -------------------- */
+:root[data-theme-semantic="oxide"] {
+  --syntax-keyword: #D87941; --syntax-ident: #83A6B8; --syntax-string: #8FAF72; --syntax-number: #D3A95F;
+  --syntax-type: #C4A45F; --syntax-macro: #E99A62; --syntax-function: #DDD0BF; --syntax-comment: #70786E; --syntax-operator: #d7d1c8;
+  --syntax-bracket-border: rgba(211,169,95,.72); --syntax-bracket-bg: rgba(211,169,95,.12); --syntax-bracket-shadow: rgba(211,169,95,.34);
+}
+:root[data-theme-semantic="metallic"] {
+  --syntax-keyword: #E0844C; --syntax-ident: #8FB5C9; --syntax-string: #95B77D; --syntax-number: #DEB565;
+  --syntax-type: #D2B46B; --syntax-macro: #F0A06A; --syntax-function: #E8D9C7; --syntax-comment: #78847D; --syntax-operator: #D9DEE1;
+  --syntax-bracket-border: rgba(222,181,101,.72); --syntax-bracket-bg: rgba(222,181,101,.12); --syntax-bracket-shadow: rgba(222,181,101,.34);
+}
+:root[data-theme-semantic="rust"] {
+  --syntax-keyword: #D8753F; --syntax-ident: #89A8B4; --syntax-string: #96AA70; --syntax-number: #D0A65B;
+  --syntax-type: #C59A58; --syntax-macro: #E58D50; --syntax-function: #DEC8B1; --syntax-comment: #777D6F; --syntax-operator: #D2C7BB;
+  --syntax-bracket-border: rgba(208,166,91,.72); --syntax-bracket-bg: rgba(208,166,91,.12); --syntax-bracket-shadow: rgba(208,166,91,.34);
+}
+:root[data-theme-semantic="modern-dark"] {
+  --syntax-keyword: #D98A56; --syntax-ident: #7FAFCB; --syntax-string: #8FB978; --syntax-number: #D7B25E;
+  --syntax-type: #D1B56C; --syntax-macro: #E69A65; --syntax-function: #E2D5C5; --syntax-comment: #78837C; --syntax-operator: #CDD3DA;
+  --syntax-bracket-border: rgba(215,178,94,.72); --syntax-bracket-bg: rgba(215,178,94,.12); --syntax-bracket-shadow: rgba(215,178,94,.34);
+}
+:root[data-theme-semantic="modern-light"] {
+  --syntax-keyword: #A95328; --syntax-ident: #3D748F; --syntax-string: #587B46; --syntax-number: #986F21;
+  --syntax-type: #8A6A20; --syntax-macro: #B96130; --syntax-function: #665441; --syntax-comment: #6C776E; --syntax-operator: #3C4249;
+  --syntax-bracket-border: rgba(152,111,33,.62); --syntax-bracket-bg: rgba(152,111,33,.10); --syntax-bracket-shadow: rgba(152,111,33,.26);
+}
+
+/* ------------------------------- MATERIALS ------------------------------- */
+/* Oxide: original industrial material, intentionally the least textured. */
+:root[data-theme-material="oxide"] .oxide-shell {
+  background-color: var(--t-shell);
+  background-image:
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,.012) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+:root[data-theme-material="oxide"] .brandbar { background-image: linear-gradient(rgba(255,255,255,.045), rgba(0,0,0,.13)); }
+:root[data-theme-material="oxide"] .menu-bar,
+:root[data-theme-material="oxide"] .command-deck,
+:root[data-theme-material="oxide"] .panel-head,
+:root[data-theme-material="oxide"] .console-head { background-image: linear-gradient(rgba(255,255,255,.035), rgba(0,0,0,.11)); }
+:root[data-theme-material="oxide"] .metal-button,
+:root[data-theme-material="oxide"] .command-button,
+:root[data-theme-material="oxide"] .profile,
+:root[data-theme-material="oxide"] .save-button,
+:root[data-theme-material="oxide"] .tiny-button,
+:root[data-theme-material="oxide"] .console-tab { background-image: linear-gradient(rgba(255,255,255,.045), rgba(0,0,0,.10)); }
+
+/* Metallic: clean forged/brushed gunmetal. Texture is subtle and depth comes
+   from edge light, lower-edge shadow, recessed seams, and raised controls. */
+:root[data-theme-material="metallic"] .oxide-shell {
+  background-color: var(--t-shell);
+  background-image:
+    radial-gradient(circle at 18% -12%, rgba(255,145,86,.065), transparent 31%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, rgba(0,0,0,.018) 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.008) 0 1px, transparent 1px 7px);
+}
+:root[data-theme-material="metallic"] .brandbar,
+:root[data-theme-material="metallic"] .menu-bar,
+:root[data-theme-material="metallic"] .command-deck,
+:root[data-theme-material="metallic"] .panel-head,
+:root[data-theme-material="metallic"] .console-head,
+:root[data-theme-material="metallic"] .status-rail {
+  background-color: var(--t-head);
+  background-image: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.025) 24%, rgba(0,0,0,.19) 76%, rgba(0,0,0,.34));
+  box-shadow: inset 0 1px rgba(255,255,255,.13), inset 0 -1px rgba(0,0,0,.88), 0 1px 2px rgba(0,0,0,.35);
+}
+:root[data-theme-material="metallic"] .panel,
+:root[data-theme-material="metallic"] .editor-stack,
+:root[data-theme-material="metallic"] .project-tree,
+:root[data-theme-material="metallic"] .cargo-inspector,
+:root[data-theme-material="metallic"] .build-output,
+:root[data-theme-material="metallic"] .problems-pane,
+:root[data-theme-material="metallic"] .debug-pane,
+:root[data-theme-material="metallic"] .debug-output,
+:root[data-theme-material="metallic"] .menu-popup,
+:root[data-theme-material="metallic"] .oxide-dialog,
+:root[data-theme-material="metallic"] .terminal-window,
+:root[data-theme-material="metallic"] .welcome-plate,
+:root[data-theme-material="metallic"] .manifest-block {
+  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.010) 0 1px, transparent 1px 4px);
+  box-shadow: inset 0 1px rgba(255,255,255,.055), inset 0 -1px rgba(0,0,0,.48);
+}
+:root[data-theme-material="metallic"] .build-resizer { box-shadow: inset 0 1px rgba(255,255,255,.13), inset 0 -1px rgba(0,0,0,.85); }
+
+/* Rust: same forged geometry as Metallic with oxidation/patina layered on the
+   material. Corrosion clusters around edges/seams rather than brown bucket-fill. */
+:root[data-theme-material="rust"] .oxide-shell {
+  background-color: var(--t-shell);
+  background-image:
+    radial-gradient(circle at 8% 10%, rgba(168,79,40,.18), transparent 17%),
+    radial-gradient(circle at 77% 31%, rgba(116,54,29,.13), transparent 15%),
+    radial-gradient(circle at 43% 91%, rgba(176,75,31,.10), transparent 20%),
+    repeating-linear-gradient(102deg, rgba(255,205,160,.012) 0 1px, rgba(0,0,0,.024) 1px 4px);
+}
+:root[data-theme-material="rust"] .brandbar,
+:root[data-theme-material="rust"] .menu-bar,
+:root[data-theme-material="rust"] .command-deck,
+:root[data-theme-material="rust"] .panel-head,
+:root[data-theme-material="rust"] .console-head,
+:root[data-theme-material="rust"] .status-rail {
+  background-color: var(--t-head);
+  background-image:
+    radial-gradient(circle at 7% 100%, rgba(190,75,30,.18), transparent 19%),
+    radial-gradient(circle at 92% 0%, rgba(120,51,28,.13), transparent 16%),
+    linear-gradient(180deg, rgba(255,218,185,.07), transparent 30%, rgba(0,0,0,.31));
+  box-shadow: inset 0 1px rgba(255,218,185,.08), inset 0 -1px rgba(0,0,0,.9), 0 1px 2px rgba(0,0,0,.42);
+}
+:root[data-theme-material="rust"] .panel,
+:root[data-theme-material="rust"] .editor-stack,
+:root[data-theme-material="rust"] .project-tree,
+:root[data-theme-material="rust"] .cargo-inspector,
+:root[data-theme-material="rust"] .build-output,
+:root[data-theme-material="rust"] .problems-pane,
+:root[data-theme-material="rust"] .debug-pane,
+:root[data-theme-material="rust"] .debug-output,
+:root[data-theme-material="rust"] .menu-popup,
+:root[data-theme-material="rust"] .oxide-dialog,
+:root[data-theme-material="rust"] .terminal-window,
+:root[data-theme-material="rust"] .welcome-plate,
+:root[data-theme-material="rust"] .manifest-block {
+  background-image:
+    radial-gradient(circle at 2% 6%, rgba(173,70,29,.10), transparent 12%),
+    radial-gradient(circle at 98% 94%, rgba(119,52,28,.09), transparent 13%),
+    repeating-linear-gradient(103deg, rgba(255,205,160,.009) 0 1px, transparent 1px 5px);
+  box-shadow: inset 0 1px rgba(255,210,175,.045), inset 0 -1px rgba(0,0,0,.58);
+}
+:root[data-theme-material="rust"] .build-resizer { box-shadow: inset 0 1px rgba(255,205,170,.08), inset 0 -1px rgba(0,0,0,.9); }
+
+/* Modern: deliberately removes industrial material cues. */
+:root[data-theme-material="modern"] .oxide-shell,
+:root[data-theme-material="modern"] .brandbar,
+:root[data-theme-material="modern"] .menu-bar,
+:root[data-theme-material="modern"] .command-deck,
+:root[data-theme-material="modern"] .panel-head,
+:root[data-theme-material="modern"] .console-head,
+:root[data-theme-material="modern"] .status-rail,
+:root[data-theme-material="modern"] .panel,
+:root[data-theme-material="modern"] .editor-stack,
+:root[data-theme-material="modern"] .cargo-inspector,
+:root[data-theme-material="modern"] .oxide-dialog,
+:root[data-theme-material="modern"] .terminal-window,
+:root[data-theme-material="modern"] .welcome-plate,
+:root[data-theme-material="modern"] .manifest-block { background-image: none; box-shadow: none; }
+
+/* --------------------------- CONTROL TREATMENTS -------------------------- */
+:root[data-theme-controls="oxide"] .metal-button,
+:root[data-theme-controls="oxide"] .command-button,
+:root[data-theme-controls="oxide"] .profile,
+:root[data-theme-controls="oxide"] .save-button,
+:root[data-theme-controls="oxide"] .tiny-button,
+:root[data-theme-controls="oxide"] .console-tab,
+:root[data-theme-controls="oxide"] .file-tab,
+:root[data-theme-controls="oxide"] .welcome-action,
+:root[data-theme-controls="oxide"] .dependency-item,
+:root[data-theme-controls="oxide"] .debug-tool,
+:root[data-theme-controls="oxide"] .terminal-head-button { border-radius: 0; box-shadow: inset 0 1px rgba(255,255,255,.045), inset 0 -1px rgba(0,0,0,.45); }
+
+:root[data-theme-controls="metallic"] .metal-button,
+:root[data-theme-controls="metallic"] .command-button,
+:root[data-theme-controls="metallic"] .profile,
+:root[data-theme-controls="metallic"] .save-button,
+:root[data-theme-controls="metallic"] .tiny-button,
+:root[data-theme-controls="metallic"] .console-tab,
+:root[data-theme-controls="metallic"] .file-tab,
+:root[data-theme-controls="metallic"] .welcome-action,
+:root[data-theme-controls="metallic"] .dependency-item,
+:root[data-theme-controls="metallic"] .debug-tool,
+:root[data-theme-controls="metallic"] .terminal-head-button {
+  border-radius: 1px;
+  background-image: linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.025) 38%, rgba(0,0,0,.16) 62%, rgba(0,0,0,.31));
+  box-shadow: inset 0 1px rgba(255,255,255,.14), inset 1px 0 rgba(255,255,255,.035), inset 0 -1px rgba(0,0,0,.85), 0 1px 1px rgba(0,0,0,.42);
+}
+:root[data-theme-controls="metallic"] .metal-button:active:not(:disabled),
+:root[data-theme-controls="metallic"] .command-button:active:not(:disabled),
+:root[data-theme-controls="metallic"] .tiny-button:active:not(:disabled) { box-shadow: inset 0 2px 4px rgba(0,0,0,.65), inset 0 -1px rgba(255,255,255,.07); transform: translateY(1px); }
+
+:root[data-theme-controls="rust"] .metal-button,
+:root[data-theme-controls="rust"] .command-button,
+:root[data-theme-controls="rust"] .profile,
+:root[data-theme-controls="rust"] .save-button,
+:root[data-theme-controls="rust"] .tiny-button,
+:root[data-theme-controls="rust"] .console-tab,
+:root[data-theme-controls="rust"] .file-tab,
+:root[data-theme-controls="rust"] .welcome-action,
+:root[data-theme-controls="rust"] .dependency-item,
+:root[data-theme-controls="rust"] .debug-tool,
+:root[data-theme-controls="rust"] .terminal-head-button {
+  border-radius: 1px;
+  background-image:
+    radial-gradient(circle at 8% 88%, rgba(185,72,28,.13), transparent 23%),
+    linear-gradient(180deg, rgba(255,215,175,.075), transparent 35%, rgba(0,0,0,.30));
+  box-shadow: inset 0 1px rgba(255,210,175,.085), inset 0 -1px rgba(0,0,0,.88), 0 1px 1px rgba(0,0,0,.48);
+}
+:root[data-theme-controls="rust"] .metal-button:active:not(:disabled),
+:root[data-theme-controls="rust"] .command-button:active:not(:disabled),
+:root[data-theme-controls="rust"] .tiny-button:active:not(:disabled) { box-shadow: inset 0 2px 5px rgba(0,0,0,.72), inset 0 -1px rgba(255,205,165,.05); transform: translateY(1px); }
+
+:root[data-theme-controls="modern"] .menu-trigger,
+:root[data-theme-controls="modern"] .command-button,
+:root[data-theme-controls="modern"] .metal-button,
+:root[data-theme-controls="modern"] .panel-head,
+:root[data-theme-controls="modern"] .console-head,
+:root[data-theme-controls="modern"] .console-tab { letter-spacing: .035em; }
+:root[data-theme-controls="modern"] .brand-mark { clip-path: none; border-radius: 3px; outline: 0; }
+:root[data-theme-controls="modern"] .metal-button,
+:root[data-theme-controls="modern"] .command-button,
+:root[data-theme-controls="modern"] .profile-switch,
+:root[data-theme-controls="modern"] .profile,
+:root[data-theme-controls="modern"] .save-button,
+:root[data-theme-controls="modern"] .tiny-button,
+:root[data-theme-controls="modern"] .console-tab,
+:root[data-theme-controls="modern"] .file-tab,
+:root[data-theme-controls="modern"] .welcome-action,
+:root[data-theme-controls="modern"] .dependency-item,
+:root[data-theme-controls="modern"] .debug-tool,
+:root[data-theme-controls="modern"] .terminal-head-button {
+  border-radius: 3px; background-image: none; box-shadow: none; transform: none;
+}
+
+/* Light palette foreground compatibility, independent of material/control. */
+:root[data-theme-palette="modern-light"] .brand-copy strong,
+:root[data-theme-palette="modern-light"] .panel-head,
+:root[data-theme-palette="modern-light"] .console-head,
+:root[data-theme-palette="modern-light"] .file-tab.active,
+:root[data-theme-palette="modern-light"] .tree-entry.file.active-file,
+:root[data-theme-palette="modern-light"] .manifest-block > strong,
+:root[data-theme-palette="modern-light"] .manifest-block dd,
+:root[data-theme-palette="modern-light"] .dependency-item strong,
+:root[data-theme-palette="modern-light"] .welcome-plate h1,
+:root[data-theme-palette="modern-light"] .welcome-action,
+:root[data-theme-palette="modern-light"] .tutorial-course-head span,
+:root[data-theme-palette="modern-light"] .tutorial-lesson-copy strong,
+:root[data-theme-palette="modern-light"] .debug-frame,
+:root[data-theme-palette="modern-light"] .debug-variable code,
+:root[data-theme-palette="modern-light"] .debug-watch code,
+:root[data-theme-palette="modern-light"] .completion-detail-head strong,
+:root[data-theme-palette="modern-light"] .update-status-message strong { color: var(--t-text); }
+:root[data-theme-palette="modern-light"] .brand-copy span,
+:root[data-theme-palette="modern-light"] .panel-head small,
+:root[data-theme-palette="modern-light"] .console-head small,
+:root[data-theme-palette="modern-light"] .file-tab,
+:root[data-theme-palette="modern-light"] .tree-entry.folder,
+:root[data-theme-palette="modern-light"] .manifest-block dt,
+:root[data-theme-palette="modern-light"] .dependency-item small,
+:root[data-theme-palette="modern-light"] .welcome-plate > p,
+:root[data-theme-palette="modern-light"] .welcome-action small,
+:root[data-theme-palette="modern-light"] .debug-empty,
+:root[data-theme-palette="modern-light"] .completion-detail-docs,
+:root[data-theme-palette="modern-light"] .update-release-date,
+:root[data-theme-palette="modern-light"] .update-progress-text { color: var(--t-muted); }
+:root[data-theme-palette="modern-light"] .update-body,
+:root[data-theme-palette="modern-light"] .update-notes,
+:root[data-theme-palette="modern-light"] .update-version-row,
+:root[data-theme-palette="modern-light"] .browser-workspace,
+:root[data-theme-palette="modern-light"] .browser-location,
+:root[data-theme-palette="modern-light"] .browser-footer,
+:root[data-theme-palette="modern-light"] .run-body { background: var(--t-panel); color: var(--t-text); border-color: var(--t-border); }
+:root[data-theme-palette="modern-light"] .update-notes { border-color: var(--t-border); }
+:root[data-theme-palette="modern-light"] .update-version-row b,
+:root[data-theme-palette="modern-light"] .update-version-row strong,
+:root[data-theme-palette="modern-light"] .update-notes-title { color: var(--t-accent); }
+
+/* ----------------------------- THEME WORKSHOP ---------------------------- */
+.theme-studio-dialog { width: min(850px, calc(100vw - 44px)); max-height: min(760px, calc(100vh - 44px)); }
+.theme-studio-dialog form { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; max-height: inherit; }
+.theme-studio-body { padding: 14px; overflow: auto; background: var(--t-panel); color: var(--t-text); }
+.theme-name-field { display: grid; gap: 6px; margin-bottom: 12px; color: var(--t-muted); font: 10px var(--t-ui-font); letter-spacing: .05em; }
+.theme-name-field input,
+.theme-component-card select {
+  width: 100%; min-height: 34px; padding: 6px 9px; color: var(--t-text); background: var(--t-input);
+  border: 1px solid var(--t-border); outline: 0; font: 11px var(--t-ui-font);
+}
+.theme-name-field input:focus,
+.theme-component-card select:focus { border-color: var(--t-accent); box-shadow: 0 0 0 1px var(--t-focus-ring); }
+.theme-component-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.theme-component-card {
+  min-height: 128px; display: grid; align-content: start; gap: 7px; padding: 11px;
+  color: var(--t-text); background: var(--t-card); border: 1px solid var(--t-border);
+  box-shadow: inset 0 1px rgba(255,255,255,.035);
+}
+.theme-component-card > span { color: var(--t-accent-hot); font: 700 10px var(--t-ui-font); letter-spacing: .08em; }
+.theme-component-card small { color: var(--t-muted); font: 10px/1.45 var(--t-ui-font); }
+.theme-recipe-readout { margin-top: 11px; padding: 10px 11px; background: var(--t-panel-alt); border: 1px solid var(--t-border); }
+.theme-recipe-readout strong { display: block; margin-bottom: 5px; color: var(--t-accent-hot); font: 700 9px var(--t-ui-font); letter-spacing: .08em; }
+.theme-recipe-readout code { display: block; color: var(--t-text); font: 11px/1.45 var(--t-ui-font); }
+.theme-recipe-readout p { margin: 7px 0 0; color: var(--t-muted); font: 10px/1.45 var(--t-ui-font); }
+.theme-saved-wrap { margin-top: 12px; border: 1px solid var(--t-border); background: var(--t-panel-alt); }
+.theme-saved-head { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--t-border); color: var(--t-accent-hot); font: 700 9px var(--t-ui-font); letter-spacing: .06em; }
+.theme-saved-head small { color: var(--t-muted); font: 9px var(--t-ui-font); }
+.theme-saved-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--t-border); }
+.theme-saved-item { min-width: 0; padding: 9px 10px; border: 0; background: var(--t-card); color: var(--t-text); text-align: left; cursor: pointer; }
+.theme-saved-item:hover, .theme-saved-item.active { background: var(--t-tree-hover); box-shadow: inset 2px 0 var(--t-accent); }
+.theme-saved-item strong, .theme-saved-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.theme-saved-item strong { font: 700 10px var(--t-ui-font); }
+.theme-saved-item small { margin-top: 4px; color: var(--t-muted); font: 9px var(--t-ui-font); }
+.theme-studio-actions { display: flex; align-items: center; }
+.theme-action-spacer { flex: 1 1 auto; }
+#custom-theme-menu-items { display: contents; }
+@media (max-width: 760px) {
+  .theme-component-grid, .theme-saved-list { grid-template-columns: 1fr; }
+}

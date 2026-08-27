@@ -110,7 +110,7 @@ git tag v1.3.6-b2
 git push origin v1.3.6-b2
 ```
 
-The public Rivet version is still `1.3.6`; the `-b2` tag (and the same `-bN` pattern for every build) makes each internal build a distinct GitHub Release so `releases/latest/download/...` advances for Build 1 → Build 2 → Build 3 updates. The platform feed remains authoritative and carries both `release_version` and `build`.
+The public Rivet version is still `1.3.6`; the `-b2` tag (and the same `-bN` pattern for every build) makes each internal build a distinct GitHub Release so `releases/latest/download/...` advances for Build 1 → Build 2 → Build 3 → Build 4 updates. The platform feed remains authoritative and carries both `release_version` and `build`.
 
 The pipeline creates the build-specific release as a **draft**, runs the Windows and Linux jobs, uploads and validates both platform feeds, and only then publishes the release. If either platform job fails, the incomplete draft does not replace the previous working `releases/latest` target.
 

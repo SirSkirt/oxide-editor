@@ -1,41 +1,49 @@
-# Rivet B1.3.6 · Build 3
+# Rivet B1.3.6 · Build 4
 
-B1.3.6 Build 3 is a **rename-compatibility and startup reliability fix** for the first Rivet-branded release.
+B1.3.6 Build 4 is the **Composable Themes** build. It keeps Rivet's layout and functionality unchanged while replacing the first-generation monolithic theme selection with a component-based presentation engine designed for built-in and user-created themes.
 
-## Startup / project controls
+## Composable theme recipes
 
-Build 2 could stop frontend initialization while applying the active theme because the theme path called a removed function name (`syncSyntaxHighlight`) instead of the current syntax renderer (`updateSyntaxHighlight`). The failure happened after top-menu handlers were attached but before the Welcome-screen project controls and automatic toolchain detection were attached.
+Every theme now resolves through the same four-part recipe:
 
-That produced a very specific failure pattern on launch:
+- **Material** — physical surface, texture, depth, seams, highlights, and weathering
+- **Color Palette** — UI surfaces, text, borders, editor colors, and accents
+- **Control Treatment** — button/tab edges, bevel/pressed behavior, and industrial-vs-modern control styling
+- **Semantic Readability** — Rust semantic token colors
 
-- Cargo and rustc remained at `unknown` / `Checking…`.
-- **Tools → Refresh Toolchain** still worked because menu handlers had already been registered.
-- After refresh, Cargo/rustc appeared correctly.
-- **New Project**, **Open Project**, and **Tutorial** remained unresponsive because their click handlers were never reached during startup.
+The five built-in themes are implemented as recipes using that same model. Theme components only affect presentation; they do not alter workspace geometry, panel placement, commands, or functionality.
 
-Build 3 corrects the theme startup call so full frontend initialization completes and automatic Cargo/rustc discovery runs normally again.
+## Material improvements
 
-## Linux Oxide → Rivet package migration
+Build 4 also strengthens the intended distinction between Rivet's industrial themes:
 
-Build 2's Rivet `.deb` used the new Debian package name `rivet`, while an existing Oxide installation was owned by package `oxide-editor`. Both packages contained `/usr/bin/oxide-editor`, so Debian correctly refused to overwrite a file owned by the other package.
+- **Oxide** remains the relatively restrained/original industrial material.
+- **Metallic** now leans further into forged/brushed gunmetal with subtle directional texture, brighter upper edges, darker inset edges, recessed depth, and more physical raised controls.
+- **Rust** uses the forged-depth approach as a foundation but adds aged iron, irregular oxidation/patina, worn seams and edges, and rougher surface variation instead of simply tinting the interface brown.
+- **Modern** material intentionally strips most of that physical treatment away for a conventional IDE presentation.
 
-Build 3 now post-processes the release `.deb` with explicit migration metadata:
+## Theme Workshop
 
-- `Provides: oxide-editor`
-- `Replaces: oxide-editor`
-- `Conflicts: oxide-editor`
+**View → Theme → Theme Workshop…** now provides the first user-custom-theme workflow. Users can:
 
-This lets Debian/Ubuntu/Pop!_OS replace the old `oxide-editor` package with the new `rivet` package during a normal Rivet update instead of requiring the user to manually uninstall Oxide first. The release workflow validates this metadata before publishing the Linux assets.
+- choose Material independently
+- choose the UI Color Palette independently
+- choose Control Treatment independently
+- choose the Semantic Readability palette independently
+- preview an unsaved component combination without committing it
+- name and save a custom theme
+- edit or delete saved custom themes
+- select saved custom themes directly from the Theme menu
 
-Rivet still retains legacy internal executable/update identifiers such as `/usr/bin/oxide-editor`, `com.oxide.editor`, `oxide-*` update feeds, and updater signing identity where changing them would break installed-update compatibility.
+Custom themes persist locally. The storage format is versioned and includes reserved palette/semantic override maps so future Rivet builds can add fine-grained custom colors, import/export, and additional theme components without introducing a second theme system.
 
-## Branding and themes
+## Existing fixes retained
 
-The product remains **Rivet — Rust Development Environment**. The default visual theme remains named **Oxide**. The five B1.3.6 themes and theme-aware Semantic Readability Colors are otherwise unchanged.
+Build 4 includes the Build 3 startup reliability fix and the Linux Oxide → Rivet Debian migration metadata (`Provides`, `Replaces`, and `Conflicts`). The signed updater continues to compare release version plus build number.
 
 ## Version
 
 - Release version: `1.3.6`
 - Display version: **B1.3.6**
-- Build: **3**
-- Full identity: **Rivet B1.3.6 · Build 3**
+- Build: **4**
+- Full identity: **Rivet B1.3.6 · Build 4**

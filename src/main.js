@@ -2,34 +2,39 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import './styles.css';
 import rivetLogo from './assets/rivet-logo.png';
+import {
+  THEME_COMPONENTS,
+  createCustomTheme,
+  loadCustomThemes,
+  loadStoredTheme,
+  normalizeThemeRecipe,
+  persistTheme,
+  resolveTheme,
+  saveCustomThemes,
+} from './theme-engine.js';
 
 const app = document.querySelector('#app');
 
-const THEME_STORAGE_KEY = 'oxide.appearance.theme';
-const THEME_CATALOG = Object.freeze({
-  oxide: { label: 'Oxide', menuLabel: 'OXIDE' },
-  metallic: { label: 'Metallic', menuLabel: 'METALLIC' },
-  rust: { label: 'Rust', menuLabel: 'RUST' },
-  'modern-light': { label: 'Modern (Light)', menuLabel: 'MODERN LIGHT' },
-  'modern-dark': { label: 'Modern (Dark)', menuLabel: 'MODERN DARK' },
-});
+let customThemes = loadCustomThemes();
+const initialTheme = loadStoredTheme(customThemes);
+const initialThemeDefinition = resolveTheme(initialTheme, customThemes);
 
-function loadStoredTheme() {
-  try {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    return Object.hasOwn(THEME_CATALOG, stored) ? stored : 'oxide';
-  } catch {
-    return 'oxide';
-  }
-}
-
-const initialTheme = loadStoredTheme();
-// Apply the stored material before the main UI is rendered to avoid a flash of
-// the default Oxide theme surface when a different theme was selected previously.
-document.documentElement.dataset.theme = initialTheme;
+// Build 4 routes every theme — built-in or custom — through the same component
+// recipe. The old data-theme blocks remain as a compatibility fallback, while
+// these component attributes are the authoritative presentation contract.
+document.documentElement.dataset.theme = 'composed';
+document.documentElement.dataset.themeId = initialThemeDefinition.id;
+document.documentElement.dataset.themeMaterial = initialThemeDefinition.recipe.material;
+document.documentElement.dataset.themePalette = initialThemeDefinition.recipe.palette;
+document.documentElement.dataset.themeControls = initialThemeDefinition.recipe.controls;
+document.documentElement.dataset.themeSemantic = initialThemeDefinition.recipe.semantic;
 
 const state = {
   theme: initialTheme,
+  themeRecipe: normalizeThemeRecipe(initialThemeDefinition.recipe),
+  themeStudioEditingId: '',
+  themeStudioPreviewing: false,
+  customThemes,
   projectPath: '',
   platform: { os: 'unknown', arch: 'unknown', pathCaseSensitive: false, automaticUpdates: false, updateMode: 'unknown' },
   tabs: [],
@@ -227,6 +232,13 @@ app.innerHTML = `
             <button role="menuitem" data-menu-action="theme-rust"><span><i class="menu-check" data-theme-check="rust"></i> Rust</span></button>
             <button role="menuitem" data-menu-action="theme-modern-light"><span><i class="menu-check" data-theme-check="modern-light"></i> Modern (Light)</span></button>
             <button role="menuitem" data-menu-action="theme-modern-dark"><span><i class="menu-check" data-theme-check="modern-dark"></i> Modern (Dark)</span></button>
+            <div id="custom-theme-menu-section" hidden>
+              <div class="menu-separator"></div>
+              <div class="menu-section-label">CUSTOM THEMES</div>
+              <div id="custom-theme-menu-items"></div>
+            </div>
+            <div class="menu-separator"></div>
+            <button role="menuitem" data-menu-action="theme-customize"><span>Theme Workshop…</span></button>
             <div class="menu-separator"></div>
             <button role="menuitem" data-menu-action="reset-layout"><span>Reset Layout</span></button>
           </div>
@@ -260,7 +272,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 3</div>
+        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 4</div>
         <h1>Welcome to Rivet</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -407,7 +419,7 @@ app.innerHTML = `
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>RIVET B1.3.6 · BUILD 3</span>
+      <span>RIVET B1.3.6 · BUILD 4</span>
     </footer>
   </main>
 
@@ -524,6 +536,37 @@ app.innerHTML = `
     <div class="dialog-actions intelligence-actions"><button type="button" id="code-actions-done" class="metal-button">CLOSE</button></div>
   </dialog>
 
+  <dialog id="theme-studio-dialog" class="oxide-dialog theme-studio-dialog">
+    <form id="theme-studio-form">
+      <div class="dialog-head"><div><span>THEME WORKSHOP</span><small>COMPOSABLE PRESENTATION</small></div><button type="button" id="theme-studio-close" class="dialog-close">×</button></div>
+      <div class="theme-studio-body">
+        <label class="theme-name-field"><span>Custom Theme Name</span><input id="theme-studio-name" maxlength="64" autocomplete="off" value="Custom Theme" /></label>
+        <div class="theme-component-grid">
+          <label class="theme-component-card"><span>MATERIAL</span><select id="theme-studio-material"></select><small id="theme-material-description"></small></label>
+          <label class="theme-component-card"><span>COLOR PALETTE</span><select id="theme-studio-palette"></select><small id="theme-palette-description"></small></label>
+          <label class="theme-component-card"><span>CONTROL TREATMENT</span><select id="theme-studio-controls"></select><small id="theme-controls-description"></small></label>
+          <label class="theme-component-card"><span>SEMANTIC READABILITY</span><select id="theme-studio-semantic"></select><small id="theme-semantic-description"></small></label>
+        </div>
+        <div class="theme-recipe-readout">
+          <strong>CURRENT RECIPE</strong>
+          <code id="theme-recipe-readout">Oxide Iron · Oxide · Oxide Industrial · Oxide Readability</code>
+          <p>Theme recipes change presentation only. Rivet's layout, panels, commands, and functionality stay identical.</p>
+        </div>
+        <div id="theme-saved-wrap" class="theme-saved-wrap" hidden>
+          <div class="theme-saved-head"><span>SAVED CUSTOM THEMES</span><small>SELECT ONE TO EDIT</small></div>
+          <div id="theme-saved-list" class="theme-saved-list"></div>
+        </div>
+      </div>
+      <div class="dialog-actions theme-studio-actions">
+        <button type="button" id="theme-studio-delete" class="metal-button danger" hidden>DELETE</button>
+        <span class="theme-action-spacer"></span>
+        <button type="button" id="theme-studio-cancel" class="metal-button">CANCEL</button>
+        <button type="button" id="theme-studio-preview" class="metal-button">PREVIEW</button>
+        <button type="submit" class="metal-button primary">SAVE & APPLY</button>
+      </div>
+    </form>
+  </dialog>
+
   <section id="terminal-window" class="terminal-window" hidden aria-label="Rivet Run Terminal">
     <header id="terminal-drag-handle" class="terminal-window-head">
       <div><span>RIVET RUN TERMINAL</span><small id="terminal-window-project">NO PROJECT</small></div>
@@ -629,6 +672,22 @@ const els = {
   renameSymbolLabel: $('#rename-symbol-label'),
   codeActionsDialog: $('#code-actions-dialog'),
   codeActionsList: $('#code-actions-list'),
+  themeStudioDialog: $('#theme-studio-dialog'),
+  themeStudioForm: $('#theme-studio-form'),
+  themeStudioName: $('#theme-studio-name'),
+  themeStudioMaterial: $('#theme-studio-material'),
+  themeStudioPalette: $('#theme-studio-palette'),
+  themeStudioControls: $('#theme-studio-controls'),
+  themeStudioSemantic: $('#theme-studio-semantic'),
+  themeMaterialDescription: $('#theme-material-description'),
+  themePaletteDescription: $('#theme-palette-description'),
+  themeControlsDescription: $('#theme-controls-description'),
+  themeSemanticDescription: $('#theme-semantic-description'),
+  themeRecipeReadout: $('#theme-recipe-readout'),
+  themeSavedWrap: $('#theme-saved-wrap'),
+  themeSavedList: $('#theme-saved-list'),
+  themeStudioDelete: $('#theme-studio-delete'),
+  themeStudioPreview: $('#theme-studio-preview'),
   codeCompleter: $('#code-completer'),
   completionList: $('#completion-list'),
   completionDetailKind: $('#completion-detail-kind'),
@@ -772,25 +831,85 @@ function closeMenus() {
   document.querySelectorAll('.menu-trigger.active').forEach((button) => button.classList.remove('active'));
 }
 
-function applyTheme(themeId, { persist = true } = {}) {
-  const next = Object.hasOwn(THEME_CATALOG, themeId) ? themeId : 'oxide';
-  state.theme = next;
-  document.documentElement.dataset.theme = next;
+const THEME_PALETTE_OVERRIDE_MAP = Object.freeze({
+  text: '--t-text',
+  muted: '--t-muted',
+  faint: '--t-faint',
+  border: '--t-border',
+  accent: '--t-accent',
+  accentHot: '--t-accent-hot',
+  panel: '--t-panel',
+  editor: '--t-editor',
+  input: '--t-input',
+  caret: '--t-caret',
+});
+const THEME_SEMANTIC_OVERRIDE_MAP = Object.freeze({
+  keyword: '--syntax-keyword',
+  identifier: '--syntax-ident',
+  string: '--syntax-string',
+  number: '--syntax-number',
+  type: '--syntax-type',
+  macro: '--syntax-macro',
+  function: '--syntax-function',
+  comment: '--syntax-comment',
+  operator: '--syntax-operator',
+});
+const THEME_OVERRIDE_VARIABLES = Object.freeze([
+  ...Object.values(THEME_PALETTE_OVERRIDE_MAP),
+  ...Object.values(THEME_SEMANTIC_OVERRIDE_MAP),
+]);
 
-  const definition = THEME_CATALOG[next];
+function applyThemeOverrides(definition) {
+  const rootStyle = document.documentElement.style;
+  THEME_OVERRIDE_VARIABLES.forEach((property) => rootStyle.removeProperty(property));
+  const palette = definition?.overrides?.palette || {};
+  const semantic = definition?.overrides?.semantic || {};
+  Object.entries(THEME_PALETTE_OVERRIDE_MAP).forEach(([key, property]) => {
+    if (palette[key]) rootStyle.setProperty(property, String(palette[key]));
+  });
+  Object.entries(THEME_SEMANTIC_OVERRIDE_MAP).forEach(([key, property]) => {
+    if (semantic[key]) rootStyle.setProperty(property, String(semantic[key]));
+  });
+}
+
+function themeDefinition(themeId = state.theme) {
+  return resolveTheme(themeId, state.customThemes);
+}
+
+function themeDisplayLabel(themeId = state.theme) {
+  const definition = themeDefinition(themeId);
+  return definition?.menuLabel || definition?.name?.toUpperCase() || 'OXIDE';
+}
+
+function applyTheme(themeId, { persist = true } = {}) {
+  const definition = themeDefinition(themeId);
+  const recipe = normalizeThemeRecipe(definition.recipe);
+  state.theme = definition.id;
+  state.themeRecipe = recipe;
+
+  // data-theme="composed" deliberately keeps every built-in and custom theme
+  // on the same presentation path. Component attributes are the stable Theme
+  // Engine API; no theme is allowed to change workspace geometry or behavior.
+  const root = document.documentElement;
+  root.dataset.theme = 'composed';
+  root.dataset.themeId = definition.id;
+  root.dataset.themeMaterial = recipe.material;
+  root.dataset.themePalette = recipe.palette;
+  root.dataset.themeControls = recipe.controls;
+  root.dataset.themeSemantic = recipe.semantic;
+  applyThemeOverrides(definition);
+
   const current = document.querySelector('#theme-menu-current');
-  if (current) current.textContent = definition.menuLabel;
+  if (current) current.textContent = themeDisplayLabel(definition.id);
 
   document.querySelectorAll('[data-theme-check]').forEach((check) => {
-    check.textContent = check.dataset.themeCheck === next ? '✓' : '';
+    check.textContent = check.dataset.themeCheck === definition.id ? '✓' : '';
   });
 
-  if (persist) {
-    try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch { /* non-fatal in restricted webviews */ }
-  }
+  if (persist) persistTheme(definition.id);
 
   // Semantic tokens represent meaning, not color. The CSS palette bound to
-  // the active theme changes instantly without asking rust-analyzer to
+  // the active recipe changes instantly without asking rust-analyzer to
   // recompute token classifications. Presentation refresh must remain
   // non-fatal: a theme/highlighter problem should never prevent the rest of
   // Rivet's startup handlers from being registered.
@@ -799,6 +918,146 @@ function applyTheme(themeId, { persist = true } = {}) {
   } catch (error) {
     console.warn('Could not refresh syntax presentation after theme change:', error);
   }
+}
+
+function componentOptions(group, selected) {
+  return Object.entries(THEME_COMPONENTS[group]).map(([id, definition]) =>
+    `<option value="${escapeHtml(id)}" ${id === selected ? 'selected' : ''}>${escapeHtml(definition.label)}</option>`
+  ).join('');
+}
+
+function recipeFromThemeStudio() {
+  return normalizeThemeRecipe({
+    material: els.themeStudioMaterial.value,
+    palette: els.themeStudioPalette.value,
+    controls: els.themeStudioControls.value,
+    semantic: els.themeStudioSemantic.value,
+  });
+}
+
+function updateThemeStudioSummary() {
+  const recipe = recipeFromThemeStudio();
+  const material = THEME_COMPONENTS.materials[recipe.material];
+  const palette = THEME_COMPONENTS.palettes[recipe.palette];
+  const controls = THEME_COMPONENTS.controls[recipe.controls];
+  const semantic = THEME_COMPONENTS.semantic[recipe.semantic];
+  els.themeMaterialDescription.textContent = material.description;
+  els.themePaletteDescription.textContent = palette.description;
+  els.themeControlsDescription.textContent = controls.description;
+  els.themeSemanticDescription.textContent = semantic.description;
+  els.themeRecipeReadout.textContent = `${material.label} · ${palette.label} · ${controls.label} · ${semantic.label}`;
+}
+
+function renderSavedThemeList() {
+  const themes = state.customThemes;
+  els.themeSavedWrap.hidden = themes.length === 0;
+  if (!themes.length) {
+    els.themeSavedList.innerHTML = '';
+    return;
+  }
+  els.themeSavedList.innerHTML = themes.map((theme) => {
+    const recipe = normalizeThemeRecipe(theme.recipe);
+    return `<button type="button" class="theme-saved-item ${theme.id === state.themeStudioEditingId ? 'active' : ''}" data-edit-theme="${escapeHtml(theme.id)}">
+      <strong>${escapeHtml(theme.name)}</strong>
+      <small>${escapeHtml(THEME_COMPONENTS.materials[recipe.material].label)} · ${escapeHtml(THEME_COMPONENTS.palettes[recipe.palette].label)} · ${escapeHtml(THEME_COMPONENTS.semantic[recipe.semantic].label)}</small>
+    </button>`;
+  }).join('');
+  els.themeSavedList.querySelectorAll('[data-edit-theme]').forEach((button) => {
+    button.addEventListener('click', () => fillThemeStudio(button.dataset.editTheme));
+  });
+}
+
+function renderCustomThemeMenu() {
+  const section = document.querySelector('#custom-theme-menu-section');
+  const host = document.querySelector('#custom-theme-menu-items');
+  if (!section || !host) return;
+  section.hidden = state.customThemes.length === 0;
+  host.innerHTML = state.customThemes.map((theme) =>
+    `<button role="menuitem" data-menu-action="theme-${escapeHtml(theme.id)}"><span><i class="menu-check" data-theme-check="${escapeHtml(theme.id)}"></i> ${escapeHtml(theme.name)}</span></button>`
+  ).join('');
+  document.querySelectorAll('[data-theme-check]').forEach((check) => {
+    check.textContent = check.dataset.themeCheck === state.theme ? '✓' : '';
+  });
+}
+
+function fillThemeStudio(themeId = '') {
+  const editing = state.customThemes.find((theme) => theme.id === themeId) || null;
+  const source = editing || themeDefinition(state.theme);
+  const recipe = normalizeThemeRecipe(source.recipe);
+  state.themeStudioEditingId = editing?.id || '';
+  els.themeStudioName.value = editing?.name || 'Custom Theme';
+  els.themeStudioMaterial.innerHTML = componentOptions('materials', recipe.material);
+  els.themeStudioPalette.innerHTML = componentOptions('palettes', recipe.palette);
+  els.themeStudioControls.innerHTML = componentOptions('controls', recipe.controls);
+  els.themeStudioSemantic.innerHTML = componentOptions('semantic', recipe.semantic);
+  els.themeStudioDelete.hidden = !editing;
+  updateThemeStudioSummary();
+  renderSavedThemeList();
+}
+
+function previewThemeStudio() {
+  const recipe = recipeFromThemeStudio();
+  const editing = state.customThemes.find((theme) => theme.id === state.themeStudioEditingId);
+  const root = document.documentElement;
+  root.dataset.theme = 'composed';
+  root.dataset.themeId = 'preview';
+  root.dataset.themeMaterial = recipe.material;
+  root.dataset.themePalette = recipe.palette;
+  root.dataset.themeControls = recipe.controls;
+  root.dataset.themeSemantic = recipe.semantic;
+  applyThemeOverrides(editing || { overrides: {} });
+  state.themeStudioPreviewing = true;
+  try { updateSyntaxHighlight(); } catch (error) { console.warn('Could not preview theme recipe:', error); }
+}
+
+function restoreThemeAfterStudioPreview() {
+  if (!state.themeStudioPreviewing) return;
+  state.themeStudioPreviewing = false;
+  applyTheme(state.theme, { persist: false });
+}
+
+function openThemeStudio() {
+  const editingId = state.theme.startsWith('custom:') ? state.theme : '';
+  state.themeStudioPreviewing = false;
+  fillThemeStudio(editingId);
+  els.themeStudioDialog.showModal();
+  requestAnimationFrame(() => els.themeStudioName.focus());
+}
+
+function saveThemeStudio() {
+  const name = els.themeStudioName.value.trim() || 'Custom Theme';
+  const recipe = recipeFromThemeStudio();
+  const existingIndex = state.customThemes.findIndex((theme) => theme.id === state.themeStudioEditingId);
+  let saved;
+  if (existingIndex >= 0) {
+    saved = {
+      ...state.customThemes[existingIndex],
+      name,
+      recipe,
+    };
+    state.customThemes.splice(existingIndex, 1, saved);
+  } else {
+    saved = createCustomTheme({ name, recipe });
+    state.customThemes.push(saved);
+  }
+  state.customThemes = saveCustomThemes(state.customThemes);
+  customThemes = state.customThemes;
+  state.themeStudioEditingId = saved.id;
+  state.themeStudioPreviewing = false;
+  renderCustomThemeMenu();
+  applyTheme(saved.id);
+  els.themeStudioDialog.close();
+}
+
+function deleteThemeStudioTheme() {
+  const id = state.themeStudioEditingId;
+  if (!id) return;
+  state.customThemes = saveCustomThemes(state.customThemes.filter((theme) => theme.id !== id));
+  customThemes = state.customThemes;
+  state.themeStudioEditingId = '';
+  renderCustomThemeMenu();
+  if (state.theme === id) applyTheme('oxide');
+  fillThemeStudio('');
 }
 
 const BUILD_BAY_HEIGHT_KEY = 'oxide.layout.buildBayHeight';
@@ -955,7 +1214,7 @@ function updateMenuAvailability() {
     check.textContent = check.dataset.themeCheck === state.theme ? '✓' : '';
   });
   const themeReadout = document.querySelector('#theme-menu-current');
-  if (themeReadout) themeReadout.textContent = THEME_CATALOG[state.theme]?.menuLabel || 'OXIDE';
+  if (themeReadout) themeReadout.textContent = themeDisplayLabel(state.theme);
   document.querySelectorAll('[data-menu-action="trigger-completion"]').forEach((button) => {
     button.disabled = !projectLoaded || !fileLoaded || !state.completer.available || !state.completer.enabled;
   });
@@ -4052,7 +4311,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 3</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, theme-aware Semantic Readability Colors, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, and five presentation themes that preserve the same Rivet workflow.</p></div>`);
+  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 4</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, five built-in material themes, theme-aware Semantic Readability Colors, and the composable Theme Workshop for user-created presentation recipes.</p></div>`);
 }
 
 function showShortcuts() {
@@ -4120,6 +4379,7 @@ async function handleMenuAction(action) {
   else if (action === 'rename-symbol') await startSemanticRename();
   else if (action === 'code-actions') await showCodeActions();
   else if (action === 'tutorial') await openTutorialHome();
+  else if (action === 'theme-customize') openThemeStudio();
   else if (action.startsWith('theme-')) applyTheme(action.slice('theme-'.length));
   else if (action === 'toggle-project') setViewPanel('project', !state.view.project);
   else if (action === 'toggle-cargo') setViewPanel('cargo', !state.view.cargo);
@@ -4144,16 +4404,37 @@ function setupMenus() {
       trigger.classList.add('active');
     }
   }));
-  document.querySelectorAll('[data-menu-action]').forEach((button) => button.addEventListener('click', () => {
-    if (!button.disabled) handleMenuAction(button.dataset.menuAction);
-  }));
+  document.querySelector('.menu-cluster')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-menu-action]');
+    if (button && !button.disabled) handleMenuAction(button.dataset.menuAction);
+  });
   document.addEventListener('pointerdown', (event) => {
     if (!event.target.closest('.menu-host')) closeMenus();
   });
 }
 
+renderCustomThemeMenu();
 setupMenus();
 applyTheme(state.theme, { persist: false });
+
+$('#theme-studio-close').addEventListener('click', () => els.themeStudioDialog.close());
+$('#theme-studio-cancel').addEventListener('click', () => els.themeStudioDialog.close());
+els.themeStudioPreview.addEventListener('click', previewThemeStudio);
+els.themeStudioDialog.addEventListener('close', restoreThemeAfterStudioPreview);
+['change', 'input'].forEach((eventName) => {
+  [els.themeStudioMaterial, els.themeStudioPalette, els.themeStudioControls, els.themeStudioSemantic].forEach((control) => {
+    control.addEventListener(eventName, updateThemeStudioSummary);
+  });
+});
+els.themeStudioForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  saveThemeStudio();
+});
+els.themeStudioDelete.addEventListener('click', async () => {
+  const theme = state.customThemes.find((item) => item.id === state.themeStudioEditingId);
+  if (!theme) return;
+  if (await oxideConfirm('DELETE CUSTOM THEME', `Delete custom theme “${theme.name}”?`, 'DELETE')) deleteThemeStudioTheme();
+});
 
 $('#welcome-new').addEventListener('click', () => openFileBrowser('new-project'));
 $('#welcome-open').addEventListener('click', () => openFileBrowser('open'));

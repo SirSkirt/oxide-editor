@@ -1,14 +1,14 @@
-# Rivet B1.3.6 · Build 3
+# Rivet B1.3.6 · Build 4
 
 
 **Rivet** is the product name; **Rust Development Environment** is its tagline. The default presentation theme remains named **Oxide**.
-B1.3.6 Build 3 carries the Rivet rename and B1.3.6 theme engine forward with two compatibility fixes: full frontend startup is restored after a theme-initialization typo in Build 2, and Linux `.deb` packages now declare the package migration needed to replace existing `oxide-editor` installations cleanly.
+B1.3.6 Build 4 upgrades Rivet's theme engine from monolithic built-in themes into a **composable presentation system**. Layout and functionality remain unchanged; themes are recipes assembled from independent material, UI palette, control-treatment, and Semantic Readability components.
 
-The default **Oxide** theme preserves the current forged-workbench appearance. **Metallic** makes the same interface feel more like machined/forged steel, **Rust** applies a weathered rusted-iron treatment, and **Modern (Dark)** / **Modern (Light)** provide conventional IDE presentations for users who prefer a less industrial look.
+The five built-ins still ship as **Oxide**, **Metallic**, **Rust**, **Modern (Dark)**, and **Modern (Light)**, but they now use the same recipe model as user-created themes. **View → Theme → Theme Workshop…** can create, edit, save, delete, and apply custom themes by mixing the available presentation components. Custom themes persist locally and can be selected directly from the View → Theme menu.
 
-Theme selection lives under **View → Theme**, persists between sessions, and is restored before the workbench renders.
+Material treatment is no longer treated as a color swap. **Metallic** adds forged/brushed gunmetal texture, edge highlights, recessed depth, and raised controls. **Rust** uses the same physical-depth idea with aged iron, patina, oxidation around seams/edges, and rougher weathering. **Modern** material intentionally removes most industrial texture.
 
-**Semantic Readability Colors are theme-aware in B1.3.6.** rust-analyzer still supplies semantic meaning; each active theme supplies its own readability palette for variables, functions, types, macros, strings, numbers, comments, keywords, and punctuation.
+**Semantic Readability Colors remain independently selectable.** rust-analyzer still supplies semantic meaning; the active theme recipe supplies the readability palette for variables, functions, types, macros, strings, numbers, comments, keywords, and punctuation.
 
 Rivet is a Rust-first desktop IDE built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, language intelligence, debugging, and update orchestration are handled by Rust.
 
@@ -22,15 +22,26 @@ The B1.3.5 Build 2 LLDB/DAP debugger expansion and **Semantic Readability Colors
 
 ## Themes
 
-All B1.3.6 themes use the **same DOM, grid, controls, commands, panel locations, and workflows**. A theme is not a workspace preset.
+All B1.3.6 themes use the **same DOM, grid, controls, commands, panel locations, and workflows**. A theme is not a workspace preset. Build 4 separates presentation into four independently composable parts:
 
-- **Oxide** — existing/default forged-workbench material
-- **Metallic** — cleaner machined metal and stronger steel depth
-- **Rust** — oxidized/weathered iron based on Metallic
-- **Modern (Dark)** — conventional dark IDE material
-- **Modern (Light)** — conventional light IDE material
+1. **Material** — surface texture, physical depth, panel treatment, seams, and patina.
+2. **Color Palette** — UI surface, text, border, accent, editor, and status colors.
+3. **Control Treatment** — button/tab edge treatment, bevel/pressed behavior, and modern-vs-industrial control styling.
+4. **Semantic Readability** — theme-aware code colors for Rust semantic categories.
 
-The active theme is stored locally as `oxide.appearance.theme`.
+Built-in recipes:
+
+- **Oxide** — Oxide Iron + Oxide palette + Oxide Industrial controls + Oxide Readability
+- **Metallic** — Forged Gunmetal + Metallic palette + Forged controls + Metallic Readability
+- **Rust** — Rusted Iron + Rust palette + Weathered controls + Rust Readability
+- **Modern (Dark)** — Modern Flat + Modern Dark palette + Modern controls + Modern Dark Readability
+- **Modern (Light)** — Modern Flat + Modern Light palette + Modern controls + Modern Light Readability
+
+### Theme Workshop / custom themes
+
+Use **View → Theme → Theme Workshop…** to create a custom recipe. A custom theme can mix components independently—for example Forged Gunmetal material with the Rust UI palette, Modern controls, and Oxide Semantic Readability Colors. The Workshop can preview the unsaved recipe, and closing/canceling restores the active theme. Saved custom themes appear in the Theme menu and persist between sessions.
+
+Custom themes are stored in a versioned JSON schema under `oxide.appearance.customThemes`; the active theme ID remains in `oxide.appearance.theme`. The schema already reserves separate palette/semantic override maps so later builds can add granular user-defined colors or import/export without replacing the theme engine.
 
 ## Windows + Linux
 
@@ -260,7 +271,7 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 - **Rust Code Analyzer/Completer** powered by rust-analyzer/LSP
 - **Rivet Debugger** powered by LLDB/DAP with target/thread selection, conditional/log breakpoints, stepping/restart, expandable stack/locals, watches, and Debug Console
 - **Semantic Readability Colors** backed by rust-analyzer semantic tokens with a lexical fallback
-- five persistent presentation themes: **Oxide, Metallic, Rust, Modern (Dark), Modern (Light)**
+- five built-in presentation themes plus persistent user-created recipes from **Theme Workshop**
 - context-aware completion popup with details and signature help
 - Cargo Check / Build / Run / Test / Clean
 - Cargo.toml package/dependency GUI
@@ -275,8 +286,8 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 
 - Release version: `1.3.6`
 - User-facing version: **B1.3.6**
-- Current internal build number: **1**
-- Full installed identity: **Rivet B1.3.6 · Build 3**
+- Current internal build number: **4**
+- Full installed identity: **Rivet B1.3.6 · Build 4**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:
@@ -295,9 +306,9 @@ Rivet keeps the public release version and the internal build number separate. T
 For example:
 
 ```text
-B1.3.6 · Build 2
-        ↓
 B1.3.6 · Build 3
+        ↓
+B1.3.6 · Build 4
 ```
 
 The signed update feed carries `release_version` plus `build`, and Rivet compares both. GitHub update packages include the build in their filename. Every internal build gets its own release tag (`v1.3.6-b1`, `v1.3.6-b2`, and so on), so GitHub's `releases/latest/download/...` route advances even when the public Rivet version stays the same. For compatibility with older updater-enabled Rivet builds, the feed's required SemVer `version` is a monotonic updater sequence while `release_version` remains the actual Rivet release version.
