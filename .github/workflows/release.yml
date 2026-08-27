@@ -1,4 +1,4 @@
-name: Build and publish Oxide
+name: Build and publish Rivet
 
 on:
   workflow_dispatch:
@@ -52,15 +52,15 @@ jobs:
         run: |
           if gh release view "$OXIDE_TAG" >/dev/null 2>&1; then
             if [ -f RELEASE_NOTES.md ]; then
-              gh release edit "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes-file RELEASE_NOTES.md
+              gh release edit "$OXIDE_TAG" --title "Rivet $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes-file RELEASE_NOTES.md
             else
-              gh release edit "$OXIDE_TAG" --title "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD"
+              gh release edit "$OXIDE_TAG" --title "Rivet $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes "Rivet $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD"
             fi
           else
             if [ -f RELEASE_NOTES.md ]; then
-              gh release create "$OXIDE_TAG" --draft --title "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes-file RELEASE_NOTES.md
+              gh release create "$OXIDE_TAG" --draft --title "Rivet $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes-file RELEASE_NOTES.md
             else
-              gh release create "$OXIDE_TAG" --draft --title "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes "Oxide Editor $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD"
+              gh release create "$OXIDE_TAG" --draft --title "Rivet $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD" --notes "Rivet $OXIDE_DISPLAY_VERSION Build $OXIDE_BUILD"
             fi
           fi
 
@@ -108,13 +108,13 @@ jobs:
       - name: Build and stage Windows Update Service
         run: npm run prepare:updater
 
-      - name: Build Oxide NSIS installer
+      - name: Build Rivet NSIS installer
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build -- --bundles nsis --config src-tauri/tauri.release.conf.json
 
-      - name: Create signed Windows Oxide package
+      - name: Create signed Windows Rivet package
         id: package
         shell: pwsh
         env:
@@ -165,7 +165,7 @@ jobs:
           $signature = (Get-Content $signaturePath -Raw).Trim()
           $sha256 = (Get-FileHash $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()
           $downloadUrl = "https://github.com/${{ github.repository }}/releases/download/$($env:OXIDE_TAG)/$assetName"
-          $notes = if (Test-Path 'RELEASE_NOTES.md') { (Get-Content 'RELEASE_NOTES.md' -Raw).Trim() } else { "Oxide Editor $($env:OXIDE_DISPLAY_VERSION)" }
+          $notes = if (Test-Path 'RELEASE_NOTES.md') { (Get-Content 'RELEASE_NOTES.md' -Raw).Trim() } else { "Rivet $($env:OXIDE_DISPLAY_VERSION)" }
 
           $latest = [ordered]@{
             version = $env:OXIDE_UPDATER_VERSION
@@ -181,7 +181,7 @@ jobs:
           $latestPath = Join-Path $releaseDir 'oxide-latest-windows-x86_64.json'
           [System.IO.File]::WriteAllText($latestPath, $latest, (New-Object System.Text.UTF8Encoding($false)))
 
-          # Build numbers are part of Oxide's release identity. Fail the release
+          # Build numbers are part of Rivet's release identity. Fail the release
           # instead of publishing a feed that would make Build N invisible to Build N-1.
           $feedCheck = Get-Content $latestPath -Raw | ConvertFrom-Json
           if ($feedCheck.release_version -ne $env:OXIDE_VERSION -or [int]$feedCheck.build -ne [int]$env:OXIDE_BUILD) {
@@ -291,7 +291,7 @@ jobs:
       - name: Build and stage Linux Update Service
         run: npm run prepare:updater
 
-      - name: Build Oxide .deb and AppImage
+      - name: Build Rivet .deb and AppImage
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -349,7 +349,7 @@ jobs:
           signature=$(cat "$signature_path" | tr -d '\r\n')
           sha256=$(sha256sum "$package_path" | awk '{print $1}')
           download_url="https://github.com/${{ github.repository }}/releases/download/$OXIDE_TAG/$asset_name"
-          notes=$(cat RELEASE_NOTES.md 2>/dev/null || printf 'Oxide Editor %s' "$OXIDE_DISPLAY_VERSION")
+          notes=$(cat RELEASE_NOTES.md 2>/dev/null || printf 'Rivet %s' "$OXIDE_DISPLAY_VERSION")
           latest_path="$release_dir/oxide-latest-linux-x86_64.json"
           python3 - "$latest_path" "$OXIDE_UPDATER_VERSION" "$OXIDE_VERSION" "$OXIDE_DISPLAY_VERSION" "$OXIDE_BUILD" "$download_url" "$signature" "$sha256" "$notes" <<'PY'
           import datetime, json, sys
@@ -412,7 +412,7 @@ jobs:
 
 
   publish-release:
-    name: Publish completed Oxide release
+    name: Publish completed Rivet release
     needs: [prepare-release, windows-release, linux-release]
     runs-on: ubuntu-latest
     steps:
