@@ -3231,3 +3231,234 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
 @media (max-width: 760px) {
   .theme-component-grid, .theme-saved-list { grid-template-columns: 1fr; }
 }
+
+/* ========================================================================== 
+   Rivet B1.3.6 Build 7 — Iron / Rusty Iron material texture pass
+
+   Metallic and Rust are physical presentation materials, not palette swaps.
+   The code/editor reading surface stays intentionally quiet; texture belongs
+   primarily to Rivet's chassis, chrome, controls, inspectors, and panel frames.
+   ========================================================================== */
+
+/* METALLIC = forged iron. Fine directional brushing, faint cross-scratches,
+   cold exposed edge highlights, and darker recessed lower edges. */
+:root[data-theme-material="metallic"] {
+  --iron-brush-fine:
+    repeating-linear-gradient(0deg,
+      rgba(255,255,255,.034) 0 1px,
+      rgba(0,0,0,.028) 1px 2px,
+      transparent 2px 4px);
+  --iron-brush-cross:
+    repeating-linear-gradient(93deg,
+      transparent 0 13px,
+      rgba(255,255,255,.014) 13px 14px,
+      transparent 14px 31px,
+      rgba(0,0,0,.022) 31px 32px);
+  --iron-mottle:
+    radial-gradient(ellipse at 18% 12%, rgba(255,255,255,.065), transparent 29%),
+    radial-gradient(ellipse at 79% 86%, rgba(0,0,0,.15), transparent 34%),
+    radial-gradient(ellipse at 52% 43%, rgba(255,255,255,.022), transparent 23%);
+  --iron-chrome:
+    linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.025) 24%, rgba(0,0,0,.15) 73%, rgba(0,0,0,.34));
+}
+
+:root[data-theme-material="metallic"] .oxide-shell {
+  background-image:
+    radial-gradient(circle at 15% -8%, rgba(229,139,85,.07), transparent 28%),
+    var(--iron-mottle),
+    var(--iron-brush-cross),
+    var(--iron-brush-fine);
+  background-size: auto, auto, auto, auto;
+}
+
+:root[data-theme-material="metallic"] .brandbar,
+:root[data-theme-material="metallic"] .menu-bar,
+:root[data-theme-material="metallic"] .command-deck,
+:root[data-theme-material="metallic"] .panel-head,
+:root[data-theme-material="metallic"] .console-head,
+:root[data-theme-material="metallic"] .status-rail,
+:root[data-theme-material="metallic"] .tab-rail,
+:root[data-theme-material="metallic"] .build-resizer {
+  background-image:
+    var(--iron-chrome),
+    var(--iron-brush-cross),
+    var(--iron-brush-fine);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.17),
+    inset 1px 0 0 rgba(255,255,255,.035),
+    inset 0 -1px 0 rgba(0,0,0,.92),
+    0 1px 2px rgba(0,0,0,.42);
+}
+
+:root[data-theme-material="metallic"] .panel,
+:root[data-theme-material="metallic"] .editor-stack,
+:root[data-theme-material="metallic"] .project-tree,
+:root[data-theme-material="metallic"] .cargo-inspector,
+:root[data-theme-material="metallic"] .build-output,
+:root[data-theme-material="metallic"] .problems-pane,
+:root[data-theme-material="metallic"] .debug-pane,
+:root[data-theme-material="metallic"] .debug-output,
+:root[data-theme-material="metallic"] .menu-popup,
+:root[data-theme-material="metallic"] .oxide-dialog,
+:root[data-theme-material="metallic"] .terminal-window,
+:root[data-theme-material="metallic"] .welcome-plate,
+:root[data-theme-material="metallic"] .manifest-block,
+:root[data-theme-material="metallic"] .dependency-item,
+:root[data-theme-material="metallic"] .theme-component-card,
+:root[data-theme-material="metallic"] .theme-saved-item,
+:root[data-theme-material="metallic"] .theme-recipe-readout {
+  background-image:
+    radial-gradient(ellipse at 16% 8%, rgba(255,255,255,.035), transparent 27%),
+    radial-gradient(ellipse at 86% 94%, rgba(0,0,0,.12), transparent 31%),
+    var(--iron-brush-cross),
+    var(--iron-brush-fine);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.075),
+    inset 1px 0 0 rgba(255,255,255,.018),
+    inset 0 -1px 0 rgba(0,0,0,.58);
+}
+
+/* Keep the actual code canvas low-noise. The gutter can carry a whisper of the
+   iron material, but the syntax backdrop remains a solid readability surface. */
+:root[data-theme-material="metallic"] .line-numbers {
+  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.016) 0 1px, transparent 1px 4px);
+  box-shadow: inset -1px 0 rgba(255,255,255,.035), inset -2px 0 rgba(0,0,0,.42);
+}
+:root[data-theme-material="metallic"] .editor-wrap,
+:root[data-theme-material="metallic"] .syntax-layer { background-image: none; }
+
+/* Forged iron controls get a finer, brighter brush than the large chassis. */
+:root[data-theme-controls="metallic"] .metal-button,
+:root[data-theme-controls="metallic"] .command-button,
+:root[data-theme-controls="metallic"] .profile,
+:root[data-theme-controls="metallic"] .save-button,
+:root[data-theme-controls="metallic"] .tiny-button,
+:root[data-theme-controls="metallic"] .console-tab,
+:root[data-theme-controls="metallic"] .file-tab,
+:root[data-theme-controls="metallic"] .welcome-action,
+:root[data-theme-controls="metallic"] .dependency-item,
+:root[data-theme-controls="metallic"] .debug-tool,
+:root[data-theme-controls="metallic"] .terminal-head-button {
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.035) 34%, rgba(0,0,0,.17) 66%, rgba(0,0,0,.34)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.032) 0 1px, rgba(0,0,0,.025) 1px 2px, transparent 2px 4px),
+    repeating-linear-gradient(91deg, transparent 0 11px, rgba(255,255,255,.014) 11px 12px, transparent 12px 23px);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.18),
+    inset 1px 0 rgba(255,255,255,.04),
+    inset 0 -1px rgba(0,0,0,.9),
+    0 1px 1px rgba(0,0,0,.48);
+}
+
+/* RUST = rusty iron. It inherits the same manufactured geometry, then layers
+   irregular oxidation around corners, seams and lower/recessed edges. */
+:root[data-theme-material="rust"] {
+  --rust-grain:
+    repeating-linear-gradient(103deg,
+      rgba(255,215,175,.022) 0 1px,
+      transparent 1px 5px,
+      rgba(0,0,0,.028) 5px 6px,
+      transparent 6px 12px);
+  --rust-patina:
+    radial-gradient(ellipse at 4% 8%, rgba(191,72,25,.24), transparent 18%),
+    radial-gradient(ellipse at 96% 91%, rgba(133,54,27,.20), transparent 20%),
+    radial-gradient(ellipse at 78% 14%, rgba(166,74,34,.14), transparent 16%),
+    radial-gradient(ellipse at 31% 82%, rgba(100,45,26,.13), transparent 20%);
+  --rust-iron-depth:
+    linear-gradient(180deg, rgba(255,214,175,.08), rgba(255,255,255,.012) 27%, rgba(0,0,0,.20) 72%, rgba(0,0,0,.43));
+}
+
+:root[data-theme-material="rust"] .oxide-shell {
+  background-image:
+    radial-gradient(circle at 10% 8%, rgba(202,78,28,.24), transparent 18%),
+    radial-gradient(circle at 84% 29%, rgba(113,46,24,.18), transparent 15%),
+    radial-gradient(circle at 46% 92%, rgba(184,72,26,.15), transparent 21%),
+    var(--rust-patina),
+    var(--rust-grain);
+}
+
+:root[data-theme-material="rust"] .brandbar,
+:root[data-theme-material="rust"] .menu-bar,
+:root[data-theme-material="rust"] .command-deck,
+:root[data-theme-material="rust"] .panel-head,
+:root[data-theme-material="rust"] .console-head,
+:root[data-theme-material="rust"] .status-rail,
+:root[data-theme-material="rust"] .tab-rail,
+:root[data-theme-material="rust"] .build-resizer {
+  background-image:
+    radial-gradient(ellipse at 2% 100%, rgba(203,79,28,.28), transparent 18%),
+    radial-gradient(ellipse at 98% 0%, rgba(121,49,26,.20), transparent 17%),
+    var(--rust-iron-depth),
+    var(--rust-grain);
+  border-color: #553122;
+  box-shadow:
+    inset 0 1px rgba(255,208,168,.10),
+    inset 1px 0 rgba(166,71,35,.055),
+    inset 0 -1px rgba(0,0,0,.93),
+    0 1px 2px rgba(0,0,0,.48);
+}
+
+:root[data-theme-material="rust"] .panel,
+:root[data-theme-material="rust"] .editor-stack,
+:root[data-theme-material="rust"] .project-tree,
+:root[data-theme-material="rust"] .cargo-inspector,
+:root[data-theme-material="rust"] .build-output,
+:root[data-theme-material="rust"] .problems-pane,
+:root[data-theme-material="rust"] .debug-pane,
+:root[data-theme-material="rust"] .debug-output,
+:root[data-theme-material="rust"] .menu-popup,
+:root[data-theme-material="rust"] .oxide-dialog,
+:root[data-theme-material="rust"] .terminal-window,
+:root[data-theme-material="rust"] .welcome-plate,
+:root[data-theme-material="rust"] .manifest-block,
+:root[data-theme-material="rust"] .dependency-item,
+:root[data-theme-material="rust"] .theme-component-card,
+:root[data-theme-material="rust"] .theme-saved-item,
+:root[data-theme-material="rust"] .theme-recipe-readout {
+  background-image:
+    radial-gradient(ellipse at 1% 4%, rgba(199,73,25,.17), transparent 13%),
+    radial-gradient(ellipse at 99% 96%, rgba(129,50,25,.15), transparent 14%),
+    radial-gradient(ellipse at 78% 22%, rgba(171,76,36,.075), transparent 18%),
+    var(--rust-grain);
+  border-color: #4f2e22;
+  box-shadow:
+    inset 0 1px rgba(255,206,166,.055),
+    inset 1px 0 rgba(169,70,32,.035),
+    inset 0 -1px rgba(0,0,0,.68);
+}
+
+:root[data-theme-material="rust"] .line-numbers {
+  background-image:
+    radial-gradient(ellipse at 0% 12%, rgba(170,65,27,.08), transparent 21%),
+    repeating-linear-gradient(103deg, rgba(255,205,165,.012) 0 1px, transparent 1px 6px);
+  box-shadow: inset -1px 0 rgba(125,50,26,.13), inset -2px 0 rgba(0,0,0,.48);
+}
+:root[data-theme-material="rust"] .editor-wrap,
+:root[data-theme-material="rust"] .syntax-layer { background-image: none; }
+
+:root[data-theme-controls="rust"] .metal-button,
+:root[data-theme-controls="rust"] .command-button,
+:root[data-theme-controls="rust"] .profile,
+:root[data-theme-controls="rust"] .save-button,
+:root[data-theme-controls="rust"] .tiny-button,
+:root[data-theme-controls="rust"] .console-tab,
+:root[data-theme-controls="rust"] .file-tab,
+:root[data-theme-controls="rust"] .welcome-action,
+:root[data-theme-controls="rust"] .dependency-item,
+:root[data-theme-controls="rust"] .debug-tool,
+:root[data-theme-controls="rust"] .terminal-head-button {
+  background-image:
+    radial-gradient(ellipse at 4% 88%, rgba(204,77,27,.24), transparent 22%),
+    radial-gradient(ellipse at 96% 10%, rgba(118,47,25,.15), transparent 18%),
+    linear-gradient(180deg, rgba(255,212,172,.09), rgba(255,255,255,.01) 34%, rgba(0,0,0,.20) 66%, rgba(0,0,0,.39)),
+    repeating-linear-gradient(103deg, rgba(255,205,165,.018) 0 1px, transparent 1px 5px, rgba(0,0,0,.025) 5px 6px, transparent 6px 11px);
+  box-shadow:
+    inset 0 1px rgba(255,210,170,.11),
+    inset 1px 0 rgba(176,73,34,.045),
+    inset 0 -1px rgba(0,0,0,.92),
+    0 1px 1px rgba(0,0,0,.52);
+}
+
+/* Modern materials must remain intentionally clean so the contrast between
+   Rivet's manufactured themes and conventional IDE themes stays obvious. */
+:root[data-theme-material="modern"] .line-numbers { background-image: none; box-shadow: none; }

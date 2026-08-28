@@ -12,8 +12,8 @@ export const CUSTOM_THEME_SCHEMA_VERSION = 1;
 export const THEME_COMPONENTS = Object.freeze({
   materials: Object.freeze({
     oxide: { label: 'Oxide Iron', description: 'Original Rivet industrial surfaces with restrained depth.' },
-    metallic: { label: 'Forged Gunmetal', description: 'Brushed forged metal, recessed seams, highlights, and deeper physical surfaces.' },
-    rust: { label: 'Rusted Iron', description: 'Weathered iron with oxidation, patina, worn seams, and rougher surface variation.' },
+    metallic: { label: 'Forged Iron', description: 'Dark forged iron with visible brushed grain, recessed seams, edge highlights, and physical depth.' },
+    rust: { label: 'Rusty Iron', description: 'The forged-iron material aged with oxidation, patina, worn seams, exposed dark metal, and rougher surface variation.' },
     modern: { label: 'Modern Flat', description: 'Clean conventional IDE surfaces with minimal material texture.' },
   }),
   palettes: Object.freeze({

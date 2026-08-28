@@ -1,50 +1,47 @@
-# Rivet B1.3.6 · Build 6
+# Rivet B1.3.6 · Build 7
 
-B1.3.6 Build 6 is a focused **editor visibility repair** for the composable theme system. Projects and Rust source were loading correctly in Build 5, but the code could appear completely blank in the editor even though the file contents were present.
+B1.3.6 Build 7 strengthens Rivet RDE's industrial identity by making the **Metallic** and **Rust** themes behave like physical materials instead of mostly color variations. Layout, functionality, editor geometry, and workflows are unchanged.
 
-## Root cause
+## Metallic = forged Iron
 
-Rivet renders Rust highlighting using two stacked editor layers:
+The Metallic theme is now treated as a dark forged-iron workstation material. Build 7 adds:
 
-1. a syntax-highlight backdrop containing the visible colored source; and
-2. the real textarea above it, which owns caret, selection, scrolling, editing, diagnostics, and keyboard behavior.
+- visible but restrained directional brushed-metal grain
+- faint cross-scratches and uneven metal mottle
+- colder exposed upper-edge highlights
+- darker recessed/lower edges and seams
+- stronger inset depth on panel chrome and the Build Bay
+- finer brushed texture on buttons, tabs, and interactive controls
+- a subtle iron texture in the line-number gutter
 
-When syntax highlighting is active, the textarea intentionally makes its own glyphs transparent so the colored syntax layer can show through. Build 4's composable theme architecture changed every built-in/custom theme to `data-theme="composed"`. An older themed-editor CSS rule then applied an opaque `--t-editor` background to the textarea *after* the normal `.syntax-active` transparency rule.
+The theme is still named **Metallic** for compatibility, while its material component is labeled **Forged Iron** in Theme Workshop.
 
-The result was an opaque textarea with transparent glyphs sitting on top of valid highlighted source — effectively hiding every line of code while leaving the line numbers, project tree, Cargo inspector, and Build Bay working normally.
+## Rust = Rusty Iron
 
-## Fix
+Rust now explicitly builds on the same forged-iron geometry and adds weathering rather than acting as a brown recolor. It adds:
 
-Build 6 adds an explicit composable-theme overlay contract:
+- irregular rust/oxidation patches
+- patina concentrated near seams, corners, and recessed edges
+- darker exposed-iron variation between oxidized areas
+- rougher directional grain than clean Iron
+- weathered control surfaces and warmer worn edges
+- stronger rust accumulation around panel/chrome boundaries
 
-```css
-:root[data-theme="composed"] .code-editor.syntax-active {
-  color: transparent;
-  background-color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-```
+The Theme Workshop material component is labeled **Rusty Iron**.
 
-This higher-specificity rule is placed after the theme editor-surface binding, so all built-in themes and custom theme recipes keep their editor material/color while the syntax layer remains visible through the editing textarea.
+## Readability guardrail
 
-The fix applies to **Oxide, Metallic, Rust, Modern Dark, Modern Light, and custom composed themes** without changing layout or editing functionality.
+Material texture is intentionally strongest on Rivet's chassis, toolbars, panel headers, inspectors, controls, menus, dialogs, Build Bay framing, and other chrome. The actual Rust source backdrop remains low-noise and uses a solid editor surface so Semantic Readability Colors stay dominant. The line-number gutter receives only a very faint material cue.
 
-## Regression protection
+Modern Dark and Modern Light remain intentionally clean and flat so Rivet keeps a meaningful distinction between its manufactured industrial themes and conventional IDE presentation.
 
-`npm run validate:themes` now checks both:
+## Existing fixes retained
 
-- Semantic Readability contrast for the repaired theme palettes; and
-- that the composed-theme syntax textarea retains a transparent background while highlighting is active and that this rule appears after the themed editor background binding.
-
-This turns the exact Build 5 failure mode into a CI-detectable regression instead of relying only on visual testing.
-
-## Existing features retained
-
-Build 6 retains Build 5's repaired Semantic Readability palettes and neutral fallback source role, Build 4's composable Theme Workshop/custom theme architecture, Build 3's startup and Debian migration fixes, version+build updater behavior, LLDB/DAP debugger, Rust Code Analyzer/Completer, resizable Build Bay, and the rest of the B1.3.6 functionality.
+Build 7 retains Build 6's syntax-overlay visibility fix, Build 5's contrast-first Semantic Readability palettes, Build 4's composable Theme Workshop/custom-theme architecture, Build 3's startup and Debian migration fixes, the version+build updater, LLDB/DAP debugger, Rust Code Analyzer/Completer, resizable Build Bay, and the rest of B1.3.6.
 
 ## Version
 
 - Release version: `1.3.6`
 - Display version: **B1.3.6**
-- Build: **6**
-- Full identity: **Rivet B1.3.6 · Build 6**
+- Build: **7**
+- Full identity: **Rivet B1.3.6 · Build 7**

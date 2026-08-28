@@ -272,7 +272,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 6</div>
+        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 7</div>
         <h1>Welcome to Rivet</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -419,7 +419,7 @@ app.innerHTML = `
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>RIVET B1.3.6 · BUILD 6</span>
+      <span>RIVET B1.3.6 · BUILD 7</span>
     </footer>
   </main>
 
@@ -4331,7 +4331,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 6</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, five built-in material themes, theme-aware Semantic Readability Colors, and the composable Theme Workshop for user-created presentation recipes.</p></div>`);
+  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 7</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, five built-in material themes, theme-aware Semantic Readability Colors, and the composable Theme Workshop for user-created presentation recipes.</p></div>`);
 }
 
 function showShortcuts() {

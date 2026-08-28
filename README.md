@@ -1,14 +1,14 @@
-# Rivet B1.3.6 · Build 6
+# Rivet B1.3.6 · Build 7
 
 
 **Rivet** is the product name; **Rust Development Environment** is its tagline. The default presentation theme remains named **Oxide**.
-B1.3.6 Build 6 fixes a **source-editor visibility regression** introduced by the composable theme path. Rust source was loaded correctly, but the themed textarea could paint an opaque editor surface over Rivet's highlighted syntax layer while the textarea glyphs themselves were transparent. Build 6 restores the intended overlay contract: the themed editor surface belongs to the editor/syntax backdrop, and the textarea stays transparent whenever syntax highlighting is active. Build 5's contrast-first Semantic Readability palettes remain intact.
+B1.3.6 Build 7 is a **material-texture pass** for Rivet's industrial themes. Metallic now behaves as a forged **Iron** material rather than a gray palette swap, with visible directional brushing, subtle cross-scratches, mottled metal variation, cold edge highlights, recessed seams, and raised iron controls. Rust is now explicitly **Rusty Iron**: it inherits the same forged depth model and adds irregular oxidation, patina, worn corners/seams, and darker exposed-metal variation. The actual code canvas remains intentionally quiet so material texture never competes with Semantic Readability.
 
 Build 4 introduced the **composable presentation system**. Layout and functionality remain unchanged; themes are recipes assembled from independent material, UI palette, control-treatment, and Semantic Readability components.
 
 The five built-ins still ship as **Oxide**, **Metallic**, **Rust**, **Modern (Dark)**, and **Modern (Light)**, but they now use the same recipe model as user-created themes. **View → Theme → Theme Workshop…** can create, edit, save, delete, and apply custom themes by mixing the available presentation components. Custom themes persist locally and can be selected directly from the View → Theme menu.
 
-Material treatment is no longer treated as a color swap. **Metallic** adds forged/brushed gunmetal texture, edge highlights, recessed depth, and raised controls. **Rust** uses the same physical-depth idea with aged iron, patina, oxidation around seams/edges, and rougher weathering. **Modern** material intentionally removes most industrial texture.
+Material treatment is no longer treated as a color swap. **Metallic** is the forged **Iron** presentation: directional brushing, cross-scratches, mottled metal, edge highlights, recessed depth, and raised iron controls. **Rust** is **Rusty Iron**: the same manufactured geometry aged with irregular oxidation, patina, worn seams/corners, and exposed darker iron. Build 7 makes these material cues visibly stronger across Rivet chrome and panels while keeping the source-code surface low-noise. **Modern** material intentionally removes most industrial texture.
 
 **Semantic Readability Colors remain independently selectable.** rust-analyzer still supplies semantic meaning; the active theme recipe supplies the readability palette for variables, functions, types, macros, strings, numbers, comments, keywords, punctuation, and now a neutral/fallback source role. Theme Workshop includes a live Rust readability preview and warns when a semantic preset is designed for the opposite editor-surface tone.
 
@@ -34,14 +34,14 @@ All B1.3.6 themes use the **same DOM, grid, controls, commands, panel locations,
 Built-in recipes:
 
 - **Oxide** — Oxide Iron + Oxide palette + Oxide Industrial controls + Oxide Readability
-- **Metallic** — Forged Gunmetal + Metallic palette + Forged controls + Metallic Readability
-- **Rust** — Rusted Iron + Rust palette + Weathered controls + Rust Readability
+- **Metallic** — Forged Iron + Metallic palette + Forged controls + Metallic Readability
+- **Rust** — Rusty Iron + Rust palette + Weathered controls + Rust Readability
 - **Modern (Dark)** — Modern Flat + Modern Dark palette + Modern controls + Modern Dark Readability
 - **Modern (Light)** — Modern Flat + Modern Light palette + Modern controls + Modern Light Readability
 
 ### Theme Workshop / custom themes
 
-Use **View → Theme → Theme Workshop…** to create a custom recipe. A custom theme can mix components independently—for example Forged Gunmetal material with the Rust UI palette, Modern controls, and Oxide Semantic Readability Colors. The Workshop can preview the unsaved recipe, and closing/canceling restores the active theme. Saved custom themes appear in the Theme menu and persist between sessions.
+Use **View → Theme → Theme Workshop…** to create a custom recipe. A custom theme can mix components independently—for example Forged Iron material with the Rust UI palette, Modern controls, and Oxide Semantic Readability Colors. The Workshop can preview the unsaved recipe, and closing/canceling restores the active theme. Saved custom themes appear in the Theme menu and persist between sessions.
 
 Custom themes are stored in a versioned JSON schema under `oxide.appearance.customThemes`; the active theme ID remains in `oxide.appearance.theme`. The schema already reserves separate palette/semantic override maps so later builds can add granular user-defined colors or import/export without replacing the theme engine.
 
@@ -289,7 +289,7 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 - Release version: `1.3.6`
 - User-facing version: **B1.3.6**
 - Current internal build number: **6**
-- Full installed identity: **Rivet B1.3.6 · Build 6**
+- Full installed identity: **Rivet B1.3.6 · Build 7**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:
