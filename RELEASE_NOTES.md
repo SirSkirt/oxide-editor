@@ -1,41 +1,50 @@
-# Rivet B1.3.6 · Build 5
+# Rivet B1.3.6 · Build 6
 
-B1.3.6 Build 5 is the **Semantic Readability repair** for Rivet's expanded theme system. The Oxide readability palette remains unchanged; Metallic, Rust, Modern Dark, and especially Modern Light now prioritize source-code contrast and semantic separation instead of merely matching the surrounding UI palette.
+B1.3.6 Build 6 is a focused **editor visibility repair** for the composable theme system. Projects and Rust source were loading correctly in Build 5, but the code could appear completely blank in the editor even though the file contents were present.
 
-## Modern Light visibility fix
+## Root cause
 
-Modern Light had a structural readability bug beyond its individual token colors: source text that did not receive a specific lexical/semantic class inherited the old dark-theme neutral gray. Against the white Modern Light editor this could make ordinary code appear extremely faint or effectively disappear.
+Rivet renders Rust highlighting using two stacked editor layers:
 
-Build 5 adds a first-class `--syntax-default` Semantic Readability role. The syntax layer now uses that theme-aware neutral source color for all unclassified/fallback text.
+1. a syntax-highlight backdrop containing the visible colored source; and
+2. the real textarea above it, which owns caret, selection, scrolling, editing, diagnostics, and keyboard behavior.
 
-Modern Light therefore uses a purpose-built **dark-on-light** semantic palette, including a dark neutral fallback, dark steel-blue identifiers, dark sage strings, dark amber numbers/types, warm dark keywords/macros, and clearly readable comments. Red remains reserved for real errors/problems.
+When syntax highlighting is active, the textarea intentionally makes its own glyphs transparent so the colored syntax layer can show through. Build 4's composable theme architecture changed every built-in/custom theme to `data-theme="composed"`. An older themed-editor CSS rule then applied an opaque `--t-editor` background to the textarea *after* the normal `.syntax-active` transparency rule.
 
-## Rebalanced dark-theme readability
+The result was an opaque textarea with transparent glyphs sitting on top of valid highlighted source — effectively hiding every line of code while leaving the line numbers, project tree, Cargo inspector, and Build Bay working normally.
 
-The repaired dark themes also receive higher-contrast palettes:
+## Fix
 
-- **Metallic** — brighter steel identifiers, sage strings, amber/gold numbers and types, copper/orange keywords/macros, cream functions, and more readable gray-green comments against gunmetal.
-- **Rust** — preserves the warm aged-iron character while keeping identifiers deliberately cool/steel-colored and lifting comments and semantic roles away from the dark rust surface.
-- **Modern Dark** — cleaner, brighter conventional dark-IDE semantic colors with stronger category separation.
-- **Oxide** — unchanged, by design.
+Build 6 adds an explicit composable-theme overlay contract:
 
-## Theme Workshop readability preview
+```css
+:root[data-theme="composed"] .code-editor.syntax-active {
+  color: transparent;
+  background-color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+```
 
-Theme Workshop now shows an actual Rust **Semantic Readability Preview** while composing a custom theme. Palette and Semantic Readability presets carry an intended editor-surface tone (`dark` or `light`), and the Workshop warns when a user mixes a light editor surface with a dark semantic preset or vice versa. The combination is still allowed; Rivet simply makes the readability risk visible before saving it.
+This higher-specificity rule is placed after the theme editor-surface binding, so all built-in themes and custom theme recipes keep their editor material/color while the syntax layer remains visible through the editing textarea.
 
-The custom-theme semantic override map also gains a `default`/neutral source role so future granular custom color controls can tune fallback source text explicitly.
+The fix applies to **Oxide, Metallic, Rust, Modern Dark, Modern Light, and custom composed themes** without changing layout or editing functionality.
 
-## Contrast regression validation
+## Regression protection
 
-A new `npm run validate:themes` check audits every repaired built-in semantic role against its matching editor background. Metallic, Rust, Modern Dark, and Modern Light must maintain at least **4.5:1** contrast for neutral text, keywords, identifiers, strings, numbers, types, macros, functions, comments, and operators. Build and release GitHub Actions now run this validation before publishing.
+`npm run validate:themes` now checks both:
+
+- Semantic Readability contrast for the repaired theme palettes; and
+- that the composed-theme syntax textarea retains a transparent background while highlighting is active and that this rule appears after the themed editor background binding.
+
+This turns the exact Build 5 failure mode into a CI-detectable regression instead of relying only on visual testing.
 
 ## Existing features retained
 
-Build 5 retains Build 4's composable Theme Workshop, material/palette/control/semantic separation, the Build 3 startup and Debian migration fixes, version+build updater behavior, LLDB/DAP debugger, Rust Code Analyzer/Completer, resizable Build Bay, and the rest of the B1.3.6 functionality.
+Build 6 retains Build 5's repaired Semantic Readability palettes and neutral fallback source role, Build 4's composable Theme Workshop/custom theme architecture, Build 3's startup and Debian migration fixes, version+build updater behavior, LLDB/DAP debugger, Rust Code Analyzer/Completer, resizable Build Bay, and the rest of the B1.3.6 functionality.
 
 ## Version
 
 - Release version: `1.3.6`
 - Display version: **B1.3.6**
-- Build: **5**
-- Full identity: **Rivet B1.3.6 · Build 5**
+- Build: **6**
+- Full identity: **Rivet B1.3.6 · Build 6**

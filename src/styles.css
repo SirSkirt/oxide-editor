@@ -2455,6 +2455,16 @@ body.build-bay-resizing * { cursor: row-resize !important; user-select: none !im
   color: var(--t-text);
   caret-color: var(--t-caret);
 }
+/* Build 6: the syntax layer lives underneath the textarea. Theme composition
+   deliberately sets data-theme="composed", so the themed editor background
+   rule above also applies to the Oxide recipe. When syntax highlighting is
+   active the textarea itself MUST be transparent or it paints an opaque editor
+   surface over the highlighted code while its own glyphs are transparent. */
+:root[data-theme="composed"] .code-editor.syntax-active {
+  color: transparent;
+  background-color: transparent;
+  -webkit-text-fill-color: transparent;
+}
 :root[data-theme]:not([data-theme="oxide"]) .code-editor::selection,
 :root[data-theme]:not([data-theme="oxide"]) .code-editor.syntax-active::selection { background: var(--t-selection); }
 :root[data-theme]:not([data-theme="oxide"]) .line-numbers {

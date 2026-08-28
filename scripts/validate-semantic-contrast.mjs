@@ -26,6 +26,33 @@ function blockFor(attribute, value) {
   return css.slice(open + 1, close);
 }
 
+
+function selectorBlock(selector) {
+  const at = css.indexOf(selector);
+  if (at < 0) throw new Error(`Missing ${selector} rule`);
+  const open = css.indexOf('{', at);
+  const close = css.indexOf('}', open);
+  if (open < 0 || close < 0) throw new Error(`Malformed ${selector} rule`);
+  return css.slice(open + 1, close);
+}
+
+function validateSyntaxOverlayTransparency() {
+  const selector = ':root[data-theme="composed"] .code-editor.syntax-active';
+  const block = selectorBlock(selector);
+  if (!/background-color\s*:\s*transparent\s*;/.test(block)) {
+    throw new Error('Syntax overlay regression: themed .code-editor.syntax-active must have a transparent background');
+  }
+  if (!/-webkit-text-fill-color\s*:\s*transparent\s*;/.test(block)) {
+    throw new Error('Syntax overlay regression: highlighted textarea glyphs must remain transparent');
+  }
+  const themeEditorRule = css.indexOf(':root[data-theme]:not([data-theme="oxide"]) .code-editor { background-color: var(--t-editor); }');
+  const overlayRule = css.indexOf(selector);
+  if (themeEditorRule >= 0 && overlayRule < themeEditorRule) {
+    throw new Error('Syntax overlay regression: transparency rule must appear after the themed editor background rule');
+  }
+  console.log('PASS syntax overlay remains visible through themed textarea');
+}
+
 function variable(block, name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = block.match(new RegExp(`${escaped}\\s*:\\s*(#[0-9a-fA-F]{6})`));
@@ -53,6 +80,8 @@ function contrast(a, b) {
   const darker = Math.min(l1, l2);
   return (lighter + 0.05) / (darker + 0.05);
 }
+
+validateSyntaxOverlayTransparency();
 
 let failed = false;
 for (const theme of themes) {
