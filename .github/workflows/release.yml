@@ -28,6 +28,11 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Validate Semantic Readability contrast
+        run: npm run validate:themes
+      - name: Validate Settings and adaptive layouts
+        run: npm run validate:layout
+
       - name: Read release version
         id: version
         shell: bash
@@ -297,6 +302,17 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build -- --bundles deb,appimage --config src-tauri/tauri.release.conf.json
 
+      - name: Add Oxide-to-Rivet Debian migration metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          deb=$(find src-tauri/target/release/bundle/deb -maxdepth 1 -type f -name '*.deb' | head -n 1)
+          test -n "$deb" && test -f "$deb"
+          bash ./scripts/patch-deb-migration.sh "$deb"
+          test "$(dpkg-deb -f "$deb" Package)" = "rivet"
+          test "$(dpkg-deb -f "$deb" Replaces)" = "oxide-editor"
+          test "$(dpkg-deb -f "$deb" Conflicts)" = "oxide-editor"
+
       - name: Create signed Linux update package
         id: package
         shell: bash
@@ -411,12 +427,86 @@ jobs:
             ${{ steps.package.outputs.latest }}
 
 
+  android-release:
+    name: Android ARM64 editor preview
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Rust Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Install Android SDK/NDK components
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Validate Android preview architecture
+        run: npm run validate:mobile
+
+      - name: Initialize Tauri Android project
+        run: npm run tauri android init
+
+      - name: Build installable Android preview APK
+        run: npm run tauri android build -- --apk --target aarch64 --debug
+
+      - name: Stage Android preview APK
+        id: apk
+        shell: bash
+        env:
+          RIVET_VERSION: ${{ needs.prepare-release.outputs.version }}
+          RIVET_BUILD: ${{ needs.prepare-release.outputs.build }}
+        run: |
+          set -euo pipefail
+          source_apk=$(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
+          test -n "$source_apk" && test -f "$source_apk"
+          mkdir -p release-assets-android
+          output="release-assets-android/Rivet-Android-Preview-$RIVET_VERSION-b$RIVET_BUILD-arm64.apk"
+          cp "$source_apk" "$output"
+          echo "path=$output" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Android APK to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RIVET_TAG: ${{ needs.prepare-release.outputs.tag }}
+        run: gh release upload "$RIVET_TAG" "${{ steps.apk.outputs.path }}" --clobber
+
+      - name: Upload Android workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: rivet-android-preview-arm64-${{ needs.prepare-release.outputs.version }}-b${{ needs.prepare-release.outputs.build }}
+          path: ${{ steps.apk.outputs.path }}
+
+
   publish-release:
     name: Publish completed Rivet release
-    needs: [prepare-release, windows-release, linux-release]
+    needs: [prepare-release, windows-release, linux-release, android-release]
     runs-on: ubuntu-latest
     steps:
-      - name: Publish release after both platform feeds are ready
+      - name: Publish release after desktop feeds and Android preview are ready
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
