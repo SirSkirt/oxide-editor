@@ -147,3 +147,12 @@ install Tauri Linux build dependencies
 ## B1.3.6 Build 3 branding/package compatibility
 
 Rivet intentionally keeps the existing `oxide-editor` executable path, `com.oxide.editor` identifier, `oxide-*` feed names, and signing key identity where changing them would break installed-update compatibility. The Debian package itself is now named `rivet`; Build 3 adds `Provides: oxide-editor`, `Replaces: oxide-editor`, and `Conflicts: oxide-editor` so dpkg can perform the one-time Oxide → Rivet package migration without a manual uninstall.
+
+## Android editor preview (B1.3.6 Build 9)
+
+The Build 9 Android target is deliberately an **editor-first preview**. It does not use the desktop Rivet updater or the `oxide-latest-*` feeds. Android preview builds are distributed as APK artifacts from GitHub Actions.
+
+The Android Gradle shell is generated with `tauri android init` in CI/local development and is intentionally kept out of the source ZIP. Mobile source-of-truth lives in `src/mobile/`, `src-tauri/src/mobile/`, and `src-tauri/tauri.android.conf.json`.
+
+Build 9 uses a preview Android application identifier (`com.rivet.rde.preview`) and a debug-signed APK for development/testing. Stable production Android signing, package identity, update delivery, and the local Rust toolchain backend are intentionally deferred until the Android editor shell is proven reliable.
+

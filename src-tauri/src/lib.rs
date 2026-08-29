@@ -1,5 +1,7 @@
 mod analyzer;
 mod debugger;
+#[cfg(target_os = "android")]
+mod mobile;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -15,6 +17,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use tauri::{AppHandle, Emitter, State};
+#[cfg(desktop)]
 use tauri_plugin_updater::UpdaterExt;
 use toml_edit::{Array, DocumentMut, InlineTable, Item, Value};
 
@@ -24,6 +27,8 @@ struct ToolchainInfo {
     rustc_found: bool,
     cargo: String,
     rustc: String,
+    backend_ready: bool,
+    note: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -369,14 +374,25 @@ fn platform_info() -> PlatformInfo {
 
 #[tauri::command]
 fn toolchain_info() -> ToolchainInfo {
-    let cargo = command_version("cargo");
-    let rustc = command_version("rustc");
+    #[cfg(target_os = "android")]
+    {
+        return mobile::preview_toolchain_info();
+    }
 
-    ToolchainInfo {
-        cargo_found: cargo.is_some(),
-        rustc_found: rustc.is_some(),
-        cargo: cargo.unwrap_or_else(|| "Cargo: not found".into()),
-        rustc: rustc.unwrap_or_else(|| "rustc: not found".into()),
+    #[cfg(not(target_os = "android"))]
+    {
+        let cargo = command_version("cargo");
+        let rustc = command_version("rustc");
+        let cargo_found = cargo.is_some();
+        let rustc_found = rustc.is_some();
+        ToolchainInfo {
+            cargo_found,
+            rustc_found,
+            cargo: cargo.unwrap_or_else(|| "Cargo: not found".into()),
+            rustc: rustc.unwrap_or_else(|| "rustc: not found".into()),
+            backend_ready: cargo_found && rustc_found,
+            note: None,
+        }
     }
 }
 
@@ -486,14 +502,36 @@ fn default_browse_path_value() -> PathBuf {
 }
 
 #[tauri::command]
-fn default_browse_path() -> String {
-    default_browse_path_value().to_string_lossy().to_string()
+fn default_browse_path(app: AppHandle) -> String {
+    #[cfg(target_os = "android")]
+    {
+        return mobile::workspace_root(&app)
+            .unwrap_or_else(|_| default_browse_path_value())
+            .to_string_lossy()
+            .to_string();
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        default_browse_path_value().to_string_lossy().to_string()
+    }
 }
 
 #[tauri::command]
-fn filesystem_roots() -> Vec<BrowserRoot> {
+fn filesystem_roots(app: AppHandle) -> Vec<BrowserRoot> {
+    #[cfg(target_os = "android")]
+    {
+        let root = mobile::workspace_root(&app).unwrap_or_else(|_| default_browse_path_value());
+        return vec![BrowserRoot {
+            label: "RIVET WORKSPACE".into(),
+            path: root.to_string_lossy().to_string(),
+        }];
+    }
+
+    #[cfg(not(target_os = "android"))]
     let mut roots = Vec::new();
+    #[cfg(not(target_os = "android"))]
     let home = default_browse_path_value();
+    #[cfg(not(target_os = "android"))]
     roots.push(BrowserRoot {
         label: "HOME".into(),
         path: home.to_string_lossy().to_string(),
@@ -512,7 +550,7 @@ fn filesystem_roots() -> Vec<BrowserRoot> {
         }
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(all(not(target_os = "windows"), not(target_os = "android")))]
     {
         roots.push(BrowserRoot {
             label: "ROOT".into(),
@@ -520,14 +558,17 @@ fn filesystem_roots() -> Vec<BrowserRoot> {
         });
     }
 
-    roots.dedup_by(|a, b| {
-        if cfg!(windows) {
-            a.path.eq_ignore_ascii_case(&b.path)
-        } else {
-            a.path == b.path
-        }
-    });
-    roots
+    #[cfg(not(target_os = "android"))]
+    {
+        roots.dedup_by(|a, b| {
+            if cfg!(windows) {
+                a.path.eq_ignore_ascii_case(&b.path)
+            } else {
+                a.path == b.path
+            }
+        });
+        roots
+    }
 }
 
 #[tauri::command]
@@ -3066,6 +3107,7 @@ fn current_oxide_build_number() -> u64 {
         .unwrap_or(1)
 }
 
+#[cfg(desktop)]
 fn updater_display_version(update: &tauri_plugin_updater::Update) -> String {
     update
         .raw_json
@@ -3076,6 +3118,7 @@ fn updater_display_version(update: &tauri_plugin_updater::Update) -> String {
         .unwrap_or_else(|| format!("B{}", updater_release_version(update)))
 }
 
+#[cfg(desktop)]
 fn updater_release_version(update: &tauri_plugin_updater::Update) -> String {
     update
         .raw_json
@@ -3086,6 +3129,7 @@ fn updater_release_version(update: &tauri_plugin_updater::Update) -> String {
         .unwrap_or_else(|| update.version.to_string())
 }
 
+#[cfg(desktop)]
 fn updater_build_number(update: &tauri_plugin_updater::Update) -> u64 {
     update
         .raw_json
@@ -3113,6 +3157,7 @@ fn oxide_release_is_newer(
     Ok(remote > current || (remote == current && remote_build > current_build))
 }
 
+#[cfg(desktop)]
 fn remote_oxide_is_newer(update: &tauri_plugin_updater::Update) -> Result<bool, String> {
     let remote_version = updater_release_version(update);
     oxide_release_is_newer(
@@ -3123,6 +3168,7 @@ fn remote_oxide_is_newer(update: &tauri_plugin_updater::Update) -> Result<bool, 
     )
 }
 
+#[cfg(desktop)]
 async fn raw_oxide_update(app: &AppHandle) -> Result<Option<tauri_plugin_updater::Update>, String> {
     // Tauri's default comparator only understands SemVer and would normally
     // reject an equal 1.3.5 before Rivet could notice Build 1 -> Build 2.
@@ -3145,6 +3191,7 @@ async fn raw_oxide_update(app: &AppHandle) -> Result<Option<tauri_plugin_updater
         .map_err(|error| format!("Could not check the Rivet release feed: {error}"))
 }
 
+#[cfg(desktop)]
 async fn available_oxide_update(app: &AppHandle) -> Result<Option<tauri_plugin_updater::Update>, String> {
     let Some(update) = raw_oxide_update(app).await? else {
         return Ok(None);
@@ -3157,6 +3204,7 @@ async fn available_oxide_update(app: &AppHandle) -> Result<Option<tauri_plugin_u
     }
 }
 
+#[cfg(desktop)]
 #[tauri::command]
 async fn oxide_update_check(app: AppHandle) -> Result<Option<RivetUpdateInfo>, String> {
     let update = available_oxide_update(&app).await?;
@@ -3208,6 +3256,7 @@ mod updater_version_tests {
     }
 }
 
+#[cfg(desktop)]
 fn installed_updater_helper(install_dir: &Path) -> Result<PathBuf, String> {
     let direct = install_dir.join(if cfg!(windows) { "oxide-updater.exe" } else { "oxide-updater" });
     if direct.is_file() {
@@ -3232,6 +3281,7 @@ fn installed_updater_helper(install_dir: &Path) -> Result<PathBuf, String> {
         .ok_or_else(|| "Rivet Update Service was not found beside the installed editor. Install B1.3.2 once with the normal installer before package updates can take over.".to_string())
 }
 
+#[cfg(desktop)]
 #[tauri::command]
 async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64) -> Result<RivetUpdateStageResult, String> {
     let update = available_oxide_update(&app)
@@ -3395,6 +3445,18 @@ async fn oxide_update_prepare(app: AppHandle, version: String, build_number: u64
         build_number,
         helper_started: true,
     })
+}
+
+#[cfg(mobile)]
+#[tauri::command]
+async fn oxide_update_check(_app: AppHandle) -> Result<Option<RivetUpdateInfo>, String> {
+    Ok(None)
+}
+
+#[cfg(mobile)]
+#[tauri::command]
+async fn oxide_update_prepare(_app: AppHandle, _version: String, _build_number: u64) -> Result<RivetUpdateStageResult, String> {
+    Err("Rivet Android preview updates are installed through Android packages. In-app package updating will be designed after the mobile backend is established.".into())
 }
 
 #[tauri::command]
@@ -3653,8 +3715,11 @@ fn quit_app(app: AppHandle, debugger_runtime: State<'_, debugger::DebuggerRuntim
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .setup(|_| {
+        .setup(|app| {
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+
+            #[cfg(desktop)]
             thread::spawn(|| {
                 thread::sleep(Duration::from_secs(5));
                 let update_root = env::temp_dir().join("OxideEditor");

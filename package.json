@@ -12,7 +12,11 @@
     "prepare:updater": "node scripts/prepare-updater-sidecar.mjs",
     "release:build": "node scripts/increment-build.mjs",
     "validate:themes": "node scripts/validate-semantic-contrast.mjs",
-    "validate:layout": "node scripts/validate-settings-layout.mjs"
+    "validate:layout": "node scripts/validate-settings-layout.mjs",
+    "android:init": "tauri android init",
+    "android:dev": "tauri android dev",
+    "android:build": "tauri android build -- --apk --target aarch64 --debug",
+    "validate:mobile": "node scripts/validate-mobile-preview.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1"
@@ -25,5 +29,5 @@
   "engines": {
     "node": ">=24"
   },
-  "buildNumber": 8
+  "buildNumber": 9
 }

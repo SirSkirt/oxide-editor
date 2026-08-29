@@ -1,0 +1,22 @@
+{
+  "identifier": "com.rivet.rde.preview",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Rivet RDE"
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "externalBin": [],
+    "android": {
+      "versionCode": 1030609
+    }
+  }
+}

@@ -1,6 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import './styles.css';
+import './mobile/mobile.css';
+import { createAdaptiveLayoutController } from './mobile/layout.js';
+import { applyAndroidEditorPreview, isAndroidPlatform } from './mobile/android-preview.js';
 import rivetLogo from './assets/rivet-logo.png';
 import {
   THEME_COMPONENTS,
@@ -81,6 +84,7 @@ const state = {
   mobilePane: 'editor',
   projectPath: '',
   platform: { os: 'unknown', arch: 'unknown', pathCaseSensitive: false, automaticUpdates: false, updateMode: 'unknown' },
+  toolchain: { cargo: false, rustc: false, buildReady: false },
   tabs: [],
   activeTabPath: '',
   currentFile: '',
@@ -309,7 +313,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 8</div>
+        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 9</div>
         <h1>Welcome to Rivet</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -456,7 +460,7 @@ app.innerHTML = `
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>RIVET B1.3.6 · BUILD 8</span>
+      <span>RIVET B1.3.6 · BUILD 9</span>
     </footer>
   </main>
 
@@ -910,6 +914,7 @@ async function detectPlatform() {
     const info = await invoke('platform_info');
     state.platform = info;
     document.documentElement.dataset.oxideOs = info.os || 'unknown';
+    applyAndroidEditorPreview({ state, els });
   } catch (error) {
     console.warn('Could not detect Rivet platform information:', error);
   }
@@ -1179,48 +1184,31 @@ function persistLayoutMode(mode) {
   try { localStorage.setItem(LAYOUT_STORAGE_KEY, mode); } catch { /* restricted webview: non-fatal */ }
 }
 
-function layoutDescription(mode = state.layout) {
-  return mode === 'mobile'
-    ? 'Mobile Layout uses a single primary workspace with Files / Editor / Cargo switching and touch-friendly chrome.'
-    : 'Desktop Layout keeps Rivet’s full multi-panel workbench visible at the same time.';
-}
+let adaptiveLayout = null;
 
-function setMobilePane(pane = 'editor') {
-  const allowed = ['project', 'editor', 'cargo', 'tutorial'];
-  const next = allowed.includes(pane) ? pane : 'editor';
-  state.mobilePane = next;
-  els.shell.dataset.mobilePane = next;
-  els.mobileWorkspaceBar?.querySelectorAll('[data-mobile-pane]').forEach((button) => {
-    button.classList.toggle('active', button.dataset.mobilePane === next);
-    button.setAttribute('aria-pressed', button.dataset.mobilePane === next ? 'true' : 'false');
-  });
-  if (state.layout === 'mobile') {
-    if (next === 'project' && !state.view.project) setViewPanel('project', true);
-    if (next === 'cargo' && !state.view.cargo) setViewPanel('cargo', true);
-    if (next === 'tutorial' && !state.tutorial.active) setMobilePane('editor');
-  }
-}
-
-function applyLayoutMode(mode, { persist = true } = {}) {
-  const next = mode === 'mobile' ? 'mobile' : 'desktop';
-  state.layout = next;
-  document.documentElement.dataset.layout = next;
-  els.shell.dataset.layout = next;
-  if (persist) persistLayoutMode(next);
-  if (els.settingsLayoutSelect) els.settingsLayoutSelect.value = next;
-  if (els.settingsLayoutDescription) els.settingsLayoutDescription.textContent = layoutDescription(next);
-  if (next === 'mobile') {
-    if (!['project', 'editor', 'cargo', 'tutorial'].includes(state.mobilePane)) state.mobilePane = 'editor';
-    setMobilePane(state.tutorial.active ? 'tutorial' : state.mobilePane);
-    requestAnimationFrame(() => {
-      try { updateSyntaxHighlight(); syncSyntaxScroll(); } catch (error) { console.warn('Could not refresh editor after mobile layout change:', error); }
-    });
-  } else {
-    requestAnimationFrame(() => {
-      try { updateSyntaxHighlight(); syncSyntaxScroll(); } catch (error) { console.warn('Could not refresh editor after desktop layout change:', error); }
+function getAdaptiveLayout() {
+  if (!adaptiveLayout) {
+    adaptiveLayout = createAdaptiveLayoutController({
+      state,
+      root: document.documentElement,
+      shell: els.shell,
+      workspaceBar: els.mobileWorkspaceBar,
+      settingsSelect: els.settingsLayoutSelect,
+      settingsDescription: els.settingsLayoutDescription,
+      persistLayout: persistLayoutMode,
+      ensurePanel: (panel) => setViewPanel(panel, true),
+      refreshEditor: () => {
+        try { updateSyntaxHighlight(); syncSyntaxScroll(); }
+        catch (error) { console.warn('Could not refresh editor after layout change:', error); }
+      },
     });
   }
+  return adaptiveLayout;
 }
+
+function layoutDescription(mode = state.layout) { return getAdaptiveLayout().description(mode); }
+function setMobilePane(pane = 'editor') { return getAdaptiveLayout().setPane(pane); }
+function applyLayoutMode(mode, options = {}) { return getAdaptiveLayout().apply(mode, options); }
 
 function openSettings() {
   renderThemeSelectors();
@@ -1367,16 +1355,19 @@ function updateMenuAvailability() {
     button.disabled = !projectLoaded;
   });
   document.querySelectorAll('[data-menu-action="check"], [data-menu-action="build"], [data-menu-action="run"], [data-menu-action="test"], [data-menu-action="clean"], [data-menu-action="analyze-now"]').forEach((button) => {
-    button.disabled = !projectLoaded || cargoBusy;
+    button.disabled = !projectLoaded || cargoBusy || !state.toolchain.buildReady;
+    if (!state.toolchain.buildReady) button.title = isAndroidPlatform(state) ? 'Android Rust toolchain backend is planned for a later build.' : 'Cargo and rustc are required.';
   });
   document.querySelectorAll('[data-menu-action="show-terminal"]').forEach((button) => {
-    button.disabled = !projectLoaded;
+    button.disabled = !projectLoaded || !state.toolchain.buildReady;
   });
   document.querySelectorAll('[data-menu-action="add-dependency"]').forEach((button) => {
     button.disabled = !projectLoaded || cargoBusy;
   });
   document.querySelectorAll('.command-button').forEach((button) => {
-    button.disabled = !projectLoaded || cargoBusy;
+    const needsToolchain = button.matches('[data-action], [data-debug-action="start"]');
+    button.disabled = !projectLoaded || cargoBusy || (needsToolchain && !state.toolchain.buildReady);
+    if (needsToolchain && !state.toolchain.buildReady) button.title = isAndroidPlatform(state) ? 'Android Rust toolchain backend is planned for a later build.' : 'Cargo and rustc are required.';
   });
   document.querySelectorAll('[data-check="live-check"]').forEach((check) => {
     check.textContent = state.liveCheck ? '✓' : '';
@@ -1396,7 +1387,7 @@ function updateMenuAvailability() {
     button.disabled = !projectLoaded || !fileLoaded || !state.completer.available || !state.currentFile?.toLowerCase().endsWith('.rs');
   });
   document.querySelectorAll('[data-menu-action="debug-start"], [data-debug-action="start"]').forEach((button) => {
-    button.disabled = !projectLoaded || state.buildRunning || state.terminalRunning || state.debugger.running;
+    button.disabled = !projectLoaded || !state.toolchain.buildReady || !state.debugger.available || state.buildRunning || state.terminalRunning || state.debugger.running;
   });
   document.querySelectorAll('[data-menu-action="debug-continue"], [data-debug-action="continue"]').forEach((button) => {
     button.disabled = !state.debugger.running || !state.debugger.stopped;
@@ -1430,6 +1421,16 @@ async function detectToolchain() {
     setLamp(els.rustcLamp, info.rustc_found);
     setLamp(els.welcomeCargoLamp, info.cargo_found);
     setLamp(els.welcomeRustcLamp, info.rustc_found);
+    state.toolchain.cargo = Boolean(info.cargo_found);
+    state.toolchain.rustc = Boolean(info.rustc_found);
+    state.toolchain.buildReady = Boolean(info.backend_ready ?? (info.cargo_found && info.rustc_found));
+    if (isAndroidPlatform(state)) {
+      applyAndroidEditorPreview({ state, els });
+      state.completer.available = false;
+      state.debugger.available = false;
+      updateMenuAvailability();
+      return;
+    }
     try {
       const analyzer = await invoke('rust_analyzer_status');
       state.completer.available = Boolean(analyzer.available);
@@ -1476,7 +1477,7 @@ function fileBadge(name) {
 }
 
 async function warmRustAnalyzer(projectPath = state.projectPath) {
-  if (!projectPath || !state.completer.enabled || !state.completer.available) return;
+  if (!projectPath || isAndroidPlatform(state) || !state.completer.enabled || !state.completer.available) return;
   els.analyzerStatus.textContent = 'ANALYZER: STARTING';
   try {
     await invoke('rust_analyzer_warmup', { projectPath });
@@ -2099,7 +2100,7 @@ function clearSemanticReadability() {
 }
 
 function scheduleSemanticReadability(delay = 260) {
-  if (!syntaxHighlightEnabled() || !state.projectPath || !state.completer.available) {
+  if (!syntaxHighlightEnabled() || !state.projectPath || isAndroidPlatform(state) || !state.completer.available) {
     clearSemanticReadability();
     updateSyntaxHighlight();
     return;
@@ -2259,7 +2260,7 @@ async function jumpToDiagnostic(diagnostic) {
 }
 
 function scheduleAnalysis(delay = 900) {
-  if (!state.liveCheck || !state.projectPath || state.buildRunning || state.terminalRunning || state.debugger.running) return;
+  if (!state.toolchain.buildReady || !state.liveCheck || !state.projectPath || state.buildRunning || state.terminalRunning || state.debugger.running) return;
   if (!activeTab()?.name.toLowerCase().endsWith('.rs')) return;
   if (state.analysisTimer) clearTimeout(state.analysisTimer);
   state.analysisTimer = setTimeout(() => {
@@ -2269,6 +2270,10 @@ function scheduleAnalysis(delay = 900) {
 }
 
 async function runDiagnostics({ silent = false, force = false } = {}) {
+  if (!state.toolchain.buildReady) {
+    els.analysisStatus.textContent = isAndroidPlatform(state) ? 'RUST CHECK: BACKEND PENDING' : 'RUST CHECK: TOOLCHAIN MISSING';
+    return;
+  }
   if (!state.projectPath || state.buildRunning || state.terminalRunning || state.debugger.running) return;
   if (state.analysisRunning) {
     state.analysisQueued = true;
@@ -2444,6 +2449,10 @@ function setBuildRunning(running, action = '') {
 }
 
 async function cargoAction(action) {
+  if (!state.toolchain.buildReady) {
+    if (isAndroidPlatform(state)) showInfo('ANDROID BACKEND PENDING', "<p>Build, Check, Test and Clean will be enabled after Rivet's Android Rust toolchain backend is implemented.</p>");
+    return;
+  }
   if (!state.projectPath || state.buildRunning || state.terminalRunning || state.debugger.running) return;
   if (!await saveAllDirtyTabs()) return;
   if (!state.view.build) setViewPanel('build', true);
@@ -2478,6 +2487,10 @@ function projectLikelyGui() {
 }
 
 function requestRun() {
+  if (!state.toolchain.buildReady) {
+    if (isAndroidPlatform(state)) showInfo('ANDROID BACKEND PENDING', '<p>Program execution is not part of the Build 9 Android editor preview yet.</p>');
+    return;
+  }
   if (!state.projectPath || state.buildRunning || state.terminalRunning || state.debugger.running) return;
   els.runProjectName.textContent = state.manifest?.package_name || pathBase(state.projectPath);
   if (state.tutorial.active && currentTutorialStep()?.run_required) {
@@ -2819,6 +2832,10 @@ async function refreshDebugThreads(preferredThreadId = null) {
 }
 
 async function startDebugging() {
+  if (!state.toolchain.buildReady) {
+    if (isAndroidPlatform(state)) showInfo('ANDROID BACKEND PENDING', '<p>LLDB debugging will be enabled after the Android toolchain/runtime backend exists.</p>');
+    return;
+  }
   if (!state.projectPath || state.debugger.running || state.buildRunning || state.terminalRunning) return;
   if (!state.debugger.available) {
     showInfo('DEBUGGER NOT FOUND', `<p>${escapeHtml(state.debugger.message || 'Rivet could not find lldb-dap.')}</p><p>Rivet uses LLDB's Debug Adapter Protocol for structured Rust debugging.</p>`);
@@ -4490,7 +4507,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 8</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, five built-in material themes, theme-aware Semantic Readability Colors, custom Theme Workshop recipes, centralized Settings, and user-selectable Desktop/Mobile workspace layouts.</p></div>`);
+  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 9</span><p>A Rust-first IDE for Windows and Linux with an Android editor preview, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, five built-in material themes, theme-aware Semantic Readability Colors, custom Theme Workshop recipes, centralized Settings, and user-selectable Desktop/Mobile workspace layouts.</p></div>`);
 }
 
 function showShortcuts() {
@@ -4622,9 +4639,7 @@ els.settingsCustomTheme.addEventListener('click', () => {
   els.settingsDialog.close();
   openThemeStudio();
 });
-els.mobileWorkspaceBar.querySelectorAll('[data-mobile-pane]').forEach((button) => {
-  button.addEventListener('click', () => setMobilePane(button.dataset.mobilePane));
-});
+getAdaptiveLayout().bind();
 
 $('#theme-studio-close').addEventListener('click', () => els.themeStudioDialog.close());
 $('#theme-studio-cancel').addEventListener('click', () => els.themeStudioDialog.close());
@@ -5162,4 +5177,4 @@ resetLayout({ resetBuildBay: false });
 restoreBuildBayHeight();
 setProjectUiState();
 detectPlatform().finally(() => detectToolchain());
-window.setTimeout(() => checkForRivetUpdates({ manual: false }), 1400);
+window.setTimeout(() => { if (!isAndroidPlatform(state)) checkForRivetUpdates({ manual: false }); }, 1400);

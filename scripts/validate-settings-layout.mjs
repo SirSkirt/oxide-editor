@@ -2,6 +2,7 @@ import fs from 'node:fs';
 
 const main = fs.readFileSync('src/main.js', 'utf8');
 const css = fs.readFileSync('src/styles.css', 'utf8');
+const mobileCss = fs.readFileSync('src/mobile/mobile.css', 'utf8');
 const requiredMain = [
   'data-menu-action="settings"',
   'id="settings-dialog"',
@@ -34,7 +35,7 @@ const requiredCss = [
   ':root[data-layout="mobile"] .settings-field select',
 ];
 for (const token of requiredCss) {
-  if (!css.includes(token)) throw new Error(`Missing mobile layout CSS contract: ${token}`);
+  if (!mobileCss.includes(token)) throw new Error(`Missing mobile layout CSS contract: ${token}`);
 }
 
 
@@ -57,5 +58,6 @@ if (viewMenu.includes('Theme Workshop') || viewMenu.includes('theme-metallic') |
 console.log('PASS Tools → Settings contains theme and layout preferences');
 console.log('PASS Mobile/Desktop layout preference is persisted and user-selectable');
 console.log('PASS Mobile workspace keeps Files / Editor / Cargo access without changing functionality');
+console.log('PASS Mobile layout styling is isolated in src/mobile/mobile.css');
 console.log('PASS Theme controls were removed from View and centralized in Settings');
 console.log('PASS persistent editor assistance toggles live in Settings');

@@ -1,365 +1,63 @@
-# Rivet B1.3.6 · Build 8
+# Rivet B1.3.6 · Build 9
 
+**Rivet — Rust Development Environment**
 
-**Rivet** is the product name; **Rust Development Environment** is its tagline. The default presentation theme remains named **Oxide**.
-B1.3.6 Build 8 adds **centralized application Settings and user-selectable Desktop/Mobile layouts**. Open **Tools → Settings…** to choose the active theme or layout. Theme selection is now a compact dropdown with a **Custom Theme** button directly beneath it, which opens the existing Theme Workshop. Future application preferences belong in this Settings surface instead of being scattered through unrelated menus.
+Build 9 is the first Android application milestone. It deliberately ships the **editor before the Android Rust toolchain backend** so the mobile shell, file/project workflow, themes, layouts and Android packaging can be tested independently from PRoot/rustc/Cargo work.
 
-Layout mode is explicitly user-controlled and persisted. **Desktop Layout** keeps Rivet's full multi-panel workbench. **Mobile Layout** keeps the editor primary and adds a compact Files / Editor / Cargo workspace switcher, touch-friendlier menus/commands, narrow-screen dialogs, and a mobile-safe file browser. Rivet may choose a sensible layout only on first run; after a user chooses Desktop or Mobile it does not override that choice based on device or viewport size. A Windows tablet can therefore use Mobile Layout, while a docked or large-screen device can use Desktop Layout. The layout architecture is platform-independent even though the current packaged targets remain Windows and Linux.
+## Android editor preview
 
-B1.3.6 Build 7 remains the **industrial material texture pass**. Metallic represents forged/brushed iron with visible directional grain, machining lines, surface variation, edge highlights, darker recessed edges, and textured controls/panels. Rust uses that same iron foundation and adds irregular oxidation, patina, darker pitting, seam/corner buildup, and exposed iron instead of a uniform brown wash. The editor backdrop receives a deliberately quieter version so the material remains visible without competing with Semantic Readability Colors.
+The Android build can:
 
-Build 4 introduced the **composable presentation system**. Layout and functionality remain unchanged; themes are recipes assembled from independent material, UI palette, control-treatment, and Semantic Readability components.
+- launch Rivet as a native Tauri Android application;
+- use Mobile Layout or Desktop Layout from **Tools → Settings**;
+- use all built-in/custom presentation themes;
+- create a normal Rust/Cargo-shaped project without invoking Cargo (Rivet writes `Cargo.toml` and `src/main.rs` itself);
+- open projects stored in Rivet's private Android workspace;
+- browse project files, open multiple tabs, edit and save text files;
+- edit Cargo.toml metadata/dependencies through Rivet's existing manifest tools;
+- use lexical Semantic Readability highlighting even without rust-analyzer.
 
-The five built-ins still ship as **Oxide**, **Metallic**, **Rust**, **Modern (Dark)**, and **Modern (Light)**, but they now use the same recipe model as user-created themes. **Tools → Settings…** owns theme selection. The Theme dropdown contains built-in and saved custom themes, while the **Custom Theme** button opens Theme Workshop to create, edit, save, delete, preview, and apply composable presentation recipes.
+The Android build intentionally cannot yet:
 
-Material treatment is no longer treated as a color swap. **Metallic** adds forged/brushed iron grain, machining marks, edge highlights, recessed depth, worn surface variation, and raised controls. **Rust** uses the same forged-iron foundation with aged iron, irregular patina, oxidation around seams/edges, dark pitting, exposed metal, and rougher weathering. **Modern** material intentionally removes most industrial texture.
+- run Cargo or rustc;
+- run live Cargo diagnostics;
+- use rust-analyzer semantic intelligence/completion;
+- build/run/test/clean Rust programs;
+- use LLDB debugging;
+- run the interactive tutorial, which depends on a real Rust toolchain;
+- browse arbitrary shared-device storage through Android's Storage Access Framework.
 
-**Semantic Readability Colors remain independently selectable.** rust-analyzer still supplies semantic meaning; the active theme recipe supplies the readability palette for variables, functions, types, macros, strings, numbers, comments, keywords, punctuation, and now a neutral/fallback source role. Theme Workshop includes a live Rust readability preview and warns when a semantic preset is designed for the opposite editor-surface tone.
+Those controls remain visible where appropriate but are disabled with a clear **Android backend pending** explanation. This keeps the real desktop workflow recognizable while avoiding fake compiler behavior.
 
-Rivet is a Rust-first desktop IDE built with Tauri 2. The frontend is vanilla HTML/CSS/JavaScript; filesystem access, Cargo, compiler diagnostics, project creation, dependency editing, tutorial evaluation, process I/O, language intelligence, debugging, and update orchestration are handled by Rust.
+## Mobile code separation
 
-B1.3.5 Build 3 is a **workbench-polish and reliability build**. It keeps Rivet's existing forged-metal layout and workflow, but tightens the visual hierarchy of panels, tabs, command controls, project rows, Cargo/dependency cards, the editor chrome, and the Build Bay. It does not replace the current UI with a new layout.
-
-The **Build Bay is now vertically resizable** from its forged top-edge grip. Its height is clamped so the output remains usable without swallowing the editor, is remembered between sessions, and can be reset by double-clicking the grip, pressing Home while it is focused, or using View → Reset Layout.
-
-Build 3 also hardens **Windows and Linux automatic updates around Rivet's real identity: `(release_version, build)`**. A machine on B1.3.5 Build 1 can therefore see B1.3.5 Build 2/3 even though the public SemVer is still `1.3.5`. Update requests bypass stale cache reuse, release feeds are validated before publication, every build gets its own GitHub Release tag such as `v1.3.5-b3`, and the release stays draft until both Windows and Linux assets are ready.
-
-The B1.3.5 Build 2 LLDB/DAP debugger expansion and **Semantic Readability Colors** remain intact. Semantic colors use rust-analyzer tokens when available with the lexical highlighter as fallback; ordinary variables/identifiers stay steel blue, and red remains reserved for actual errors/problems.
-
-## Themes
-
-All B1.3.6 themes use the **same DOM, grid, controls, commands, panel locations, and workflows**. A theme is not a workspace preset. Build 4 separates presentation into four independently composable parts:
-
-1. **Material** — surface texture, physical depth, panel treatment, seams, and patina.
-2. **Color Palette** — UI surface, text, border, accent, editor, and status colors.
-3. **Control Treatment** — button/tab edge treatment, bevel/pressed behavior, and modern-vs-industrial control styling.
-4. **Semantic Readability** — theme-aware code colors for Rust semantic categories.
-
-Built-in recipes:
-
-- **Oxide** — Oxide Iron + Oxide palette + Oxide Industrial controls + Oxide Readability
-- **Metallic** — Forged Iron + Metallic palette + Forged controls + Metallic Readability
-- **Rust** — Rusted Iron + Rust palette + Weathered controls + Rust Readability
-- **Modern (Dark)** — Modern Flat + Modern Dark palette + Modern controls + Modern Dark Readability
-- **Modern (Light)** — Modern Flat + Modern Light palette + Modern controls + Modern Light Readability
-
-### Theme Workshop / custom themes
-
-Use **Tools → Settings… → Custom Theme** to create a custom recipe. A custom theme can mix components independently—for example Forged Iron material with the Rust UI palette, Modern controls, and Oxide Semantic Readability Colors. The Workshop can preview the unsaved recipe, and closing/canceling restores the active theme. Saved custom themes appear in the Settings theme dropdown and persist between sessions.
-
-Custom themes are stored in a versioned JSON schema under `oxide.appearance.customThemes`; the active theme ID remains in `oxide.appearance.theme`. The schema already reserves separate palette/semantic override maps so later builds can add granular user-defined colors or import/export without replacing the theme engine.
-
-## Settings and layouts
-
-Application preferences are centralized under **Tools → Settings…**. Build 8 currently exposes:
-
-- **Theme** — a dropdown containing the five built-in themes plus saved custom themes.
-- **Custom Theme** — opens Theme Workshop for composable material/palette/control/Semantic Readability recipes.
-- **Layout Mode** — explicit **Desktop Layout** or **Mobile Layout** selection.
-- **Live Rust Check** — persistent background diagnostic preference.
-- **Rust Code Analyzer/Completer** — persistent completion/intelligence preference.
-
-The selected theme and layout persist independently. Theme changes presentation/material; layout changes workspace arrangement. Neither is allowed to change Cargo projects, source files, compiler behavior, debugger behavior, or other application functionality.
-
-### Mobile Layout
-
-Mobile Layout is not a stripped-down edition of Rivet. It keeps the same project, Cargo, editor, debugger, tutorial, Build Bay, terminal, and update functionality while rearranging dense desktop panels for touch and narrow screens. The main workbench uses **Files / Editor / Cargo** switching (plus Tutorial while a lesson is active), horizontally scrollable Cargo commands, touch-friendly menu targets, a compact Build Bay, and mobile-safe dialogs/file browsing.
-
-The layout setting is intentionally independent of operating system or screen class. Rivet can pick a sensible first-run default, but once selected it respects the user's choice until changed in Settings.
-
-## Windows + Linux
-
-Supported release targets in B1.3.6:
-
-- **Windows x86_64** — NSIS installer plus Rivet's signed native ZIP update packages
-- **Linux x86_64 AppImage** — portable build with Rivet automatic package updates
-- **Linux x86_64 .deb** — native Debian/Ubuntu/Pop!_OS package with Polkit-authorized automatic updates
-
-### Oxide → Rivet Debian package migration
-
-B1.3.6 Build 3 adds `Provides`, `Replaces`, and `Conflicts` metadata for the former `oxide-editor` Debian package. This allows a machine with an existing Oxide `.deb` installation to install/update to the new `rivet` package even though both generations intentionally use the compatibility executable path `/usr/bin/oxide-editor`.
-
-The Linux CI build runs on Ubuntu 22.04 so the produced binaries target a reasonably old WebKitGTK/glibc baseline instead of accidentally requiring the newest Ubuntu release.
-
-### Linux Rust toolchain discovery
-
-Linux desktop launchers do not necessarily inherit PATH additions from `.bashrc`, `.profile`, or other interactive shell configuration. Rivet now resolves Rust tools from PATH **and** the standard rustup location:
+Mobile work is no longer mixed into the main desktop files. Android/mobile-specific code lives under:
 
 ```text
-~/.cargo/bin/cargo
-~/.cargo/bin/rustc
+src/mobile/
+  mobile.css
+  layout.js
+  android-preview.js
+
+src-tauri/src/mobile/
+  mod.rs
+
+src-tauri/tauri.android.conf.json
+src-tauri/capabilities/mobile.json
 ```
 
-This prevents a desktop-launched Rivet from reporting that Cargo is missing when it works normally in a terminal.
+`src/main.js` only talks to the small mobile/layout interfaces it needs. Desktop updater support remains desktop-only.
 
-### Linux path handling
+## Android workspace
 
-Rivet now treats Linux paths as case-sensitive. Files such as `Thing.rs` and `thing.rs` are no longer normalized as though they were the same file.
+Until Android Storage Access Framework support is implemented, Rivet creates/opens projects inside its app-private **RIVET WORKSPACE**. This lets Build 9 prove reliable editing and saving without mixing storage-permission work into the toolchain milestone.
 
-## Rivet Package Update System
+## Android packaging
 
-B1.3.6 continues to use the platform-specific signed update packages introduced in B1.3.2.
+GitHub Actions now verifies an ARM64 Android APK in addition to Windows/Linux. The GitHub release workflow also publishes an **Android preview APK**. Build 9 uses the Android preview application id `com.rivet.rde.preview`; production Android signing/package identity will be established before Rivet Android is treated as a stable distribution target.
 
-Rivet checks:
+The Android `versionCode` is build-specific so internal B1.3.6 builds can advance independently from the public SemVer string.
 
-```text
-oxide-latest-{{target}}-{{arch}}.json
-```
+## Existing desktop features retained
 
-which resolves to feeds such as:
-
-```text
-oxide-latest-windows-x86_64.json
-oxide-latest-linux-x86_64.json
-```
-
-The downloaded package is still cryptographically verified with Rivet's existing Tauri updater signing key before Rivet hands it to its own updater logic.
-
-### Windows update package
-
-```text
-oxide-update-windows-x86_64-1.3.6-b1.zip
-├── oxide-editor.exe
-├── oxide-updater.exe
-└── update-package.json
-```
-
-The temporary Rivet Update Service backs up the installed runtime, replaces it, rolls back on failure, and restarts Rivet.
-
-### Linux update package
-
-```text
-oxide-update-linux-x86_64-1.3.6-b1.zip
-├── oxide-editor.AppImage
-├── oxide-editor.deb
-└── update-package.json
-```
-
-For AppImage installs, Rivet downloads and verifies the package, launches the Linux update helper, exits, replaces the original AppImage with rollback protection, restores executable permissions, and relaunches Rivet.
-
-For `.deb` installs, Rivet first verifies the same signed package as the normal user. After Rivet exits, the Linux helper invokes `pkexec` to ask the desktop's registered Polkit authentication agent for permission, then runs `dpkg --install` on the staged `.deb`. Rivet never receives or stores the user's password. After the package manager succeeds, the helper relaunches Rivet.
-
-Unpackaged development builds deliberately do not self-install system packages.
-
-### Compatibility bridge
-
-`latest.json` is still published for B1.3.1 and older updater-enabled **Windows** builds. It points to the signed NSIS installer so older installations can cross the bridge into B1.3.2. B1.3.2 and newer use the platform-specific Rivet package feeds above.
-
-## Compact-screen / laptop layout
-
-B1.3.4 treats the window height as a hard layout constraint. The workspace uses a zero-minimum grid row, the Build Bay owns its own non-overlapping row, and the Project/Cargo/Tutorial panels all use independently scrollable bodies. The Tutorial action controls are sticky at the bottom of the lesson scroller so **Next Step**, **Complete Lesson**, and navigation controls remain reachable on shorter displays.
-
-The Build Bay also scales down on short windows instead of pushing the editor outside the application frame.
-
-## GitHub Actions
-
-Every normal build now verifies both platforms:
-
-```text
-Windows x64 verification
-Linux x64 verification (Ubuntu 22.04 / Pop!_OS baseline)
-```
-
-A release produces both Windows and Linux assets in the same GitHub Release.
-
-Typical B1.3.6 assets:
-
-```text
-Windows
-├── Rivet ... setup.exe
-├── oxide-update-windows-x86_64-1.3.6-b1.zip
-├── oxide-update-windows-x86_64-1.3.6-b1.zip.sig
-├── oxide-latest-windows-x86_64.json
-└── latest.json
-
-Linux
-├── Rivet ... amd64.deb
-├── Rivet ... amd64.AppImage
-├── oxide-update-linux-x86_64-1.3.6-b1.zip
-├── oxide-update-linux-x86_64-1.3.6-b1.zip.sig
-└── oxide-latest-linux-x86_64.json
-```
-
-## Linux development on Pop!_OS / Ubuntu
-
-Run the included helper once (it also installs LLDB for Rivet debugging and the rust-analyzer rustup component when rustup is available):
-
-```bash
-./scripts/setup-linux.sh
-```
-
-Then:
-
-```bash
-npm install
-npm run tauri dev
-```
-
-Build local Linux bundles:
-
-```bash
-npm run tauri build -- --bundles deb,appimage
-```
-
-## Windows development
-
-Requirements:
-
-- Node.js 24+ / npm
-- current Rust toolchain with Cargo
-- Tauri 2 Windows prerequisites
-
-```powershell
-npm install
-npm run tauri dev
-```
-
-Release-style Windows bundle:
-
-```powershell
-npm run tauri build -- --bundles nsis
-```
-
-Windows release builds use the GUI subsystem, so Rivet does not leave a background Command Prompt open.
-
-## Rust Code Analyzer/Completer
-
-Rivet includes its own Visual Studio-style Rust completion experience, backed by the real **rust-analyzer** language server.
-
-As you type Rust, Rivet requests context-aware suggestions from rust-analyzer and filters/ranks them against the current prefix. The popup can include local variables, functions, methods, fields, modules, structs, enums, traits, associated items, macros, and Rust keywords. A detail pane shows the symbol kind, signature/detail text, and documentation when rust-analyzer provides it.
-
-Controls:
-
-```text
-Type normally     automatic completion
-Ctrl+Space        request completion manually
-Up / Down         select a suggestion
-Enter / Tab       accept
-Escape            dismiss
-```
-
-Function-call signature help is also requested while entering arguments. Rivet applies rust-analyzer's replacement edits and additional import edits when they are supplied.
-
-Install/verify the analyzer with:
-
-```text
-rustup component add rust-analyzer
-rust-analyzer --version
-```
-
-Rivet starts one persistent rust-analyzer session per active Cargo project instead of spawning a new process for every keystroke. The same session supplies semantic tokens for **Semantic Readability Colors**, while Rivet keeps its lexical Rust highlighter as a fallback during analyzer startup. In B1.3.6 the semantic category and its presentation color are separated: rust-analyzer supplies meaning and the active theme supplies the palette. The status rail reports **ANALYZER: READY**, **NOT FOUND**, or **ERROR**.
-
-### Semantic Readability Colors
-
-The following is the **Oxide theme** palette. Metallic, Rust, Modern (Dark), and Modern (Light) remap the same semantic roles for readability within their own materials.
-
-```text
-Rust keywords          #D87941  rust orange
-Variables/identifiers  #83A6B8  steel blue
-Strings                #8FAF72  sage green
-Numbers/booleans       #D3A95F  amber/gold
-Types                  #C4A45F  brass/gold
-Macros                 #E99A62  bright copper/orange
-Functions/methods      #DDD0BF  warm cream
-Comments               #70786E  muted gray-green
-Operators/punctuation  neutral light gray/off-white
-```
-
-Red is not used as an ordinary source-code category; Rivet keeps it reserved for actual errors/problems.
-
-## Interactive Rust Tutorial
-
-The Beginner course contains **26 real Cargo lessons / 81 hands-on activities**, covering:
-
-- Hello World, variables, warnings/errors, mutability, and basic data types
-- functions, parameters, return values, conditions, and loops
-- Strings, vectors, structs, enums, and `match`
-- ownership, borrowing, string slices, and mutable references
-- methods, `Option`, `Result`, `HashMap`, and modules
-- real interactive stdin through Rivet's Run Terminal
-- combined mini-projects including Calculator and Scoreboard
-
-Tutorial teaching follows:
-
-**small example → one short explanation for each new syntax item → Now You Try → real compiler/run verification**
-
-Longer explanations remain optional behind **Learn More**. Challenge steps accept multiple valid solutions when the required concept and observable result are demonstrated, and output matching is case-insensitive unless capitalization itself is the objective.
-
-## Core editor highlights
-
-- no-project onboarding with **New Project**, **Open Project**, and **Tutorial**
-- Rivet-native project/file browser
-- normal Cargo project creation with version `0.0.1` by default
-- multi-file tabs with independent dirty/cursor/scroll state
-- automatic brace-aware indentation
-- **Rust Code Analyzer/Completer** powered by rust-analyzer/LSP
-- **Rivet Debugger** powered by LLDB/DAP with target/thread selection, conditional/log breakpoints, stepping/restart, expandable stack/locals, watches, and Debug Console
-- **Semantic Readability Colors** backed by rust-analyzer semantic tokens with a lexical fallback
-- five built-in presentation themes plus persistent user-created recipes from **Theme Workshop**
-- context-aware completion popup with details and signature help
-- Cargo Check / Build / Run / Test / Clean
-- Cargo.toml package/dependency GUI
-- live rustc diagnostics using `cargo check --message-format=json`
-- Friendly and Raw Cargo views
-- Problems pane and clickable compiler diagnostics
-- floating interactive Run Terminal with real stdin/stdout
-- GUI/native-window run mode
-- signed Rivet-native update packages
-
-## Versioning
-
-- Release version: `1.3.6`
-- User-facing version: **B1.3.6**
-- Current internal build number: **8**
-- Full installed identity: **Rivet B1.3.6 · Build 8**
-- B1.3.2 foundation codename: **The Compatibility Update**
-
-To move all editor/updater components to a future version:
-
-```powershell
-npm run release:version -- 1.3.6 B1.3.6 1
-```
-
-The version helper updates the main editor, Windows Update Service, and Linux Update Service together.
-
-
-### Build numbers
-
-Rivet keeps the public release version and the internal build number separate. This lets a rebuilt release update an existing installation without forcing a public version bump.
-
-For example:
-
-```text
-B1.3.6 · Build 7
-        ↓
-B1.3.6 · Build 8
-```
-
-The signed update feed carries `release_version` plus `build`, and Rivet compares both. GitHub update packages include the build in their filename. Every internal build gets its own release tag (`v1.3.6-b1`, `v1.3.6-b2`, and so on), so GitHub's `releases/latest/download/...` route advances even when the public Rivet version stays the same. For compatibility with older updater-enabled Rivet builds, the feed's required SemVer `version` is a monotonic updater sequence while `release_version` remains the actual Rivet release version.
-
-To increment only the build number:
-
-```powershell
-npm run release:build
-```
-
-To begin a new public version, reset the build to 1:
-
-```powershell
-npm run release:version -- 1.3.6 B1.3.6 1
-```
-
-## Release
-
-See [UPDATER_SETUP.md](UPDATER_SETUP.md) for signing-key and GitHub Actions details.
-
-### Updater dialog reliability
-
-B1.3.2 fixes an updater UI wiring bug inherited from B1.3.1: the **Later** and **Download & Update** controls are now application-level controls that are bound once at startup, independent of editor/project state. Unexpected frontend updater failures are also surfaced in the dialog instead of appearing as dead buttons.
-
-
-### B1.3.4 compact-screen/editor fixes
-
-- Inline diagnostics remain a single compact row instead of consuming the editor workspace.
-- Rust Code Analyzer/Completer UI is constrained to the editor viewport on smaller laptop displays.
-- GitHub-maintained JavaScript actions in CI/release workflows use Node.js 24-native current majors.
+Build 9 preserves the Windows/Linux debugger, updater, theme system, Semantic Readability Colors, resizable Build Bay, Settings, and both workspace layouts. Desktop behavior is not intentionally changed by the Android preview work.

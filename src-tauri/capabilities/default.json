@@ -7,5 +7,10 @@
   ],
   "permissions": [
     "core:default"
+  ],
+  "platforms": [
+    "linux",
+    "macOS",
+    "windows"
   ]
 }

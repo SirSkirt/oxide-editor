@@ -1,0 +1,255 @@
+/* Rivet mobile/adaptive layout presentation.
+   Kept separate from desktop styling so mobile work can evolve independently. */
+
+/* Mobile Layout --------------------------------------------------------- */
+:root[data-layout="mobile"] body { min-width: 0; }
+
+:root[data-layout="mobile"] .oxide-shell:not(.welcome-mode) {
+  --project-width: 100%;
+  --cargo-width: 100%;
+  --tutorial-width: 100%;
+  --build-height-default: clamp(118px, 24vh, 190px);
+  grid-template-rows: 48px 42px 48px 40px minmax(0, 1fr) var(--build-height) 25px;
+}
+:root[data-layout="mobile"] .oxide-shell.welcome-mode {
+  grid-template-rows: 48px 42px 48px minmax(0, 1fr) 25px;
+}
+
+:root[data-layout="mobile"] .oxide-shell > .brandbar { grid-row: 1; }
+:root[data-layout="mobile"] .oxide-shell > .menu-bar { grid-row: 2; }
+:root[data-layout="mobile"] .oxide-shell > .command-deck { grid-row: 3; }
+:root[data-layout="mobile"] .oxide-shell:not(.welcome-mode) > .mobile-workspace-bar { grid-row: 4; }
+:root[data-layout="mobile"] .oxide-shell:not(.welcome-mode) > .workspace { grid-row: 5; }
+:root[data-layout="mobile"] .oxide-shell:not(.welcome-mode) > .build-console { grid-row: 6; }
+:root[data-layout="mobile"] .oxide-shell:not(.welcome-mode) > .status-rail { grid-row: 7; }
+:root[data-layout="mobile"] .oxide-shell.welcome-mode > .welcome-screen { grid-row: 4; }
+:root[data-layout="mobile"] .oxide-shell.welcome-mode > .status-rail { grid-row: 5; }
+:root[data-layout="mobile"] .oxide-shell.welcome-mode > .mobile-workspace-bar { display: none; }
+
+:root[data-layout="mobile"] .brandbar {
+  min-width: 0;
+  gap: 8px;
+  padding-inline: 8px;
+}
+:root[data-layout="mobile"] .brand-mark { width: 32px; height: 32px; }
+:root[data-layout="mobile"] .brand-copy { min-width: 0; }
+:root[data-layout="mobile"] .brand-copy strong { font-size: 13px; }
+:root[data-layout="mobile"] .brand-copy span { display: none; }
+:root[data-layout="mobile"] .toolchain-lamps { display: none; }
+
+:root[data-layout="mobile"] .menu-bar {
+  min-width: 0;
+  padding: 0 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+:root[data-layout="mobile"] .menu-bar::-webkit-scrollbar { display: none; }
+:root[data-layout="mobile"] .menu-cluster {
+  min-width: max-content;
+  flex: 0 0 auto;
+}
+:root[data-layout="mobile"] .menu-trigger {
+  min-width: 56px;
+  padding-inline: 10px;
+  font-size: 10px;
+}
+:root[data-layout="mobile"] .menu-popup {
+  position: fixed;
+  z-index: 100;
+  top: 93px;
+  left: 6px;
+  right: 6px;
+  width: auto;
+  min-width: 0;
+  max-height: calc(100vh - 105px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+:root[data-layout="mobile"] .menu-popup button { min-height: 40px; font-size: 11px; }
+:root[data-layout="mobile"] .menu-project-readout { display: none; }
+:root[data-layout="mobile"] .profile-switch {
+  flex: 0 0 auto;
+  height: 31px;
+  margin: 5px 4px 5px 8px;
+}
+:root[data-layout="mobile"] .profile { min-width: 58px; }
+
+:root[data-layout="mobile"] .command-deck {
+  min-width: 0;
+  gap: 5px;
+  padding: 5px 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+:root[data-layout="mobile"] .command-deck::-webkit-scrollbar { display: none; }
+:root[data-layout="mobile"] .command-button {
+  flex: 0 0 auto;
+  min-width: 78px;
+  height: 37px;
+  padding-inline: 10px;
+}
+:root[data-layout="mobile"] .command-readout { display: none; }
+
+:root[data-layout="mobile"] .mobile-workspace-bar {
+  display: flex;
+  min-width: 0;
+  align-items: stretch;
+  border-top: 1px solid var(--t-border-strong, #090a09);
+  border-bottom: 1px solid var(--t-border-strong, #090a09);
+  background: var(--t-head, #292b29);
+  box-shadow: var(--t-shadow, inset 0 1px rgba(255,255,255,.06));
+}
+:root[data-layout="mobile"] .mobile-workspace-bar button {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 0;
+  border-right: 1px solid var(--t-border-strong, #090a09);
+  color: var(--t-muted, #8d8a82);
+  background: transparent;
+  font: 800 9px var(--t-ui-font, Consolas, monospace);
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+:root[data-layout="mobile"] .mobile-workspace-bar button:last-child { border-right: 0; }
+:root[data-layout="mobile"] .mobile-workspace-bar button.active {
+  color: var(--t-text, #d8d1c6);
+  background: var(--t-accent-wash, #32231c);
+  box-shadow: inset 0 -2px 0 var(--t-accent-hot, #d27a43);
+}
+:root[data-layout="mobile"] .mobile-tutorial-pane { display: none; }
+:root[data-layout="mobile"] .oxide-shell.tutorial-active .mobile-tutorial-pane { display: block; }
+
+:root[data-layout="mobile"] .workspace {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+:root[data-layout="mobile"] .workspace > .project-panel,
+:root[data-layout="mobile"] .workspace > .editor-stack,
+:root[data-layout="mobile"] .workspace > .tutorial-panel,
+:root[data-layout="mobile"] .workspace > .cargo-panel {
+  grid-column: 1;
+  grid-row: 1;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border-left: 0;
+  border-right: 0;
+}
+:root[data-layout="mobile"] .workspace > .project-panel,
+:root[data-layout="mobile"] .workspace > .editor-stack,
+:root[data-layout="mobile"] .workspace > .tutorial-panel,
+:root[data-layout="mobile"] .workspace > .cargo-panel { display: none; }
+:root[data-layout="mobile"] .oxide-shell[data-mobile-pane="project"] .workspace > .project-panel { display: grid; }
+:root[data-layout="mobile"] .oxide-shell[data-mobile-pane="editor"] .workspace > .editor-stack { display: grid; }
+:root[data-layout="mobile"] .oxide-shell[data-mobile-pane="cargo"] .workspace > .cargo-panel { display: grid; }
+:root[data-layout="mobile"] .oxide-shell[data-mobile-pane="tutorial"].tutorial-active .workspace > .tutorial-panel { display: grid; }
+
+:root[data-layout="mobile"] .panel-head,
+:root[data-layout="mobile"] .console-head { min-height: 34px; }
+:root[data-layout="mobile"] .tree-entry { min-height: 34px; height: 34px; font-size: 12px; }
+:root[data-layout="mobile"] .file-tab { min-width: 112px; }
+:root[data-layout="mobile"] .tab-rail { overflow: hidden; }
+:root[data-layout="mobile"] .file-tabs { overflow-x: auto; scrollbar-width: none; }
+:root[data-layout="mobile"] .file-tabs::-webkit-scrollbar { display: none; }
+:root[data-layout="mobile"] .save-button { min-width: 58px; }
+:root[data-layout="mobile"] .line-numbers { min-width: 42px; }
+:root[data-layout="mobile"] .code-editor,
+:root[data-layout="mobile"] .syntax-layer { font-size: 13px; line-height: 1.55; }
+
+:root[data-layout="mobile"] .build-console { min-width: 0; }
+:root[data-layout="mobile"] .build-console > .console-head {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+:root[data-layout="mobile"] .build-console > .console-head::-webkit-scrollbar { display: none; }
+:root[data-layout="mobile"] .console-head > div:first-child { flex: 0 0 auto; }
+:root[data-layout="mobile"] .console-tabs { flex: 0 0 auto; min-width: max-content; }
+:root[data-layout="mobile"] .console-tab { min-width: 62px; }
+:root[data-layout="mobile"] .status-rail {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+:root[data-layout="mobile"] .status-rail::-webkit-scrollbar { display: none; }
+:root[data-layout="mobile"] .status-rail span:first-child { flex: 0 0 auto; overflow: visible; }
+
+:root[data-layout="mobile"] .welcome-screen { padding: 12px; overflow: auto; }
+:root[data-layout="mobile"] .welcome-plate { width: 100%; max-width: none; padding: 18px 14px; }
+:root[data-layout="mobile"] .welcome-actions { grid-template-columns: 1fr; }
+:root[data-layout="mobile"] .welcome-action { min-height: 68px; }
+
+/* Dialogs need to remain usable in Mobile Layout even when Desktop Layout is
+   chosen on a small device later; this block is intentionally keyed to the
+   layout preference instead of viewport width. */
+:root[data-layout="mobile"] .oxide-dialog {
+  max-width: calc(100vw - 12px);
+}
+:root[data-layout="mobile"] .settings-dialog,
+:root[data-layout="mobile"] .theme-studio-dialog,
+:root[data-layout="mobile"] .dependency-dialog,
+:root[data-layout="mobile"] .run-dialog,
+:root[data-layout="mobile"] .tutorial-dialog,
+:root[data-layout="mobile"] .debug-target-dialog,
+:root[data-layout="mobile"] .breakpoint-dialog,
+:root[data-layout="mobile"] .intelligence-dialog,
+:root[data-layout="mobile"] .rename-dialog,
+:root[data-layout="mobile"] .message-dialog,
+:root[data-layout="mobile"] .update-dialog,
+:root[data-layout="mobile"] .info-dialog {
+  width: calc(100vw - 12px);
+  min-width: 0;
+  max-height: calc(100vh - 12px);
+}
+:root[data-layout="mobile"] .browser-dialog {
+  width: calc(100vw - 8px);
+  height: calc(100vh - 8px);
+  min-width: 0;
+  min-height: 0;
+}
+:root[data-layout="mobile"] .browser-workspace {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+:root[data-layout="mobile"] .browser-roots-panel {
+  padding: 5px;
+  overflow-x: auto;
+  border-right: 0;
+  border-bottom: 1px solid var(--t-border-strong, #090a09);
+}
+:root[data-layout="mobile"] .browser-section-label { display: none; }
+:root[data-layout="mobile"] .browser-roots { display: flex; min-width: max-content; gap: 4px; }
+:root[data-layout="mobile"] .browser-root { flex: 0 0 auto; min-width: 96px; height: 38px; }
+:root[data-layout="mobile"] .browser-location { grid-template-columns: 58px minmax(0,1fr) 48px; }
+:root[data-layout="mobile"] .browser-save-row { grid-template-columns: minmax(0, 1fr); }
+:root[data-layout="mobile"] .browser-footer { flex-wrap: wrap; gap: 7px; }
+:root[data-layout="mobile"] .browser-status { flex-basis: 100%; order: -1; }
+:root[data-layout="mobile"] .settings-section-head { align-items: flex-start; flex-direction: column; gap: 4px; }
+:root[data-layout="mobile"] .settings-section-head small { text-align: left; }
+:root[data-layout="mobile"] .settings-field select { min-height: 44px; font-size: 16px; }
+:root[data-layout="mobile"] .settings-sub-button,
+:root[data-layout="mobile"] .metal-button { min-height: 40px; }
+
+
+:root[data-layout="mobile"] .settings-toggle-row {
+  min-height: 52px;
+}
+
+:root[data-layout="mobile"] .settings-toggle-row input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+}
+
+:root[data-android-preview="true"] .lamp.pending { background: var(--t-muted, #8d8a82); box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
