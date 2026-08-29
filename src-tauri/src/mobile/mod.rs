@@ -21,6 +21,6 @@ pub fn preview_toolchain_info() -> ToolchainInfo {
         cargo: "Cargo: Android backend pending".into(),
         rustc: "rustc: Android backend pending".into(),
         backend_ready: false,
-        note: Some("B1.3.6 Build 9 is an editor-first Android preview. Cargo, rustc, rust-analyzer, debugger and program execution will be added through the dedicated Android backend in later builds.".into()),
+        note: Some("B1.3.6 Build 10 is an editor-first Android preview. Cargo, rustc, rust-analyzer, debugger and program execution will be added through the dedicated Android backend in later builds.".into()),
     }
 }

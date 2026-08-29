@@ -39,18 +39,29 @@ for (const token of requiredCss) {
 }
 
 
-const toolsPopupStart = main.indexOf('<div class="menu-popup" data-popup="tools"');
-const toolsPopupEnd = main.indexOf('</div>\n        </div>\n        <div class="menu-host">', toolsPopupStart);
-if (toolsPopupStart < 0 || toolsPopupEnd < 0) throw new Error('Could not inspect Tools menu');
-const toolsMenu = main.slice(toolsPopupStart, toolsPopupEnd);
+function menuSection(source, menuName, nextMenuName) {
+  const startMarker = `<button class="menu-trigger" data-menu="${menuName}">`;
+  const endMarker = `<button class="menu-trigger" data-menu="${nextMenuName}">`;
+  const start = source.indexOf(startMarker);
+  const end = source.indexOf(endMarker, start + startMarker.length);
+  if (start < 0 || end < 0 || end <= start) {
+    throw new Error(`Could not inspect ${menuName} menu`);
+  }
+  return source.slice(start, end);
+}
+
+// Menu validation must be independent of Git's checkout line endings. Windows
+// runners commonly use CRLF while Linux uses LF, so never parse menu boundaries
+// by literal newline sequences.
+const toolsMenu = menuSection(main, 'tools', 'debug');
+if (!toolsMenu.includes('data-menu-action="settings"')) {
+  throw new Error('Settings regression: Tools menu must contain Tools → Settings');
+}
 if (toolsMenu.includes('data-menu-action="toggle-live-check"') || toolsMenu.includes('data-menu-action="toggle-completer"')) {
   throw new Error('Application preference regression: persistent editor toggles must live in Settings');
 }
 
-const viewPopupStart = main.indexOf('<div class="menu-popup" data-popup="view"');
-const viewPopupEnd = main.indexOf('</div>\n        </div>\n        <div class="menu-host">', viewPopupStart);
-if (viewPopupStart < 0 || viewPopupEnd < 0) throw new Error('Could not inspect View menu');
-const viewMenu = main.slice(viewPopupStart, viewPopupEnd);
+const viewMenu = menuSection(main, 'view', 'help');
 if (viewMenu.includes('Theme Workshop') || viewMenu.includes('theme-metallic') || viewMenu.includes('theme-oxide')) {
   throw new Error('Theme selection regression: theme preferences must live in Tools → Settings, not View');
 }

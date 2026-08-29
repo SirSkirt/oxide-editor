@@ -1,8 +1,10 @@
-# Rivet B1.3.6 · Build 9
+# Rivet B1.3.6 · Build 10
+
+Build 10 is a CI repair for the Android editor-preview milestone: Windows validation is now line-ending-safe, and Android Actions explicitly provisions the SDK command-line tools and NDK before Tauri builds the APK. The Android feature scope remains editor-only.
 
 **Rivet — Rust Development Environment**
 
-Build 9 is the first Android application milestone. It deliberately ships the **editor before the Android Rust toolchain backend** so the mobile shell, file/project workflow, themes, layouts and Android packaging can be tested independently from PRoot/rustc/Cargo work.
+Build 10 is the first Android application milestone. It deliberately ships the **editor before the Android Rust toolchain backend** so the mobile shell, file/project workflow, themes, layouts and Android packaging can be tested independently from PRoot/rustc/Cargo work.
 
 ## Android editor preview
 
@@ -50,14 +52,14 @@ src-tauri/capabilities/mobile.json
 
 ## Android workspace
 
-Until Android Storage Access Framework support is implemented, Rivet creates/opens projects inside its app-private **RIVET WORKSPACE**. This lets Build 9 prove reliable editing and saving without mixing storage-permission work into the toolchain milestone.
+Until Android Storage Access Framework support is implemented, Rivet creates/opens projects inside its app-private **RIVET WORKSPACE**. This lets Build 10 prove reliable editing and saving without mixing storage-permission work into the toolchain milestone.
 
 ## Android packaging
 
-GitHub Actions now verifies an ARM64 Android APK in addition to Windows/Linux. The GitHub release workflow also publishes an **Android preview APK**. Build 9 uses the Android preview application id `com.rivet.rde.preview`; production Android signing/package identity will be established before Rivet Android is treated as a stable distribution target.
+GitHub Actions now verifies an ARM64 Android APK in addition to Windows/Linux. The GitHub release workflow also publishes an **Android preview APK**. Build 10 uses the Android preview application id `com.rivet.rde.preview`; production Android signing/package identity will be established before Rivet Android is treated as a stable distribution target.
 
 The Android `versionCode` is build-specific so internal B1.3.6 builds can advance independently from the public SemVer string.
 
 ## Existing desktop features retained
 
-Build 9 preserves the Windows/Linux debugger, updater, theme system, Semantic Readability Colors, resizable Build Bay, Settings, and both workspace layouts. Desktop behavior is not intentionally changed by the Android preview work.
+Build 10 preserves the Windows/Linux debugger, updater, theme system, Semantic Readability Colors, resizable Build Bay, Settings, and both workspace layouts. Desktop behavior is not intentionally changed by the Android preview work.

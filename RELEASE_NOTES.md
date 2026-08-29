@@ -1,6 +1,13 @@
-# Rivet B1.3.6 · Build 9
+# Rivet B1.3.6 · Build 10
 
-Build 9 begins Rivet's Android port with an **editor-first preview**.
+## Build 10 CI repairs
+
+- Fixed the Settings/layout validator so it uses stable menu markers instead of LF-only newline sequences. Windows CRLF checkouts no longer fail with `Could not inspect Tools menu`.
+- Android CI now explicitly provisions the Android SDK command-line tools with `android-actions/setup-android@v4.0.1`, so `sdkmanager` is guaranteed to be available to the workflow.
+- Android CI now uses NDK r28c (`28.2.13676358`) and explicitly exports `ANDROID_HOME`, `ANDROID_SDK_ROOT`, and `NDK_HOME` for Tauri. NDK r28+ also gives the preview a clean path toward Android 16 KB page-size requirements.
+- Android feature scope is unchanged: this remains the editor-only preview. No Cargo/rustc/PRoot backend is introduced in Build 10.
+
+Build 10 begins Rivet's Android port with an **editor-first preview**.
 
 ### Added
 - Tauri Android packaging configuration for an ARM64 preview APK.

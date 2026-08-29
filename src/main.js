@@ -313,7 +313,7 @@ app.innerHTML = `
 
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 9</div>
+        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 10</div>
         <h1>Welcome to Rivet</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -460,7 +460,7 @@ app.innerHTML = `
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>RIVET B1.3.6 · BUILD 9</span>
+      <span>RIVET B1.3.6 · BUILD 10</span>
     </footer>
   </main>
 
@@ -2488,7 +2488,7 @@ function projectLikelyGui() {
 
 function requestRun() {
   if (!state.toolchain.buildReady) {
-    if (isAndroidPlatform(state)) showInfo('ANDROID BACKEND PENDING', '<p>Program execution is not part of the Build 9 Android editor preview yet.</p>');
+    if (isAndroidPlatform(state)) showInfo('ANDROID BACKEND PENDING', '<p>Program execution is not part of the Build 10 Android editor preview yet.</p>');
     return;
   }
   if (!state.projectPath || state.buildRunning || state.terminalRunning || state.debugger.running) return;
@@ -4507,7 +4507,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 9</span><p>A Rust-first IDE for Windows and Linux with an Android editor preview, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, five built-in material themes, theme-aware Semantic Readability Colors, custom Theme Workshop recipes, centralized Settings, and user-selectable Desktop/Mobile workspace layouts.</p></div>`);
+  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 10</span><p>A Rust-first IDE for Windows and Linux with an Android editor preview, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, five built-in material themes, theme-aware Semantic Readability Colors, custom Theme Workshop recipes, centralized Settings, and user-selectable Desktop/Mobile workspace layouts.</p></div>`);
 }
 
 function showShortcuts() {
