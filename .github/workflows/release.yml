@@ -431,8 +431,6 @@ jobs:
     name: Android ARM64 editor preview
     needs: prepare-release
     runs-on: ubuntu-latest
-    env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
     steps:
       - name: Checkout source
         uses: actions/checkout@v7
@@ -453,13 +451,35 @@ jobs:
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
 
-      - name: Install Android SDK/NDK components
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@v4.0.1
+        with:
+          packages: >-
+            platform-tools
+            platforms;android-36
+            build-tools;36.0.0
+            ndk;28.2.13676358
+
+      - name: Configure Android SDK/NDK environment
         shell: bash
         run: |
           set -euo pipefail
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018"
-          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+          sdkmanager_path="$(command -v sdkmanager)"
+          test -n "$sdkmanager_path" && test -x "$sdkmanager_path"
+
+          # setup-android places sdkmanager under <sdk>/cmdline-tools/<version>/bin.
+          # Derive the SDK root from the executable we will actually use instead
+          # of trusting a stale runner-level ANDROID_HOME value.
+          sdk_root="$(cd "$(dirname "$sdkmanager_path")/../../.." && pwd)"
+          ndk_home="$sdk_root/ndk/28.2.13676358"
+          test -d "$ndk_home"
+
+          echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
+          echo "NDK_HOME=$ndk_home" >> "$GITHUB_ENV"
+          echo "Android SDK: $sdk_root"
+          echo "Android NDK: $ndk_home"
+          sdkmanager --version
 
       - name: Install frontend dependencies
         run: npm install
