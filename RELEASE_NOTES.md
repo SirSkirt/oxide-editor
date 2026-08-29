@@ -1,47 +1,59 @@
-# Rivet B1.3.6 · Build 7
+# Rivet B1.3.6 · Build 8
 
-B1.3.6 Build 7 strengthens Rivet RDE's industrial identity by making the **Metallic** and **Rust** themes behave like physical materials instead of mostly color variations. Layout, functionality, editor geometry, and workflows are unchanged.
+B1.3.6 Build 8 introduces **centralized Settings and user-selectable Desktop/Mobile layouts**.
 
-## Metallic = forged Iron
+## Tools → Settings
 
-The Metallic theme is now treated as a dark forged-iron workstation material. Build 7 adds:
+Application preferences now have a dedicated home under **Tools → Settings…** instead of theme choices living in the View menu.
 
-- visible but restrained directional brushed-metal grain
-- faint cross-scratches and uneven metal mottle
-- colder exposed upper-edge highlights
-- darker recessed/lower edges and seams
-- stronger inset depth on panel chrome and the Build Bay
-- finer brushed texture on buttons, tabs, and interactive controls
-- a subtle iron texture in the line-number gutter
+The first Settings sections include:
 
-The theme is still named **Metallic** for compatibility, while its material component is labeled **Forged Iron** in Theme Workshop.
+- **Theme** — one dropdown for Oxide, Metallic, Rust, Modern (Light), Modern (Dark), and saved custom themes.
+- **Custom Theme** — a compact button directly beneath the theme selector that opens Theme Workshop.
+- **Layout Mode** — an explicit selector for **Desktop Layout** and **Mobile Layout**.
+- **Live Rust Check** and **Rust Code Analyzer/Completer** — persistent editor-assistance preferences, moved out of the main Tools command list and into Settings.
 
-## Rust = Rusty Iron
+Theme and layout choices are persisted independently. Future application preferences should be added to Settings instead of being scattered across unrelated menus.
 
-Rust now explicitly builds on the same forged-iron geometry and adds weathering rather than acting as a brown recolor. It adds:
+## User-controlled layout mode
 
-- irregular rust/oxidation patches
-- patina concentrated near seams, corners, and recessed edges
-- darker exposed-iron variation between oxidized areas
-- rougher directional grain than clean Iron
-- weathered control surfaces and warmer worn edges
-- stronger rust accumulation around panel/chrome boundaries
+Layout is a user preference, not a device classification. Rivet may choose a sensible first-run default based on the initial viewport, but after the user chooses a layout it does not automatically switch it.
 
-The Theme Workshop material component is labeled **Rusty Iron**.
+This allows workflows such as:
 
-## Readability guardrail
+- Windows tablet → Mobile Layout;
+- a future/supported mobile target with a dock or large external display → Desktop Layout; and
+- desktop/laptop → either layout when the user prefers a different interaction density.
 
-Material texture is intentionally strongest on Rivet's chassis, toolbars, panel headers, inspectors, controls, menus, dialogs, Build Bay framing, and other chrome. The actual Rust source backdrop remains low-noise and uses a solid editor surface so Semantic Readability Colors stay dominant. The line-number gutter receives only a very faint material cue.
+## Mobile Layout
 
-Modern Dark and Modern Light remain intentionally clean and flat so Rivet keeps a meaningful distinction between its manufactured industrial themes and conventional IDE presentation.
+Mobile Layout keeps Rivet's functionality while rearranging the workbench for narrow/touch use:
 
-## Existing fixes retained
+- the editor remains the primary workspace;
+- a compact **Files / Editor / Cargo** switcher replaces permanently visible side panels;
+- Tutorial joins that switcher while an interactive lesson is active;
+- Cargo command buttons remain available in a horizontally scrollable touch strip;
+- menus use larger touch targets and mobile-safe popup positioning;
+- Build Bay remains available and resizable;
+- tabs/status/Build Bay controls can scroll when they exceed the available width;
+- Welcome reflows to a single-column launch surface; and
+- dialogs, the internal file browser, Theme Workshop, and Settings adapt to the mobile arrangement.
 
-Build 7 retains Build 6's syntax-overlay visibility fix, Build 5's contrast-first Semantic Readability palettes, Build 4's composable Theme Workshop/custom-theme architecture, Build 3's startup and Debian migration fixes, the version+build updater, LLDB/DAP debugger, Rust Code Analyzer/Completer, resizable Build Bay, and the rest of B1.3.6.
+Desktop Layout remains Rivet's existing multi-panel workbench. No feature is removed by changing layouts.
+
+## Theme workflow
+
+Theme implementation is unchanged: themes remain material/presentation recipes and Semantic Readability remains theme-aware. Build 8 only relocates theme selection to Settings and connects Theme Workshop through the **Custom Theme** button.
+
+The Build 7 forged-iron and rusty-iron texture systems remain intact.
+
+## Validation
+
+A new `npm run validate:layout` check verifies the Settings/Adaptive Layout contract in CI alongside `npm run validate:themes`. It checks that Settings contains theme/layout controls, Mobile Layout exposes Files/Editor/Cargo switching, the layout preference is persisted, and theme selection is no longer duplicated in View.
 
 ## Version
 
 - Release version: `1.3.6`
 - Display version: **B1.3.6**
-- Build: **7**
-- Full identity: **Rivet B1.3.6 · Build 7**
+- Build: **8**
+- Full identity: **Rivet B1.3.6 · Build 8**

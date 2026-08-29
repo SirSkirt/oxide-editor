@@ -4,6 +4,7 @@ import './styles.css';
 import rivetLogo from './assets/rivet-logo.png';
 import {
   THEME_COMPONENTS,
+  BUILT_IN_THEMES,
   createCustomTheme,
   loadCustomThemes,
   loadStoredTheme,
@@ -13,11 +14,52 @@ import {
   saveCustomThemes,
 } from './theme-engine.js';
 
+const LAYOUT_STORAGE_KEY = 'oxide.layout.mode';
+const LIVE_CHECK_STORAGE_KEY = 'oxide.settings.liveRustCheck';
+const COMPLETER_STORAGE_KEY = 'oxide.settings.codeCompleter';
+
+function loadStoredBoolean(key, fallback = true) {
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored === 'true') return true;
+    if (stored === 'false') return false;
+  } catch { /* restricted webview: use fallback */ }
+  return fallback;
+}
+
+function persistBooleanSetting(key, value) {
+  try { localStorage.setItem(key, value ? 'true' : 'false'); } catch { /* non-fatal */ }
+}
+
+function defaultLayoutMode() {
+  try {
+    return window.matchMedia('(max-width: 760px)').matches ? 'mobile' : 'desktop';
+  } catch {
+    return 'desktop';
+  }
+}
+
+function loadStoredLayoutMode() {
+  try {
+    const stored = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    return stored === 'mobile' || stored === 'desktop' ? stored : defaultLayoutMode();
+  } catch {
+    return defaultLayoutMode();
+  }
+}
+
 const app = document.querySelector('#app');
 
 let customThemes = loadCustomThemes();
 const initialTheme = loadStoredTheme(customThemes);
 const initialThemeDefinition = resolveTheme(initialTheme, customThemes);
+const initialLayoutMode = loadStoredLayoutMode();
+const initialLiveCheck = loadStoredBoolean(LIVE_CHECK_STORAGE_KEY, true);
+const initialCompleterEnabled = loadStoredBoolean(COMPLETER_STORAGE_KEY, true);
+
+// Layout is a user preference, not a device identity. Rivet may choose a
+// sensible first-run default, but never forces it again based on screen size.
+document.documentElement.dataset.layout = initialLayoutMode;
 
 // Build 4 routes every theme — built-in or custom — through the same component
 // recipe. The old data-theme blocks remain as a compatibility fallback, while
@@ -35,6 +77,8 @@ const state = {
   themeStudioEditingId: '',
   themeStudioPreviewing: false,
   customThemes,
+  layout: initialLayoutMode,
+  mobilePane: 'editor',
   projectPath: '',
   platform: { os: 'unknown', arch: 'unknown', pathCaseSensitive: false, automaticUpdates: false, updateMode: 'unknown' },
   tabs: [],
@@ -56,13 +100,13 @@ const state = {
   view: { project: true, cargo: true, build: true },
   consoleView: 'build',
   diagnostics: [],
-  liveCheck: true,
+  liveCheck: initialLiveCheck,
   analysisTimer: null,
   analysisRunning: false,
   analysisQueued: false,
   analysisGeneration: 0,
   completer: {
-    enabled: true,
+    enabled: initialCompleterEnabled,
     available: false,
     visible: false,
     items: [],
@@ -183,9 +227,7 @@ app.innerHTML = `
             <button role="menuitem" data-menu-action="test"><span>Cargo Test</span><kbd>F8</kbd></button>
             <button role="menuitem" data-menu-action="clean"><span>Cargo Clean</span></button>
             <div class="menu-separator"></div>
-            <button role="menuitem" data-menu-action="toggle-live-check"><span><i class="menu-check" data-check="live-check">✓</i> Live Rust Check</span></button>
             <button role="menuitem" data-menu-action="analyze-now"><span>Analyze Project Now</span><kbd>Ctrl+F6</kbd></button>
-            <button role="menuitem" data-menu-action="toggle-completer"><span><i class="menu-check" data-check="completer">✓</i> Rust Code Analyzer/Completer</span></button>
             <button role="menuitem" data-menu-action="trigger-completion"><span>Trigger Code Completion</span><kbd>Ctrl+Space</kbd></button>
             <div class="menu-separator"></div>
             <button role="menuitem" data-menu-action="go-definition"><span>Go to Definition</span><kbd>F12</kbd></button>
@@ -197,6 +239,8 @@ app.innerHTML = `
             <div class="menu-separator"></div>
             <button role="menuitem" data-menu-action="add-dependency"><span>Add Dependency…</span></button>
             <button role="menuitem" data-menu-action="refresh-toolchain"><span>Refresh Toolchain</span></button>
+            <div class="menu-separator"></div>
+            <button role="menuitem" data-menu-action="settings"><span>Settings…</span></button>
           </div>
         </div>
         <div class="menu-host">
@@ -225,20 +269,6 @@ app.innerHTML = `
             <button role="menuitem" data-menu-action="show-build"><span>Build Output</span></button>
             <button role="menuitem" data-menu-action="show-terminal"><span>Run Terminal Window</span></button>
             <button role="menuitem" data-menu-action="show-problems"><span>Problems</span></button>
-            <div class="menu-separator"></div>
-            <div class="menu-section-label">THEME <span id="theme-menu-current">OXIDE</span></div>
-            <button role="menuitem" data-menu-action="theme-oxide"><span><i class="menu-check" data-theme-check="oxide">✓</i> Oxide</span></button>
-            <button role="menuitem" data-menu-action="theme-metallic"><span><i class="menu-check" data-theme-check="metallic"></i> Metallic</span></button>
-            <button role="menuitem" data-menu-action="theme-rust"><span><i class="menu-check" data-theme-check="rust"></i> Rust</span></button>
-            <button role="menuitem" data-menu-action="theme-modern-light"><span><i class="menu-check" data-theme-check="modern-light"></i> Modern (Light)</span></button>
-            <button role="menuitem" data-menu-action="theme-modern-dark"><span><i class="menu-check" data-theme-check="modern-dark"></i> Modern (Dark)</span></button>
-            <div id="custom-theme-menu-section" hidden>
-              <div class="menu-separator"></div>
-              <div class="menu-section-label">CUSTOM THEMES</div>
-              <div id="custom-theme-menu-items"></div>
-            </div>
-            <div class="menu-separator"></div>
-            <button role="menuitem" data-menu-action="theme-customize"><span>Theme Workshop…</span></button>
             <div class="menu-separator"></div>
             <button role="menuitem" data-menu-action="reset-layout"><span>Reset Layout</span></button>
           </div>
@@ -270,9 +300,16 @@ app.innerHTML = `
       <div class="command-readout" id="command-readout">SELECT A PROJECT TO BEGIN</div>
     </section>
 
+    <nav id="mobile-workspace-bar" class="mobile-workspace-bar" aria-label="Mobile workspace">
+      <button type="button" data-mobile-pane="project">FILES</button>
+      <button type="button" data-mobile-pane="editor" class="active">EDITOR</button>
+      <button type="button" data-mobile-pane="cargo">CARGO</button>
+      <button type="button" data-mobile-pane="tutorial" class="mobile-tutorial-pane">TUTORIAL</button>
+    </nav>
+
     <section id="welcome-screen" class="welcome-screen">
       <div class="welcome-plate">
-        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 7</div>
+        <div class="welcome-eyebrow">RIVET · B1.3.6 · BUILD 8</div>
         <h1>Welcome to Rivet</h1>
         <p>To get started, select one of the options.</p>
         <div class="welcome-actions">
@@ -419,7 +456,7 @@ app.innerHTML = `
       <span id="analyzer-status">ANALYZER: CHECKING</span>
       <span id="debugger-status">DEBUGGER: CHECKING</span>
       <span id="profile-status">PROFILE: DEBUG</span>
-      <span>RIVET B1.3.6 · BUILD 7</span>
+      <span>RIVET B1.3.6 · BUILD 8</span>
     </footer>
   </main>
 
@@ -534,6 +571,45 @@ app.innerHTML = `
     <div class="dialog-head"><div><span>CODE ACTIONS / QUICK FIXES</span><small>RUST-ANALYZER</small></div><button type="button" id="code-actions-close" class="dialog-close">×</button></div>
     <div id="code-actions-list" class="intelligence-list"><div class="intelligence-empty">No code actions loaded.</div></div>
     <div class="dialog-actions intelligence-actions"><button type="button" id="code-actions-done" class="metal-button">CLOSE</button></div>
+  </dialog>
+
+  <dialog id="settings-dialog" class="oxide-dialog settings-dialog">
+    <form id="settings-form">
+      <div class="dialog-head"><div><span>SETTINGS</span><small>APPLICATION PREFERENCES</small></div><button type="button" id="settings-close" class="dialog-close" aria-label="Close settings">×</button></div>
+      <div class="settings-body">
+        <section class="settings-section">
+          <div class="settings-section-head"><span>APPEARANCE</span><small>Theme and visual presentation</small></div>
+          <label class="settings-field">
+            <span>Theme</span>
+            <select id="settings-theme-select" aria-label="Rivet theme"></select>
+            <small>Choose a built-in or saved custom presentation theme.</small>
+          </label>
+          <button type="button" id="settings-custom-theme" class="settings-sub-button">CUSTOM THEME</button>
+        </section>
+        <section class="settings-section">
+          <div class="settings-section-head"><span>LAYOUT</span><small>Choose the workspace arrangement independently of your device</small></div>
+          <label class="settings-field">
+            <span>Layout Mode</span>
+            <select id="settings-layout-select" aria-label="Rivet layout mode">
+              <option value="desktop">Desktop Layout</option>
+              <option value="mobile">Mobile Layout</option>
+            </select>
+            <small id="settings-layout-description">Desktop Layout keeps the full multi-panel workbench visible.</small>
+          </label>
+          <div class="settings-layout-note">A Windows tablet can use Mobile Layout; a docked or large-screen device can use Desktop Layout. Rivet remembers your choice.</div>
+        </section>
+        <section class="settings-section">
+          <div class="settings-section-head"><span>EDITOR ASSISTANCE</span><small>Rust analysis and completion behavior</small></div>
+          <label class="settings-toggle-row"><span><strong>Live Rust Check</strong><small>Run background Cargo/rustc diagnostics while editing.</small></span><input id="settings-live-check" type="checkbox" /></label>
+          <label class="settings-toggle-row"><span><strong>Rust Code Analyzer/Completer</strong><small>Show rust-analyzer-backed completion while writing Rust.</small></span><input id="settings-completer" type="checkbox" /></label>
+        </section>
+        <section class="settings-section settings-section-future">
+          <div class="settings-section-head"><span>RIVET SETTINGS</span><small>One home for application preferences</small></div>
+          <p>Future application settings will live here instead of being scattered across unrelated menus.</p>
+        </section>
+      </div>
+      <div class="dialog-actions settings-actions"><button type="button" id="settings-done" class="metal-button primary">DONE</button></div>
+    </form>
   </dialog>
 
   <dialog id="theme-studio-dialog" class="oxide-dialog theme-studio-dialog">
@@ -681,6 +757,14 @@ const els = {
   renameSymbolLabel: $('#rename-symbol-label'),
   codeActionsDialog: $('#code-actions-dialog'),
   codeActionsList: $('#code-actions-list'),
+  settingsDialog: $('#settings-dialog'),
+  settingsThemeSelect: $('#settings-theme-select'),
+  settingsLayoutSelect: $('#settings-layout-select'),
+  settingsLayoutDescription: $('#settings-layout-description'),
+  settingsCustomTheme: $('#settings-custom-theme'),
+  settingsLiveCheck: $('#settings-live-check'),
+  settingsCompleter: $('#settings-completer'),
+  mobileWorkspaceBar: $('#mobile-workspace-bar'),
   themeStudioDialog: $('#theme-studio-dialog'),
   themeStudioForm: $('#theme-studio-form'),
   themeStudioName: $('#theme-studio-name'),
@@ -910,12 +994,10 @@ function applyTheme(themeId, { persist = true } = {}) {
   root.dataset.themeSemantic = recipe.semantic;
   applyThemeOverrides(definition);
 
-  const current = document.querySelector('#theme-menu-current');
-  if (current) current.textContent = themeDisplayLabel(definition.id);
-
   document.querySelectorAll('[data-theme-check]').forEach((check) => {
     check.textContent = check.dataset.themeCheck === definition.id ? '✓' : '';
   });
+  if (els.settingsThemeSelect) els.settingsThemeSelect.value = definition.id;
 
   if (persist) persistTheme(definition.id);
 
@@ -987,17 +1069,30 @@ function renderSavedThemeList() {
   });
 }
 
-function renderCustomThemeMenu() {
-  const section = document.querySelector('#custom-theme-menu-section');
-  const host = document.querySelector('#custom-theme-menu-items');
-  if (!section || !host) return;
-  section.hidden = state.customThemes.length === 0;
-  host.innerHTML = state.customThemes.map((theme) =>
-    `<button role="menuitem" data-menu-action="theme-${escapeHtml(theme.id)}"><span><i class="menu-check" data-theme-check="${escapeHtml(theme.id)}"></i> ${escapeHtml(theme.name)}</span></button>`
+function themeSelectorOptions(selected = state.theme) {
+  const builtIns = Object.values(BUILT_IN_THEMES);
+  const builtInOptions = builtIns.map((theme) =>
+    `<option value="${escapeHtml(theme.id)}" ${theme.id === selected ? 'selected' : ''}>${escapeHtml(theme.label)}</option>`
   ).join('');
-  document.querySelectorAll('[data-theme-check]').forEach((check) => {
-    check.textContent = check.dataset.themeCheck === state.theme ? '✓' : '';
-  });
+  const customOptions = state.customThemes.length
+    ? `<optgroup label="Custom Themes">${state.customThemes.map((theme) =>
+        `<option value="${escapeHtml(theme.id)}" ${theme.id === selected ? 'selected' : ''}>${escapeHtml(theme.name)}</option>`
+      ).join('')}</optgroup>`
+    : '';
+  return `<optgroup label="Built-in Themes">${builtInOptions}</optgroup>${customOptions}`;
+}
+
+function renderThemeSelectors() {
+  if (els.settingsThemeSelect) {
+    els.settingsThemeSelect.innerHTML = themeSelectorOptions(state.theme);
+    els.settingsThemeSelect.value = state.theme;
+  }
+}
+
+// Kept as a compatibility name because older theme-workshop code calls it.
+// Build 8 moved theme selection out of View and into Tools → Settings.
+function renderCustomThemeMenu() {
+  renderThemeSelectors();
 }
 
 function fillThemeStudio(themeId = '') {
@@ -1078,6 +1173,64 @@ function deleteThemeStudioTheme() {
   renderCustomThemeMenu();
   if (state.theme === id) applyTheme('oxide');
   fillThemeStudio('');
+}
+
+function persistLayoutMode(mode) {
+  try { localStorage.setItem(LAYOUT_STORAGE_KEY, mode); } catch { /* restricted webview: non-fatal */ }
+}
+
+function layoutDescription(mode = state.layout) {
+  return mode === 'mobile'
+    ? 'Mobile Layout uses a single primary workspace with Files / Editor / Cargo switching and touch-friendly chrome.'
+    : 'Desktop Layout keeps Rivet’s full multi-panel workbench visible at the same time.';
+}
+
+function setMobilePane(pane = 'editor') {
+  const allowed = ['project', 'editor', 'cargo', 'tutorial'];
+  const next = allowed.includes(pane) ? pane : 'editor';
+  state.mobilePane = next;
+  els.shell.dataset.mobilePane = next;
+  els.mobileWorkspaceBar?.querySelectorAll('[data-mobile-pane]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.mobilePane === next);
+    button.setAttribute('aria-pressed', button.dataset.mobilePane === next ? 'true' : 'false');
+  });
+  if (state.layout === 'mobile') {
+    if (next === 'project' && !state.view.project) setViewPanel('project', true);
+    if (next === 'cargo' && !state.view.cargo) setViewPanel('cargo', true);
+    if (next === 'tutorial' && !state.tutorial.active) setMobilePane('editor');
+  }
+}
+
+function applyLayoutMode(mode, { persist = true } = {}) {
+  const next = mode === 'mobile' ? 'mobile' : 'desktop';
+  state.layout = next;
+  document.documentElement.dataset.layout = next;
+  els.shell.dataset.layout = next;
+  if (persist) persistLayoutMode(next);
+  if (els.settingsLayoutSelect) els.settingsLayoutSelect.value = next;
+  if (els.settingsLayoutDescription) els.settingsLayoutDescription.textContent = layoutDescription(next);
+  if (next === 'mobile') {
+    if (!['project', 'editor', 'cargo', 'tutorial'].includes(state.mobilePane)) state.mobilePane = 'editor';
+    setMobilePane(state.tutorial.active ? 'tutorial' : state.mobilePane);
+    requestAnimationFrame(() => {
+      try { updateSyntaxHighlight(); syncSyntaxScroll(); } catch (error) { console.warn('Could not refresh editor after mobile layout change:', error); }
+    });
+  } else {
+    requestAnimationFrame(() => {
+      try { updateSyntaxHighlight(); syncSyntaxScroll(); } catch (error) { console.warn('Could not refresh editor after desktop layout change:', error); }
+    });
+  }
+}
+
+function openSettings() {
+  renderThemeSelectors();
+  els.settingsThemeSelect.value = state.theme;
+  els.settingsLayoutSelect.value = state.layout;
+  els.settingsLayoutDescription.textContent = layoutDescription(state.layout);
+  els.settingsLiveCheck.checked = state.liveCheck;
+  els.settingsCompleter.checked = state.completer.enabled;
+  els.settingsDialog.showModal();
+  requestAnimationFrame(() => els.settingsThemeSelect.focus());
 }
 
 const BUILD_BAY_HEIGHT_KEY = 'oxide.layout.buildBayHeight';
@@ -1184,6 +1337,7 @@ function setupBuildBayResize() {
 
 function setProjectUiState() {
   const loaded = Boolean(state.projectPath);
+  if (loaded && state.layout === 'mobile' && !state.tutorial.active) setMobilePane('editor');
   els.shell.classList.toggle('welcome-mode', !loaded);
   els.welcome.hidden = loaded;
   els.workspace.hidden = !loaded;
@@ -3158,6 +3312,7 @@ function renderTutorialPanel() {
   if (!state.tutorial.active || !lesson || !step) return;
   els.tutorialPanel.hidden = false;
   els.shell.classList.add('tutorial-active');
+  if (state.layout === 'mobile') setMobilePane('tutorial');
   els.tutorialCourseLabel.textContent = lesson.course.toUpperCase();
   els.tutorialLessonTitle.textContent = lesson.title;
   els.tutorialStepCounter.textContent = `STEP ${state.tutorial.stepIndex + 1} / ${lesson.steps.length}`;
@@ -3315,6 +3470,7 @@ function renderTutorialCompletion() {
   state.tutorial.advancing = false;
   els.tutorialPanel.hidden = false;
   els.shell.classList.add('tutorial-active');
+  if (state.layout === 'mobile') setMobilePane('tutorial');
   els.tutorialCourseLabel.textContent = lesson.course.toUpperCase();
   els.tutorialLessonTitle.textContent = lesson.title;
   els.tutorialStepCounter.textContent = 'LESSON COMPLETE';
@@ -3426,6 +3582,7 @@ function exitTutorialMode() {
   clearTimeout(state.tutorialEvalTimer);
   els.tutorialPanel.hidden = true;
   els.shell.classList.remove('tutorial-active');
+  if (state.layout === 'mobile') setMobilePane('editor');
   state.liveCheck = state.tutorial.previousLiveCheck;
   updateMenuAvailability();
   if (state.tutorial.previousCargoView && !state.view.cargo) setViewPanel('cargo', true);
@@ -3436,12 +3593,14 @@ function setViewPanel(panel, visible) {
   els.shell.classList.toggle(`hide-${panel}`, !visible);
   document.querySelectorAll(`[data-check="${panel}"]`).forEach((check) => { check.textContent = visible ? '✓' : ''; });
   if (panel === 'build') els.buildConsole.hidden = !state.projectPath || !visible;
+  if (state.layout === 'mobile' && !visible && state.mobilePane === panel) setMobilePane('editor');
 }
 
 function resetLayout({ resetBuildBay = true } = {}) {
   setViewPanel('project', true);
   setViewPanel('cargo', true);
   setViewPanel('build', true);
+  if (state.layout === 'mobile') setMobilePane('editor');
   if (resetBuildBay) resetBuildBayHeight();
 }
 
@@ -4331,7 +4490,7 @@ function formatBytes(value) {
 }
 
 function showAbout() {
-  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 7</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, five built-in material themes, theme-aware Semantic Readability Colors, and the composable Theme Workshop for user-created presentation recipes.</p></div>`);
+  showInfo('ABOUT RIVET', `<img class="about-mark about-logo" src="${rivetLogo}" alt="Rivet logo" /><div class="about-copy"><strong>Rivet</strong><span>Rust Development Environment · Beta B1.3.6 · Build 8</span><p>A cross-platform Rust-first IDE for Windows and Linux, with Cargo project management, compiler diagnostics, rust-analyzer code intelligence, LLDB/DAP debugging, signed Rivet package updates, a floating interactive Run Terminal, a 26-lesson hands-on Rust tutorial, five built-in material themes, theme-aware Semantic Readability Colors, custom Theme Workshop recipes, centralized Settings, and user-selectable Desktop/Mobile workspace layouts.</p></div>`);
 }
 
 function showShortcuts() {
@@ -4383,6 +4542,7 @@ async function handleMenuAction(action) {
   else if (action === 'refresh-toolchain') { await detectToolchain(); if (state.projectPath) warmRustAnalyzer(); }
   else if (action === 'toggle-live-check') {
     state.liveCheck = !state.liveCheck;
+    persistBooleanSetting(LIVE_CHECK_STORAGE_KEY, state.liveCheck);
     updateMenuAvailability();
     els.analysisStatus.textContent = state.liveCheck ? 'RUST CHECK: LIVE' : 'RUST CHECK: OFF';
     if (state.liveCheck) scheduleAnalysis(100);
@@ -4390,6 +4550,7 @@ async function handleMenuAction(action) {
   else if (action === 'analyze-now') await runDiagnostics({ silent: false, force: true });
   else if (action === 'toggle-completer') {
     state.completer.enabled = !state.completer.enabled;
+    persistBooleanSetting(COMPLETER_STORAGE_KEY, state.completer.enabled);
     if (!state.completer.enabled) closeCompletionUi();
     updateMenuAvailability();
   }
@@ -4399,6 +4560,7 @@ async function handleMenuAction(action) {
   else if (action === 'rename-symbol') await startSemanticRename();
   else if (action === 'code-actions') await showCodeActions();
   else if (action === 'tutorial') await openTutorialHome();
+  else if (action === 'settings') openSettings();
   else if (action === 'theme-customize') openThemeStudio();
   else if (action.startsWith('theme-')) applyTheme(action.slice('theme-'.length));
   else if (action === 'toggle-project') setViewPanel('project', !state.view.project);
@@ -4436,6 +4598,33 @@ function setupMenus() {
 renderCustomThemeMenu();
 setupMenus();
 applyTheme(state.theme, { persist: false });
+applyLayoutMode(state.layout, { persist: false });
+setMobilePane('editor');
+
+$('#settings-close').addEventListener('click', () => els.settingsDialog.close());
+$('#settings-done').addEventListener('click', () => els.settingsDialog.close());
+els.settingsThemeSelect.addEventListener('change', () => applyTheme(els.settingsThemeSelect.value));
+els.settingsLayoutSelect.addEventListener('change', () => applyLayoutMode(els.settingsLayoutSelect.value));
+els.settingsLiveCheck.addEventListener('change', () => {
+  state.liveCheck = els.settingsLiveCheck.checked;
+  persistBooleanSetting(LIVE_CHECK_STORAGE_KEY, state.liveCheck);
+  updateMenuAvailability();
+  els.analysisStatus.textContent = state.liveCheck ? 'RUST CHECK: LIVE' : 'RUST CHECK: OFF';
+  if (state.liveCheck && state.projectPath) scheduleAnalysis(100);
+});
+els.settingsCompleter.addEventListener('change', () => {
+  state.completer.enabled = els.settingsCompleter.checked;
+  persistBooleanSetting(COMPLETER_STORAGE_KEY, state.completer.enabled);
+  if (!state.completer.enabled) closeCompletionUi();
+  updateMenuAvailability();
+});
+els.settingsCustomTheme.addEventListener('click', () => {
+  els.settingsDialog.close();
+  openThemeStudio();
+});
+els.mobileWorkspaceBar.querySelectorAll('[data-mobile-pane]').forEach((button) => {
+  button.addEventListener('click', () => setMobilePane(button.dataset.mobilePane));
+});
 
 $('#theme-studio-close').addEventListener('click', () => els.themeStudioDialog.close());
 $('#theme-studio-cancel').addEventListener('click', () => els.themeStudioDialog.close());

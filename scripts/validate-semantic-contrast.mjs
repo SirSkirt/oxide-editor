@@ -53,6 +53,35 @@ function validateSyntaxOverlayTransparency() {
   console.log('PASS syntax overlay remains visible through themed textarea');
 }
 
+
+function validateMaterialTextures() {
+  const requiredAssets = ['src/assets/iron-grain.svg', 'src/assets/rust-patina.svg'];
+  for (const asset of requiredAssets) {
+    if (!fs.existsSync(asset)) throw new Error(`Missing material texture asset: ${asset}`);
+    const source = fs.readFileSync(asset, 'utf8');
+    if (!source.includes('<svg') || !source.includes('</svg>')) {
+      throw new Error(`Malformed material texture asset: ${asset}`);
+    }
+  }
+
+  const metallicStart = css.indexOf('Rivet B1.3.6 Build 7 — Iron Material Texture Pass');
+  if (metallicStart < 0) throw new Error('Missing Build 7 iron material texture layer');
+  const textureLayer = css.slice(metallicStart);
+  if (!textureLayer.includes('url("./assets/iron-grain.svg")')) {
+    throw new Error('Metallic/iron material regression: iron grain texture is not referenced');
+  }
+  if (!textureLayer.includes('url("./assets/rust-patina.svg")')) {
+    throw new Error('Rusty-iron material regression: rust patina texture is not referenced');
+  }
+  if (!textureLayer.includes(':root[data-theme-material="metallic"] .syntax-layer')) {
+    throw new Error('Iron material regression: editor backdrop texture rule is missing');
+  }
+  if (!textureLayer.includes(':root[data-theme-material="rust"] .syntax-layer')) {
+    throw new Error('Rusty-iron material regression: editor backdrop texture rule is missing');
+  }
+  console.log('PASS industrial material texture assets and editor-safe texture bindings present');
+}
+
 function variable(block, name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = block.match(new RegExp(`${escaped}\\s*:\\s*(#[0-9a-fA-F]{6})`));
@@ -82,6 +111,7 @@ function contrast(a, b) {
 }
 
 validateSyntaxOverlayTransparency();
+validateMaterialTextures();
 
 let failed = false;
 for (const theme of themes) {

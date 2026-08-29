@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <filter id="grain" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.022 0.70" numOctaves="2" seed="23" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" filter="url(#grain)" opacity="0.20"/>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M12 31h67 M103 30h41 M167 31h72" opacity=".055"/>
+    <path d="M24 78h96 M138 77h58 M212 78h27" opacity=".035"/>
+    <path d="M3 126h43 M71 125h113 M207 126h39" opacity=".045"/>
+    <path d="M15 179h83 M117 180h37 M177 179h67" opacity=".032"/>
+    <path d="M40 224h57 M120 223h97" opacity=".045"/>
+  </g>
+  <g fill="none" stroke="#000000" stroke-linecap="round">
+    <path d="M6 52h42 M79 51h119 M216 52h31" opacity=".10"/>
+    <path d="M18 103h78 M121 103h101" opacity=".075"/>
+    <path d="M0 154h67 M93 154h71 M188 154h58" opacity=".085"/>
+    <path d="M27 204h111 M161 205h71" opacity=".07"/>
+  </g>
+  <g fill="#ffffff" opacity=".055">
+    <circle cx="19" cy="19" r=".7"/><circle cx="87" cy="61" r=".5"/><circle cx="151" cy="18" r=".6"/>
+    <circle cx="224" cy="93" r=".7"/><circle cx="54" cy="143" r=".55"/><circle cx="133" cy="211" r=".65"/>
+    <circle cx="239" cy="237" r=".5"/><circle cx="184" cy="165" r=".55"/>
+  </g>
+</svg>

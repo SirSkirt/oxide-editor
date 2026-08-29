@@ -1,14 +1,18 @@
-# Rivet B1.3.6 · Build 7
+# Rivet B1.3.6 · Build 8
 
 
 **Rivet** is the product name; **Rust Development Environment** is its tagline. The default presentation theme remains named **Oxide**.
-B1.3.6 Build 7 is a **material-texture pass** for Rivet's industrial themes. Metallic now behaves as a forged **Iron** material rather than a gray palette swap, with visible directional brushing, subtle cross-scratches, mottled metal variation, cold edge highlights, recessed seams, and raised iron controls. Rust is now explicitly **Rusty Iron**: it inherits the same forged depth model and adds irregular oxidation, patina, worn corners/seams, and darker exposed-metal variation. The actual code canvas remains intentionally quiet so material texture never competes with Semantic Readability.
+B1.3.6 Build 8 adds **centralized application Settings and user-selectable Desktop/Mobile layouts**. Open **Tools → Settings…** to choose the active theme or layout. Theme selection is now a compact dropdown with a **Custom Theme** button directly beneath it, which opens the existing Theme Workshop. Future application preferences belong in this Settings surface instead of being scattered through unrelated menus.
+
+Layout mode is explicitly user-controlled and persisted. **Desktop Layout** keeps Rivet's full multi-panel workbench. **Mobile Layout** keeps the editor primary and adds a compact Files / Editor / Cargo workspace switcher, touch-friendlier menus/commands, narrow-screen dialogs, and a mobile-safe file browser. Rivet may choose a sensible layout only on first run; after a user chooses Desktop or Mobile it does not override that choice based on device or viewport size. A Windows tablet can therefore use Mobile Layout, while a docked or large-screen device can use Desktop Layout. The layout architecture is platform-independent even though the current packaged targets remain Windows and Linux.
+
+B1.3.6 Build 7 remains the **industrial material texture pass**. Metallic represents forged/brushed iron with visible directional grain, machining lines, surface variation, edge highlights, darker recessed edges, and textured controls/panels. Rust uses that same iron foundation and adds irregular oxidation, patina, darker pitting, seam/corner buildup, and exposed iron instead of a uniform brown wash. The editor backdrop receives a deliberately quieter version so the material remains visible without competing with Semantic Readability Colors.
 
 Build 4 introduced the **composable presentation system**. Layout and functionality remain unchanged; themes are recipes assembled from independent material, UI palette, control-treatment, and Semantic Readability components.
 
-The five built-ins still ship as **Oxide**, **Metallic**, **Rust**, **Modern (Dark)**, and **Modern (Light)**, but they now use the same recipe model as user-created themes. **View → Theme → Theme Workshop…** can create, edit, save, delete, and apply custom themes by mixing the available presentation components. Custom themes persist locally and can be selected directly from the View → Theme menu.
+The five built-ins still ship as **Oxide**, **Metallic**, **Rust**, **Modern (Dark)**, and **Modern (Light)**, but they now use the same recipe model as user-created themes. **Tools → Settings…** owns theme selection. The Theme dropdown contains built-in and saved custom themes, while the **Custom Theme** button opens Theme Workshop to create, edit, save, delete, preview, and apply composable presentation recipes.
 
-Material treatment is no longer treated as a color swap. **Metallic** is the forged **Iron** presentation: directional brushing, cross-scratches, mottled metal, edge highlights, recessed depth, and raised iron controls. **Rust** is **Rusty Iron**: the same manufactured geometry aged with irregular oxidation, patina, worn seams/corners, and exposed darker iron. Build 7 makes these material cues visibly stronger across Rivet chrome and panels while keeping the source-code surface low-noise. **Modern** material intentionally removes most industrial texture.
+Material treatment is no longer treated as a color swap. **Metallic** adds forged/brushed iron grain, machining marks, edge highlights, recessed depth, worn surface variation, and raised controls. **Rust** uses the same forged-iron foundation with aged iron, irregular patina, oxidation around seams/edges, dark pitting, exposed metal, and rougher weathering. **Modern** material intentionally removes most industrial texture.
 
 **Semantic Readability Colors remain independently selectable.** rust-analyzer still supplies semantic meaning; the active theme recipe supplies the readability palette for variables, functions, types, macros, strings, numbers, comments, keywords, punctuation, and now a neutral/fallback source role. Theme Workshop includes a live Rust readability preview and warns when a semantic preset is designed for the opposite editor-surface tone.
 
@@ -35,15 +39,33 @@ Built-in recipes:
 
 - **Oxide** — Oxide Iron + Oxide palette + Oxide Industrial controls + Oxide Readability
 - **Metallic** — Forged Iron + Metallic palette + Forged controls + Metallic Readability
-- **Rust** — Rusty Iron + Rust palette + Weathered controls + Rust Readability
+- **Rust** — Rusted Iron + Rust palette + Weathered controls + Rust Readability
 - **Modern (Dark)** — Modern Flat + Modern Dark palette + Modern controls + Modern Dark Readability
 - **Modern (Light)** — Modern Flat + Modern Light palette + Modern controls + Modern Light Readability
 
 ### Theme Workshop / custom themes
 
-Use **View → Theme → Theme Workshop…** to create a custom recipe. A custom theme can mix components independently—for example Forged Iron material with the Rust UI palette, Modern controls, and Oxide Semantic Readability Colors. The Workshop can preview the unsaved recipe, and closing/canceling restores the active theme. Saved custom themes appear in the Theme menu and persist between sessions.
+Use **Tools → Settings… → Custom Theme** to create a custom recipe. A custom theme can mix components independently—for example Forged Iron material with the Rust UI palette, Modern controls, and Oxide Semantic Readability Colors. The Workshop can preview the unsaved recipe, and closing/canceling restores the active theme. Saved custom themes appear in the Settings theme dropdown and persist between sessions.
 
 Custom themes are stored in a versioned JSON schema under `oxide.appearance.customThemes`; the active theme ID remains in `oxide.appearance.theme`. The schema already reserves separate palette/semantic override maps so later builds can add granular user-defined colors or import/export without replacing the theme engine.
+
+## Settings and layouts
+
+Application preferences are centralized under **Tools → Settings…**. Build 8 currently exposes:
+
+- **Theme** — a dropdown containing the five built-in themes plus saved custom themes.
+- **Custom Theme** — opens Theme Workshop for composable material/palette/control/Semantic Readability recipes.
+- **Layout Mode** — explicit **Desktop Layout** or **Mobile Layout** selection.
+- **Live Rust Check** — persistent background diagnostic preference.
+- **Rust Code Analyzer/Completer** — persistent completion/intelligence preference.
+
+The selected theme and layout persist independently. Theme changes presentation/material; layout changes workspace arrangement. Neither is allowed to change Cargo projects, source files, compiler behavior, debugger behavior, or other application functionality.
+
+### Mobile Layout
+
+Mobile Layout is not a stripped-down edition of Rivet. It keeps the same project, Cargo, editor, debugger, tutorial, Build Bay, terminal, and update functionality while rearranging dense desktop panels for touch and narrow screens. The main workbench uses **Files / Editor / Cargo** switching (plus Tutorial while a lesson is active), horizontally scrollable Cargo commands, touch-friendly menu targets, a compact Build Bay, and mobile-safe dialogs/file browsing.
+
+The layout setting is intentionally independent of operating system or screen class. Rivet can pick a sensible first-run default, but once selected it respects the user's choice until changed in Settings.
 
 ## Windows + Linux
 
@@ -288,8 +310,8 @@ Longer explanations remain optional behind **Learn More**. Challenge steps accep
 
 - Release version: `1.3.6`
 - User-facing version: **B1.3.6**
-- Current internal build number: **6**
-- Full installed identity: **Rivet B1.3.6 · Build 7**
+- Current internal build number: **8**
+- Full installed identity: **Rivet B1.3.6 · Build 8**
 - B1.3.2 foundation codename: **The Compatibility Update**
 
 To move all editor/updater components to a future version:
@@ -308,9 +330,9 @@ Rivet keeps the public release version and the internal build number separate. T
 For example:
 
 ```text
-B1.3.6 · Build 5
+B1.3.6 · Build 7
         ↓
-B1.3.6 · Build 6
+B1.3.6 · Build 8
 ```
 
 The signed update feed carries `release_version` plus `build`, and Rivet compares both. GitHub update packages include the build in their filename. Every internal build gets its own release tag (`v1.3.6-b1`, `v1.3.6-b2`, and so on), so GitHub's `releases/latest/download/...` route advances even when the public Rivet version stays the same. For compatibility with older updater-enabled Rivet builds, the feed's required SemVer `version` is a monotonic updater sequence while `release_version` remains the actual Rivet release version.

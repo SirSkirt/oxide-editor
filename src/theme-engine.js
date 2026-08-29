@@ -12,13 +12,13 @@ export const CUSTOM_THEME_SCHEMA_VERSION = 1;
 export const THEME_COMPONENTS = Object.freeze({
   materials: Object.freeze({
     oxide: { label: 'Oxide Iron', description: 'Original Rivet industrial surfaces with restrained depth.' },
-    metallic: { label: 'Forged Iron', description: 'Dark forged iron with visible brushed grain, recessed seams, edge highlights, and physical depth.' },
-    rust: { label: 'Rusty Iron', description: 'The forged-iron material aged with oxidation, patina, worn seams, exposed dark metal, and rougher surface variation.' },
+    metallic: { label: 'Forged Iron', description: 'Brushed forged iron with visible grain, machining marks, recessed seams, edge wear, and deeper physical surfaces.' },
+    rust: { label: 'Rusted Iron', description: 'The forged-iron material weathered with irregular oxidation, patina, pitting, exposed metal, and worn seams.' },
     modern: { label: 'Modern Flat', description: 'Clean conventional IDE surfaces with minimal material texture.' },
   }),
   palettes: Object.freeze({
     oxide: { label: 'Oxide', tone: 'dark', description: 'Charcoal iron with Rivet rust-orange accents.' },
-    metallic: { label: 'Metallic', tone: 'dark', description: 'Cool gunmetal neutrals with restrained copper accents.' },
+    metallic: { label: 'Metallic', tone: 'dark', description: 'Cool dark-iron neutrals with restrained copper accents.' },
     rust: { label: 'Rust', tone: 'dark', description: 'Aged iron, warm brown-black surfaces, and oxidized accents.' },
     'modern-dark': { label: 'Modern Dark', tone: 'dark', description: 'Neutral contemporary dark IDE colors.' },
     'modern-light': { label: 'Modern Light', tone: 'light', description: 'Neutral contemporary light IDE colors.' },
